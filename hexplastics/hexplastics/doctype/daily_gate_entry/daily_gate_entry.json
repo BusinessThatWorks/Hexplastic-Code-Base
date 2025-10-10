@@ -1,0 +1,134 @@
+{
+ "actions": [],
+ "autoname": "format:{vehicle_no}-{DD}-{##}",
+ "creation": "2025-10-10 14:34:13.032089",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_y4ln",
+  "amended_from",
+  "sales_invoice",
+  "party_name",
+  "transporter_name",
+  "vehicle_in_time",
+  "date_of_entry",
+  "vehicle_out_time",
+  "date_of_exit",
+  "driver_name",
+  "driver_phone_number",
+  "column_break_rtzk",
+  "vehicle_no",
+  "invoice_date"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_y4ln",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Daily Gate Entry",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "sales_invoice.customer_name",
+   "fieldname": "party_name",
+   "fieldtype": "Data",
+   "label": "Party Name"
+  },
+  {
+   "fieldname": "transporter_name",
+   "fieldtype": "Data",
+   "label": "Transporter Name"
+  },
+  {
+   "fieldname": "vehicle_in_time",
+   "fieldtype": "Float",
+   "label": "Vehicle in Time",
+   "precision": "2"
+  },
+  {
+   "fieldname": "date_of_entry",
+   "fieldtype": "Date",
+   "label": "Date of Entry",
+   "precision": "2"
+  },
+  {
+   "fieldname": "vehicle_out_time",
+   "fieldtype": "Float",
+   "label": "Vehicle out Time",
+   "precision": "2"
+  },
+  {
+   "fieldname": "date_of_exit",
+   "fieldtype": "Date",
+   "label": "Date of Exit",
+   "precision": "2"
+  },
+  {
+   "fieldname": "driver_name",
+   "fieldtype": "Data",
+   "label": "Driver name"
+  },
+  {
+   "fieldname": "driver_phone_number",
+   "fieldtype": "Data",
+   "label": "Driver Phone Number"
+  },
+  {
+   "fieldname": "column_break_rtzk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice"
+  },
+  {
+   "fieldname": "vehicle_no",
+   "fieldtype": "Data",
+   "label": "Vehicle No"
+  },
+  {
+   "fetch_from": "sales_invoice.posting_date",
+   "fieldname": "invoice_date",
+   "fieldtype": "Data",
+   "label": "Invoice Date"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-10-10 16:28:13.408493",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "Daily Gate Entry",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

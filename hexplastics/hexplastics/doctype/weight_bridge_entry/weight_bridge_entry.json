@@ -1,0 +1,140 @@
+{
+ "actions": [],
+ "autoname": "format:{transporter_name}-{###}",
+ "creation": "2025-10-10 14:17:48.663241",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_xbkb",
+  "amended_from",
+  "sales_invoice",
+  "veichle_field",
+  "invoice_date",
+  "column_break_jiuj",
+  "item_description",
+  "party_name",
+  "transporter_name",
+  "column_break_ovrs",
+  "weight_of_finished_material",
+  "weight_of_packing_material",
+  "total_weight",
+  "actual_kata_weight",
+  "difference_in_weights"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_xbkb",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Weight Bridge Entry",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice"
+  },
+  {
+   "fieldname": "veichle_field",
+   "fieldtype": "Data",
+   "label": "Vehicle No"
+  },
+  {
+   "fetch_from": "sales_invoice.posting_date",
+   "fieldname": "invoice_date",
+   "fieldtype": "Data",
+   "label": "Invoice Date"
+  },
+  {
+   "fieldname": "column_break_jiuj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "item_description",
+   "fieldtype": "Data",
+   "label": "Item Description"
+  },
+  {
+   "fetch_from": "sales_invoice.customer_name",
+   "fieldname": "party_name",
+   "fieldtype": "Data",
+   "label": "Party Name"
+  },
+  {
+   "fieldname": "transporter_name",
+   "fieldtype": "Data",
+   "label": "Transporter Name"
+  },
+  {
+   "fieldname": "column_break_ovrs",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "weight_of_finished_material",
+   "fieldtype": "Float",
+   "label": "Weight of Finished Material",
+   "precision": "2"
+  },
+  {
+   "fieldname": "weight_of_packing_material",
+   "fieldtype": "Float",
+   "label": "Weight of Packing Material",
+   "precision": "2"
+  },
+  {
+   "fieldname": "total_weight",
+   "fieldtype": "Float",
+   "label": "Total Weight",
+   "precision": "2"
+  },
+  {
+   "fieldname": "actual_kata_weight",
+   "fieldtype": "Float",
+   "label": "Actual (KATA) weight",
+   "precision": "2"
+  },
+  {
+   "fieldname": "difference_in_weights",
+   "fieldtype": "Float",
+   "label": "Difference in Weights",
+   "precision": "2"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-10-10 16:32:33.709567",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "Weight Bridge Entry",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
