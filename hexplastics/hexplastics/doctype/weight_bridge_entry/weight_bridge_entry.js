@@ -13,7 +13,8 @@ frappe.ui.form.on('Weight Bridge Entry', {
             return;
         }
 
-        // Step 1: Fetch Sales Invoice document
+        // Step 1: Fetch Sales Invoice Documentgit add .
+
         console.log("Fetching Sales Invoice document:", sales_invoice);
         frappe.db.get_doc('Sales Invoice', sales_invoice)
             .then(invoice => {
