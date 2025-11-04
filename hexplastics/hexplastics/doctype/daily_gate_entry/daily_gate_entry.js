@@ -88,14 +88,7 @@ frappe.ui.form.on('Daily Gate Entry', {
 			frm.clear_table('sales_invoice_details');
 			frm.refresh_field('sales_invoice_details');
 
-			// Hide and clear other fields
-			frm.set_df_property('purchase_invoice', 'hidden', 1);
-			frm.set_df_property('purchase_invoice', 'reqd', 0);
-			frm.set_value('purchase_invoice', '');
-
-			frm.set_df_property('sales_invoice', 'hidden', 1);
-			frm.set_df_property('sales_invoice', 'reqd', 0);
-			frm.set_value('sales_invoice', '');
+			// No invoice fields in 'others' mode; only purpose is shown
 		} else {
 			// Hide purpose if unchecked
 			frm.set_df_property('purpose', 'hidden', 1);
