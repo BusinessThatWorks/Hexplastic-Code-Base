@@ -9,13 +9,13 @@
   "purchase",
   "sales",
   "others",
-  "party_name",
-  "invoice_date",
   "column_break_rtzk",
-  "purchase_invoice",
-  "sales_invoice",
   "purpose",
   "amended_from",
+  "section_break_qxtd",
+  "table_sxbw",
+  "section_break_hkey",
+  "sales_invoice_details",
   "vehicle_details_section",
   "vehicle_no",
   "transporter_name",
@@ -43,12 +43,6 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
-  },
-  {
-   "fetch_from": "sales_invoice.customer_name",
-   "fieldname": "party_name",
-   "fieldtype": "Data",
-   "label": "Party Name"
   },
   {
    "fieldname": "transporter_name",
@@ -94,20 +88,9 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "sales_invoice",
-   "fieldtype": "Link",
-   "label": "Sales Invoice",
-   "options": "Sales Invoice"
-  },
-  {
    "fieldname": "vehicle_no",
    "fieldtype": "Data",
    "label": "Vehicle No"
-  },
-  {
-   "fieldname": "invoice_date",
-   "fieldtype": "Data",
-   "label": "Invoice Date"
   },
   {
    "default": "0",
@@ -126,12 +109,6 @@
    "fieldname": "others",
    "fieldtype": "Check",
    "label": "Others"
-  },
-  {
-   "fieldname": "purchase_invoice",
-   "fieldtype": "Link",
-   "label": "Purchase Invoice",
-   "options": "Purchase Invoice"
   },
   {
    "fieldname": "purpose",
@@ -155,13 +132,33 @@
   {
    "fieldname": "column_break_wzts",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_qxtd",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "table_sxbw",
+   "fieldtype": "Table",
+   "label": "Purchase Invoice Details",
+   "options": "Daily Gate Entry Purchase Invoice"
+  },
+  {
+   "fieldname": "section_break_hkey",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "sales_invoice_details",
+   "fieldtype": "Table",
+   "label": "Sales Invoice Details",
+   "options": "Daily Gate Entry Sales Invoice"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-04 11:55:33.208363",
+ "modified": "2025-11-04 15:18:13.800321",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Daily Gate Entry",

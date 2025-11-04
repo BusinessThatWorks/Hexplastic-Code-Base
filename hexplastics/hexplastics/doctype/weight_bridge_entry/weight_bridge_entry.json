@@ -6,17 +6,26 @@
  "engine": "InnoDB",
  "field_order": [
   "section_break_xbkb",
-  "amended_from",
-  "sales_invoice",
-  "veichle_field",
-  "invoice_date",
-  "column_break_jiuj",
-  "item_description",
+  "purchase",
+  "sales",
+  "others",
   "party_name",
+  "invoice_date",
+  "item_description",
+  "column_break_jiuj",
+  "purchase_invoice",
+  "sales_invoice",
+  "purpose",
+  "amended_from",
+  "section_break_vtga",
   "transporter_name",
-  "column_break_ovrs",
+  "veichle_field",
+  "column_break_yqjc",
+  "column_break_qjmn",
+  "section_break_yqsk",
   "weight_of_finished_material",
   "weight_of_packing_material",
+  "column_break_uqjl",
   "total_weight",
   "actual_kata_weight",
   "difference_in_weights"
@@ -48,7 +57,6 @@
    "label": "Vehicle No"
   },
   {
-   "fetch_from": "sales_invoice.posting_date",
    "fieldname": "invoice_date",
    "fieldtype": "Data",
    "label": "Invoice Date"
@@ -63,7 +71,6 @@
    "label": "Item Description"
   },
   {
-   "fetch_from": "sales_invoice.customer_name",
    "fieldname": "party_name",
    "fieldtype": "Data",
    "label": "Party Name"
@@ -74,12 +81,8 @@
    "label": "Transporter Name"
   },
   {
-   "fieldname": "column_break_ovrs",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "weight_of_finished_material",
-   "fieldtype": "Float",
+   "fieldtype": "Data",
    "label": "Weight of Finished Material",
    "precision": "2"
   },
@@ -106,13 +109,63 @@
    "fieldtype": "Float",
    "label": "Difference in Weights",
    "precision": "2"
+  },
+  {
+   "default": "0",
+   "fieldname": "purchase",
+   "fieldtype": "Check",
+   "label": "Purchase"
+  },
+  {
+   "default": "0",
+   "fieldname": "sales",
+   "fieldtype": "Check",
+   "label": "Sales"
+  },
+  {
+   "default": "0",
+   "fieldname": "others",
+   "fieldtype": "Check",
+   "label": "Others"
+  },
+  {
+   "fieldname": "section_break_yqsk",
+   "fieldtype": "Section Break",
+   "label": "Material Details"
+  },
+  {
+   "fieldname": "column_break_uqjl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "purchase_invoice",
+   "fieldtype": "Link",
+   "label": "Purchase Invoice",
+   "options": "Purchase Invoice"
+  },
+  {
+   "fieldname": "purpose",
+   "fieldtype": "Data",
+   "label": "Purpose"
+  },
+  {
+   "fieldname": "section_break_vtga",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_yqjc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_qjmn",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-01 14:25:24.663552",
+ "modified": "2025-11-04 14:23:38.526897",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Weight Bridge Entry",
