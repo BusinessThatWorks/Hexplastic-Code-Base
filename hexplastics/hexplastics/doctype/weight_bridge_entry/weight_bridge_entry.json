@@ -9,14 +9,13 @@
   "purchase",
   "sales",
   "others",
-  "party_name",
-  "invoice_date",
-  "item_description",
   "column_break_jiuj",
-  "purchase_invoice",
-  "sales_invoice",
   "purpose",
   "amended_from",
+  "section_break_cgjj",
+  "sales_invoice_details",
+  "section_break_jvmm",
+  "purchase_invoice_details",
   "section_break_vtga",
   "transporter_name",
   "veichle_field",
@@ -46,34 +45,13 @@
    "search_index": 1
   },
   {
-   "fieldname": "sales_invoice",
-   "fieldtype": "Link",
-   "label": "Sales Invoice",
-   "options": "Sales Invoice"
-  },
-  {
    "fieldname": "veichle_field",
    "fieldtype": "Data",
    "label": "Vehicle No"
   },
   {
-   "fieldname": "invoice_date",
-   "fieldtype": "Data",
-   "label": "Invoice Date"
-  },
-  {
    "fieldname": "column_break_jiuj",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "item_description",
-   "fieldtype": "Data",
-   "label": "Item Description"
-  },
-  {
-   "fieldname": "party_name",
-   "fieldtype": "Data",
-   "label": "Party Name"
   },
   {
    "fieldname": "transporter_name",
@@ -138,12 +116,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "purchase_invoice",
-   "fieldtype": "Link",
-   "label": "Purchase Invoice",
-   "options": "Purchase Invoice"
-  },
-  {
    "fieldname": "purpose",
    "fieldtype": "Data",
    "label": "Purpose"
@@ -159,13 +131,33 @@
   {
    "fieldname": "column_break_qjmn",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_cgjj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "sales_invoice_details",
+   "fieldtype": "Table",
+   "label": "Sales Invoice Details",
+   "options": "Weight Bridge Entry Sales Invoice"
+  },
+  {
+   "fieldname": "section_break_jvmm",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "purchase_invoice_details",
+   "fieldtype": "Table",
+   "label": "Purchase Invoice Details",
+   "options": "Weight Bridge Entry Purchase Invoice"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-04 14:23:38.526897",
+ "modified": "2025-11-06 12:29:04.044128",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Weight Bridge Entry",
