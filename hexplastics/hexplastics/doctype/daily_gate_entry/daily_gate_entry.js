@@ -12,6 +12,9 @@ frappe.ui.form.on('Daily Gate Entry', {
 		frm.set_df_property('table_sxbw', 'reqd', 0);
 		frm.set_df_property('sales_invoice_details', 'reqd', 0);
 		frm.set_df_property('purpose', 'reqd', 0);
+
+		// Set up invoice filters early
+		setup_invoice_filters(frm);
 	},
 
 	purchase: function (frm) {
@@ -219,6 +222,9 @@ frappe.ui.form.on('Daily Gate Entry', {
 			frm.set_df_property('purpose', 'hidden', 1);
 		}
 
+		// Set up invoice filters to exclude already used invoices
+		setup_invoice_filters(frm);
+
 		console.log("Form refreshed. Visibility updated.");
 	}
 });
@@ -282,3 +288,89 @@ frappe.ui.form.on('Daily Gate Entry Sales Invoice', {
 		frm.trigger('sync_first_row_info');
 	}
 });
+
+// Setup invoice filters to exclude already used invoices
+function setup_invoice_filters(frm) {
+	// Get current document's invoices to exclude from filter
+	let current_purchase_invoices = [];
+	let current_sales_invoices = [];
+
+	if (Array.isArray(frm.doc.table_sxbw)) {
+		current_purchase_invoices = frm.doc.table_sxbw
+			.map(r => r.purchase_invoice)
+			.filter(Boolean);
+	}
+
+	if (Array.isArray(frm.doc.sales_invoice_details)) {
+		current_sales_invoices = frm.doc.sales_invoice_details
+			.map(r => r.sales_invoice)
+			.filter(Boolean);
+	}
+
+	// Fetch used invoices and then set up the query filters
+	fetch_used_invoices(frm.doc.name, current_purchase_invoices, current_sales_invoices, function (used_purchase, used_sales) {
+		// Filter for Purchase Invoice field in child table
+		// Second parameter should be the parent fieldname, not the child doctype name
+		frm.set_query('purchase_invoice', 'table_sxbw', function () {
+			// Only apply filter if there are used invoices
+			if (used_purchase.length > 0) {
+				return {
+					filters: [
+						['name', 'not in', used_purchase]
+					]
+				};
+			}
+			// If no used invoices, return empty filters (show all)
+			return {};
+		});
+
+		// Filter for Sales Invoice field in child table
+		// Second parameter should be the parent fieldname, not the child doctype name
+		frm.set_query('sales_invoice', 'sales_invoice_details', function () {
+			// Only apply filter if there are used invoices
+			if (used_sales.length > 0) {
+				return {
+					filters: [
+						['name', 'not in', used_sales]
+					]
+				};
+			}
+			// If no used invoices, return empty filters (show all)
+			return {};
+		});
+	});
+}
+
+function fetch_used_invoices(current_doc_name, current_purchase_invoices, current_sales_invoices, callback) {
+	// Use server-side method to get used invoices (avoids permission issues with child tables)
+	frappe.call({
+		method: 'hexplastics.hexplastics.doctype.daily_gate_entry.daily_gate_entry.get_used_invoices',
+		args: {
+			current_doc_name: current_doc_name || null
+		},
+		callback: function (r) {
+			let used_purchase = [];
+			let used_sales = [];
+
+			if (r && r.message) {
+				used_purchase = r.message.purchase_invoices || [];
+				used_sales = r.message.sales_invoices || [];
+			} else if (r && r.exc) {
+				console.warn('Error fetching used invoices:', r.exc);
+				// If server method fails, continue with empty arrays (show all invoices)
+			}
+
+			// Also exclude invoices already in current form (for new rows)
+			used_purchase = used_purchase.filter(inv => !current_purchase_invoices.includes(inv));
+			used_sales = used_sales.filter(inv => !current_sales_invoices.includes(inv));
+
+			// Call callback with the filtered lists
+			callback(used_purchase, used_sales);
+		},
+		error: function (r) {
+			console.warn('Error calling get_used_invoices:', r);
+			// On error, continue with empty arrays (show all invoices)
+			callback([], []);
+		}
+	});
+}
