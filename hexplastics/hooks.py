@@ -46,7 +46,8 @@ app_license = "mit"
 doctype_js = {
 	"BOM": "public/js/bom.js",
 	"Production Plan": "public/js/production_plan.js",
-    "Leave Application" : "public/js/leave_application.js"
+    "Leave Application" : "public/js/leave_application.js",
+    "Employee": "public/js/employee.js"
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
@@ -149,7 +150,11 @@ doctype_js = {
 # 		"on_trash": "method"
 # 	}
 # }
-
+# doc_events = {
+#     "Employee": {
+#         "before_save": "hexplastics.hexplastics.custom_scripts.employee_date_of_joining.set_confirmation_date"
+#     }
+# }
 # Scheduled Tasks
 # ---------------
 
