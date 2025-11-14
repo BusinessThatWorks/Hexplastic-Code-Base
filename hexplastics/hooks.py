@@ -46,8 +46,8 @@ app_license = "mit"
 doctype_js = {
 	"BOM": "public/js/bom.js",
 	"Production Plan": "public/js/production_plan.js",
-    "Leave Application" : "public/js/leave_application.js",
-    "Employee": "public/js/employee.js"
+	"Leave Application": "public/js/leave_application.js",
+	"Employee": "public/js/employee.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
@@ -158,23 +158,13 @@ doctype_js = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"hexplastics.tasks.all"
-# 	],
-# 	"daily": [
-# 		"hexplastics.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"hexplastics.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"hexplastics.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"hexplastics.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"cron": {
+		"0 12 * * *": [
+			"hexplastics.tasks.check_stock_levels_and_send_alert"
+		],  # Run at 12:00 PM (noon) every day
+	},
+}
 
 # Testing
 # -------
