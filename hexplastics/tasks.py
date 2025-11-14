@@ -119,8 +119,12 @@ def check_stock_levels_and_send_alert():
 			<p>This is an automated alert from Hexplastics Stock Monitoring System.</p>
 			"""
 
-		# Set recipient email
-		recipient_email = ["beetashoke.chakraborty@clapgrow.com"]
+		# Set recipient emails - send to 3 people
+		recipient_email = [
+			"beetashoke.chakraborty@clapgrow.com",
+			"beetashokechakraborty721@gamil.com",
+			"ritika@clapgrow.com",
+		]
 
 		# Log email content for debugging
 		frappe.logger().info("=" * 80)
