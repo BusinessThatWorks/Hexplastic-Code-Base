@@ -131,25 +131,30 @@ def get_item_stock_quantity(item_code, warehouse=None):
 	bins = frappe.get_all(
 		"Bin",
 		filters=filters,
-		fields=["warehouse", "actual_qty", "reserved_qty", "ordered_qty", "projected_qty"],
+		fields=["warehouse", "balance_qty", "actual_qty", "reserved_qty", "ordered_qty", "projected_qty"],
 	)
 
 	if warehouse and bins:
 		bin_data = bins[0]
+		# Use balance_qty as the primary stock quantity
+		balance_qty = bin_data.get("balance_qty", 0) or 0
 		return {
 			"item_code": item_code,
 			"warehouse": warehouse,
-			"actual_qty": bin_data.get("actual_qty", 0) or 0,
+			"actual_qty": balance_qty,  # Return balance_qty as actual_qty for compatibility
+			"balance_qty": balance_qty,
 			"reserved_qty": bin_data.get("reserved_qty", 0) or 0,
 			"ordered_qty": bin_data.get("ordered_qty", 0) or 0,
 			"projected_qty": bin_data.get("projected_qty", 0) or 0,
 		}
 	elif bins:
 		# Aggregate across all warehouses
+		total_balance_qty = sum((bin.get("balance_qty", 0) or 0) for bin in bins)
 		return {
 			"item_code": item_code,
 			"warehouse": "All Warehouses",
-			"actual_qty": sum((bin.get("actual_qty", 0) or 0) for bin in bins),
+			"actual_qty": total_balance_qty,  # Return balance_qty as actual_qty for compatibility
+			"balance_qty": total_balance_qty,
 			"reserved_qty": sum((bin.get("reserved_qty", 0) or 0) for bin in bins),
 			"ordered_qty": sum((bin.get("ordered_qty", 0) or 0) for bin in bins),
 			"projected_qty": sum((bin.get("projected_qty", 0) or 0) for bin in bins),
@@ -160,6 +165,7 @@ def get_item_stock_quantity(item_code, warehouse=None):
 			"item_code": item_code,
 			"warehouse": warehouse or "All Warehouses",
 			"actual_qty": 0,
+			"balance_qty": 0,
 			"reserved_qty": 0,
 			"ordered_qty": 0,
 			"projected_qty": 0,
