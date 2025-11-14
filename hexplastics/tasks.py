@@ -12,7 +12,7 @@ def check_stock_levels_and_send_alert():
 	Runs at 12:30 PM daily.
 	"""
 	try:
-		warehouse = "Stores - HP"
+		warehouse = "All Warehouses - HEX"
 
 		# Get all items with safety_stock > 0
 		items = frappe.get_all(
