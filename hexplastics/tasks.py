@@ -13,7 +13,7 @@ def check_stock_levels_and_send_alert():
 	Check all items' stock quantity against safety_stock across 3 warehouses.
 	Sum stock from: Production - HEX, Raw Material - HEX, Finished Goods - HEX
 	Send red alert email if total stock < safety_stock, else send green alert.
-	Runs at 12:30 PM daily.
+	Runs at 9:00 AM daily.
 	"""
 	print("\n>>> Starting stock alert check...\n")
 	sys.stdout.flush()
@@ -91,14 +91,14 @@ def check_stock_levels_and_send_alert():
 			for item in low_stock_items:
 				shortage = item["safety_stock"] - item["current_stock"]
 				warehouse_details = item.get("warehouse_stocks", {})
-				warehouse_breakdown = ", ".join([f"{wh}: {qty}" for wh, qty in warehouse_details.items()])
+				warehouse_breakdown = ", ".join([f"{wh}: {qty:.2f}" for wh, qty in warehouse_details.items()])
 				message += f"""
 					<tr>
 						<td>{item["item_code"]}</td>
 						<td>{item["item_name"]}</td>
-						<td>{item["safety_stock"]}</td>
-						<td style="color: red; font-weight: bold;">{item["current_stock"]}</td>
-						<td style="color: red; font-weight: bold;">{shortage}</td>
+						<td>{item["safety_stock"]:.2f}</td>
+						<td style="color: red; font-weight: bold;">{item["current_stock"]:.2f}</td>
+						<td style="color: red; font-weight: bold;">{shortage:.2f}</td>
 						<td>{warehouse_breakdown}</td>
 					</tr>
 				"""
@@ -119,11 +119,14 @@ def check_stock_levels_and_send_alert():
 			<p>This is an automated alert from Hexplastics Stock Monitoring System.</p>
 			"""
 
-		# Set recipient emails - send to 3 people
+		# Set recipient emails - send to 6 people
 		recipient_email = [
 			"beetashoke.chakraborty@clapgrow.com",
-			"beetashokechakraborty721@gamil.com",
+			"beetashokechakraborty721@gmail.com",
 			"ritika@clapgrow.com",
+			"rohanathex@gmail.com",
+			"avinashathex@gmail.com",
+			"gauravmartinian@gmail.com",
 		]
 
 		# Log email content for debugging
