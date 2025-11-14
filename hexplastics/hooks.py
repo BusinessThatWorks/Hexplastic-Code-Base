@@ -160,9 +160,7 @@ doctype_js = {
 
 scheduler_events = {
 	"cron": {
-		"0 12 * * *": [
-			"hexplastics.tasks.check_stock_levels_and_send_alert"
-		],  # Run at 12:00 PM (noon) every day
+		"30 12 * * *": ["hexplastics.tasks.check_stock_levels_and_send_alert"],  # Run at 12:30 PM every day
 	},
 }
 

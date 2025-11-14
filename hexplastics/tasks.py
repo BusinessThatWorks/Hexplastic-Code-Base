@@ -9,7 +9,7 @@ def check_stock_levels_and_send_alert():
 	"""
 	Check all items' stock quantity against safety_stock in Stores - HP warehouse.
 	Send email alert if items have low stock (stock < safety_stock).
-	Runs at 12pm daily.
+	Runs at 12:30 PM daily.
 	"""
 	try:
 		warehouse = "Stores - HP"
