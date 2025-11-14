@@ -1,6 +1,7 @@
 """Scheduled tasks for Hexplastics app."""
 
 import re
+import sys
 
 import frappe
 from frappe import _
@@ -9,12 +10,17 @@ from hexplastics.utils.stock_utils import get_item_stock_quantity
 
 def check_stock_levels_and_send_alert():
 	"""
-	Check all items' stock quantity against safety_stock in Stores - HP warehouse.
-	Send email alert if items have low stock (stock < safety_stock).
+	Check all items' stock quantity against safety_stock across 3 warehouses.
+	Sum stock from: Production - HEX, Raw Material - HEX, Finished Goods - HEX
+	Send red alert email if total stock < safety_stock, else send green alert.
 	Runs at 12:30 PM daily.
 	"""
+	print("\n>>> Starting stock alert check...\n")
+	sys.stdout.flush()
+
 	try:
-		warehouse = "All Warehouses - HEX"
+		# List of warehouses to check
+		warehouses = ["Production - HEX", "Raw Material - HEX", "Finished Goods - HEX"]
 
 		# Get all items with safety_stock > 0
 		items = frappe.get_all(
@@ -30,43 +36,53 @@ def check_stock_levels_and_send_alert():
 
 		low_stock_items = []
 
-		# Check each item's stock in Stores - HP warehouse
+		# Check each item's stock across all 3 warehouses
 		for item in items:
 			item_code = item.name
 			safety_stock = item.safety_stock or 0
 
-			# Get stock quantity for this item in Stores - HP
-			stock_data = get_item_stock_quantity(item_code=item_code, warehouse=warehouse)
-			actual_qty = stock_data.get("actual_qty", 0) or 0
+			# Get stock quantity for this item from each warehouse and sum them
+			total_stock = 0
+			warehouse_stocks = {}
 
-			# Check if stock is less than safety_stock
-			if actual_qty < safety_stock:
+			for warehouse in warehouses:
+				stock_data = get_item_stock_quantity(item_code=item_code, warehouse=warehouse)
+				warehouse_qty = stock_data.get("actual_qty", 0) or 0
+				warehouse_stocks[warehouse] = warehouse_qty
+				total_stock += warehouse_qty
+
+			# Check if total stock is less than safety_stock
+			if total_stock < safety_stock:
 				low_stock_items.append(
 					{
 						"item_code": item_code,
 						"item_name": item.item_name,
 						"safety_stock": safety_stock,
-						"current_stock": actual_qty,
+						"current_stock": total_stock,
+						"warehouse_stocks": warehouse_stocks,  # Store individual warehouse stocks
 					}
 				)
 
 		# Prepare email content
+		warehouse_list = ", ".join(warehouses)
+
 		if low_stock_items:
-			# Items with low stock found - send alert with item names
-			subject = "Stock Alert: Items Below Safety Stock Level"
+			# Items with low stock found - send red alert with item names
+			subject = "🔴 Stock Alert: Items Below Safety Stock Level"
 
 			# Create HTML table for better formatting
 			message = f"""
 			<p>Dear Team,</p>
-			<p>The following items have stock quantity below their safety stock level in <strong>{warehouse}</strong>:</p>
+			<p>The following items have stock quantity below their safety stock level across warehouses: <strong>{warehouse_list}</strong>:</p>
 			<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
 				<thead>
 					<tr style="background-color: #f0f0f0;">
 						<th>Item Code</th>
 						<th>Item Name</th>
 						<th>Safety Stock</th>
-						<th>Current Stock</th>
+						<th>Total Current Stock</th>
 						<th>Shortage</th>
+						<th>Warehouse Breakdown</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -74,6 +90,8 @@ def check_stock_levels_and_send_alert():
 
 			for item in low_stock_items:
 				shortage = item["safety_stock"] - item["current_stock"]
+				warehouse_details = item.get("warehouse_stocks", {})
+				warehouse_breakdown = ", ".join([f"{wh}: {qty}" for wh, qty in warehouse_details.items()])
 				message += f"""
 					<tr>
 						<td>{item["item_code"]}</td>
@@ -81,6 +99,7 @@ def check_stock_levels_and_send_alert():
 						<td>{item["safety_stock"]}</td>
 						<td style="color: red; font-weight: bold;">{item["current_stock"]}</td>
 						<td style="color: red; font-weight: bold;">{shortage}</td>
+						<td>{warehouse_breakdown}</td>
 					</tr>
 				"""
 
@@ -91,11 +110,11 @@ def check_stock_levels_and_send_alert():
 			<p>This is an automated alert from Hexplastics Stock Monitoring System.</p>
 			"""
 		else:
-			# All items have sufficient stock
-			subject = "Stock Status: All Items Have Correct Stock"
+			# All items have sufficient stock - send green alert
+			subject = "🟢 Stock Status: All Items Have Correct Stock"
 			message = f"""
 			<p>Dear Team,</p>
-			<p><strong>All your items have correct stock in {warehouse}.</strong></p>
+			<p><strong style="color: green;">✅ All your items have correct stock across warehouses: {warehouse_list}.</strong></p>
 			<p>All items meet or exceed their safety stock levels.</p>
 			<p>This is an automated alert from Hexplastics Stock Monitoring System.</p>
 			"""
@@ -136,40 +155,59 @@ def check_stock_levels_and_send_alert():
 		frappe.logger().info(plain_message)
 		frappe.logger().info("=" * 80)
 
-		# Print email content to console before sending
-		# Using both print and frappe.print for better visibility
-		email_output = f"""
+		# Print email content to console BEFORE attempting to send
+		# This will show even if email sending fails
+		email_preview = f"""
 {"=" * 80}
-EMAIL CONTENT (BEFORE SENDING):
+EMAIL CONTENT (WHAT WILL BE SENT):
 {"=" * 80}
 To: {", ".join(recipient_email)}
 Subject: {subject}
 {"-" * 80}
-Message Body (Plain Text):
+MESSAGE BODY (PLAIN TEXT):
 {"-" * 80}
 {plain_message}
 {"=" * 80}
-
-Full HTML Message:
-{"-" * 80}
+FULL HTML MESSAGE:
+{"=" * 80}
 {message}
 {"=" * 80}
 """
-		print(email_output)
-		frappe.print(email_output)  # Also use frappe.print for console visibility
 
-		# Send email
+		# Print to console
+		print(email_preview)
+		print("\n>>> Now attempting to send email...\n")
+		sys.stdout.flush()
+
+		# Return email content so it shows in console (this will definitely display)
+		email_info = {
+			"to": recipient_email,
+			"subject": subject,
+			"plain_message": plain_message,
+			"html_message": message,
+			"low_stock_count": len(low_stock_items),
+			"preview": email_preview,  # Add preview as string for easy viewing
+		}
+
+		# Send email (this may fail due to encryption key issues, but content is already shown above)
 		try:
 			frappe.sendmail(recipients=recipient_email, subject=subject, message=message, now=True)
 			frappe.logger().info(f"✓ Email sent successfully to {recipient_email}")
+			print("\n>>> Email sent successfully!\n")
+			sys.stdout.flush()
 		except Exception as email_error:
 			frappe.log_error(
 				f"Failed to send email: {str(email_error)}\n{frappe.get_traceback()}",
 				"Stock Alert Email Error",
 			)
 			frappe.logger().error(f"✗ Failed to send email: {str(email_error)}")
+			print(f"\n>>> ERROR: Failed to send email: {str(email_error)}\n")
+			sys.stdout.flush()
 
 		frappe.logger().info("=" * 80)
+
+		# Return email info so it displays in console
+		return email_info
 
 	except Exception as e:
 		frappe.log_error(frappe.get_traceback(), "Stock Alert Check Error")
