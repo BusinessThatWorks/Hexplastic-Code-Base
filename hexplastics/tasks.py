@@ -1,5 +1,7 @@
 """Scheduled tasks for Hexplastics app."""
 
+import re
+
 import frappe
 from frappe import _
 from hexplastics.utils.stock_utils import get_item_stock_quantity
@@ -101,12 +103,73 @@ def check_stock_levels_and_send_alert():
 		# Set recipient email
 		recipient_email = ["beetashoke.chakraborty@clapgrow.com"]
 
-		# Send email
-		frappe.sendmail(recipients=recipient_email, subject=subject, message=message, now=True)
+		# Log email content for debugging
+		frappe.logger().info("=" * 80)
+		frappe.logger().info("STOCK ALERT EMAIL - DETAILED LOG")
+		frappe.logger().info("=" * 80)
+		frappe.logger().info(f"Recipient: {recipient_email}")
+		frappe.logger().info(f"Subject: {subject}")
+		frappe.logger().info(f"Total items checked: {len(items)}")
+		frappe.logger().info(f"Low stock items found: {len(low_stock_items)}")
+		frappe.logger().info("-" * 80)
 
-		frappe.logger().info(
-			f"Stock alert email sent to {recipient_email}. Low stock items: {len(low_stock_items)}"
-		)
+		if low_stock_items:
+			frappe.logger().info("LOW STOCK ITEMS:")
+			frappe.logger().info(
+				f"{'Item Code':<20} {'Item Name':<30} {'Safety Stock':<15} {'Current Stock':<15} {'Shortage':<15}"
+			)
+			frappe.logger().info("-" * 80)
+			for item in low_stock_items:
+				shortage = item["safety_stock"] - item["current_stock"]
+				frappe.logger().info(
+					f"{item['item_code']:<20} {item['item_name']:<30} {item['safety_stock']:<15} {item['current_stock']:<15} {shortage:<15}"
+				)
+		else:
+			frappe.logger().info("All items have sufficient stock!")
+
+		frappe.logger().info("-" * 80)
+		frappe.logger().info("EMAIL MESSAGE CONTENT:")
+		frappe.logger().info("-" * 80)
+		# Convert HTML to plain text for logging
+		plain_message = re.sub(r"<[^>]+>", "", message)  # Remove HTML tags
+		plain_message = plain_message.replace("&nbsp;", " ").strip()
+		frappe.logger().info(plain_message)
+		frappe.logger().info("=" * 80)
+
+		# Print email content to console before sending
+		# Using both print and frappe.print for better visibility
+		email_output = f"""
+{"=" * 80}
+EMAIL CONTENT (BEFORE SENDING):
+{"=" * 80}
+To: {", ".join(recipient_email)}
+Subject: {subject}
+{"-" * 80}
+Message Body (Plain Text):
+{"-" * 80}
+{plain_message}
+{"=" * 80}
+
+Full HTML Message:
+{"-" * 80}
+{message}
+{"=" * 80}
+"""
+		print(email_output)
+		frappe.print(email_output)  # Also use frappe.print for console visibility
+
+		# Send email
+		try:
+			frappe.sendmail(recipients=recipient_email, subject=subject, message=message, now=True)
+			frappe.logger().info(f"✓ Email sent successfully to {recipient_email}")
+		except Exception as email_error:
+			frappe.log_error(
+				f"Failed to send email: {str(email_error)}\n{frappe.get_traceback()}",
+				"Stock Alert Email Error",
+			)
+			frappe.logger().error(f"✗ Failed to send email: {str(email_error)}")
+
+		frappe.logger().info("=" * 80)
 
 	except Exception as e:
 		frappe.log_error(frappe.get_traceback(), "Stock Alert Check Error")
