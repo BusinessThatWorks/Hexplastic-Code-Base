@@ -6,7 +6,20 @@ from frappe.model.document import Document
 
 
 class WeightBridgeEntry(Document):
-	pass
+	def validate(self):
+		"""Round weight fields to 2 decimal places before saving"""
+		weight_fields = [
+			"weight_of_finished_material",
+			"total_weight",
+			"weight_of_packing_material",
+			"actual_kata_weight",
+			"difference_in_weights",
+		]
+
+		for field in weight_fields:
+			if self.get(field) is not None:
+				# Round to 2 decimal places
+				self.set(field, round(float(self.get(field)), 2))
 
 
 @frappe.whitelist()

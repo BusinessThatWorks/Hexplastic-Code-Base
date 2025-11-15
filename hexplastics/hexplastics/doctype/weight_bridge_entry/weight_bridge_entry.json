@@ -60,7 +60,7 @@
   },
   {
    "fieldname": "weight_of_finished_material",
-   "fieldtype": "Data",
+   "fieldtype": "Float",
    "label": "Weight of Finished Material",
    "precision": "2"
   },
@@ -157,7 +157,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-06 12:29:04.044128",
+ "modified": "2025-11-15 11:07:56.983024",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Weight Bridge Entry",

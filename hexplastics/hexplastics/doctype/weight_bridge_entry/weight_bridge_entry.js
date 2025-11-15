@@ -138,14 +138,38 @@ frappe.ui.form.on('Weight Bridge Entry', {
     },
 
     weight_of_packing_material: function (frm) {
+        // Round to 2 decimal places if value exists
+        if (frm.doc.weight_of_packing_material != null) {
+            let value = parseFloat(frm.doc.weight_of_packing_material) || 0;
+            value = Math.round(value * 100) / 100;
+            if (value !== frm.doc.weight_of_packing_material) {
+                frm.set_value('weight_of_packing_material', value);
+            }
+        }
         calculate_weights(frm);
     },
 
     weight_of_finished_material: function (frm) {
+        // Round to 2 decimal places if value exists
+        if (frm.doc.weight_of_finished_material != null) {
+            let value = parseFloat(frm.doc.weight_of_finished_material) || 0;
+            value = Math.round(value * 100) / 100;
+            if (value !== frm.doc.weight_of_finished_material) {
+                frm.set_value('weight_of_finished_material', value);
+            }
+        }
         calculate_weights(frm);
     },
 
     actual_kata_weight: function (frm) {
+        // Round to 2 decimal places if value exists
+        if (frm.doc.actual_kata_weight != null) {
+            let value = parseFloat(frm.doc.actual_kata_weight) || 0;
+            value = Math.round(value * 100) / 100;
+            if (value !== frm.doc.actual_kata_weight) {
+                frm.set_value('actual_kata_weight', value);
+            }
+        }
         calculate_weights(frm);
     },
 
@@ -275,16 +299,23 @@ function calculate_weights(frm) {
     let finished_weight = parseFloat(frm.doc.weight_of_finished_material) || 0;
     let kata_weight = parseFloat(frm.doc.actual_kata_weight) || 0;
 
+    // Round input values to 2 decimal places
+    packing_weight = Math.round(packing_weight * 100) / 100;
+    finished_weight = Math.round(finished_weight * 100) / 100;
+    kata_weight = Math.round(kata_weight * 100) / 100;
+
     // Calculate total weight
     let total_weight = packing_weight + finished_weight;
+    total_weight = Math.round(total_weight * 100) / 100;
 
     // Calculate difference in weights only if kata weight is provided
     let difference_in_weights = 0;
     if (frm.doc.actual_kata_weight && kata_weight > 0) {
         difference_in_weights = total_weight - kata_weight;
+        difference_in_weights = Math.round(difference_in_weights * 100) / 100;
     }
 
-    // Set the calculated values
+    // Set the calculated values (rounded to 2 decimal places)
     frm.set_value('total_weight', total_weight);
     frm.set_value('difference_in_weights', difference_in_weights);
 }
@@ -307,6 +338,8 @@ function recompute_finished_material_weight(frm) {
         });
     }
 
+    // Round to 2 decimal places
+    sum = Math.round(sum * 100) / 100;
     frm.set_value('weight_of_finished_material', sum);
     // Recalculate total and differences
     calculate_weights(frm);
