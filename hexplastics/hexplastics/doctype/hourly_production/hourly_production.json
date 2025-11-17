@@ -1,0 +1,187 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-17 12:28:03.927427",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_d0rz",
+  "work_order",
+  "production_date",
+  "time_from",
+  "time_to",
+  "amended_from",
+  "column_break_qbio",
+  "bom_no",
+  "finished_good",
+  "manufactured_qty",
+  "column_break_nbtz",
+  "machine_used",
+  "operator_name",
+  "shift_type",
+  "supervisor_name",
+  "item_details_section",
+  "hourly_production_item",
+  "section_break_ejdt",
+  "total_consumption_qty",
+  "column_break_jwws",
+  "column_break_ttrc",
+  "column_break_ikje"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_d0rz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "work_order",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Work Order",
+   "options": "Work Order",
+   "reqd": 1
+  },
+  {
+   "fieldname": "production_date",
+   "fieldtype": "Date",
+   "label": "Production Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "time_from",
+   "fieldtype": "Time",
+   "label": "Time From",
+   "reqd": 1
+  },
+  {
+   "fieldname": "time_to",
+   "fieldtype": "Time",
+   "label": "Time To",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Hourly Production",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_qbio",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "work_order.bom_no",
+   "fieldname": "bom_no",
+   "fieldtype": "Link",
+   "label": "BOM No",
+   "options": "BOM"
+  },
+  {
+   "fetch_from": "work_order.item_name",
+   "fieldname": "finished_good",
+   "fieldtype": "Link",
+   "label": "Finished Good",
+   "options": "Item"
+  },
+  {
+   "fieldname": "manufactured_qty",
+   "fieldtype": "Float",
+   "label": "Manufactured Qty",
+   "precision": "3",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_nbtz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "work_order.custom_machine_used",
+   "fieldname": "machine_used",
+   "fieldtype": "Data",
+   "label": "Machine Used"
+  },
+  {
+   "fetch_from": "work_order.custom_operator_name",
+   "fieldname": "operator_name",
+   "fieldtype": "Data",
+   "label": "Operator Name"
+  },
+  {
+   "fetch_from": "work_order.custom_shift_type",
+   "fieldname": "shift_type",
+   "fieldtype": "Data",
+   "label": "Shift Type"
+  },
+  {
+   "fetch_from": "work_order.custom_supervisor_name",
+   "fieldname": "supervisor_name",
+   "fieldtype": "Data",
+   "label": "Supervisor Name"
+  },
+  {
+   "fieldname": "item_details_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "hourly_production_item",
+   "fieldtype": "Table",
+   "label": "Raw Material",
+   "options": "Hourly Production Item Table"
+  },
+  {
+   "fieldname": "section_break_ejdt",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "total_consumption_qty",
+   "fieldtype": "Float",
+   "label": "Total Consumption Qty",
+   "precision": "3"
+  },
+  {
+   "fieldname": "column_break_jwws",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_ttrc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_ikje",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-11-17 17:10:13.560939",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "Hourly Production",
+ "owner": "ritika@clapgrow.com",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
