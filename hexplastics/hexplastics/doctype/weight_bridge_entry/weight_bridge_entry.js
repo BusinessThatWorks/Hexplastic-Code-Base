@@ -311,7 +311,7 @@ function calculate_weights(frm) {
     // Calculate difference in weights only if kata weight is provided
     let difference_in_weights = 0;
     if (frm.doc.actual_kata_weight && kata_weight > 0) {
-        difference_in_weights = total_weight - kata_weight;
+        difference_in_weights = kata_weight - total_weight;
         difference_in_weights = Math.round(difference_in_weights * 100) / 100;
     }
 
