@@ -81,13 +81,6 @@
    "options": "BOM"
   },
   {
-   "fetch_from": "work_order.item_name",
-   "fieldname": "finished_good",
-   "fieldtype": "Link",
-   "label": "Finished Good",
-   "options": "Item"
-  },
-  {
    "fieldname": "manufactured_qty",
    "fieldtype": "Float",
    "label": "Manufactured Qty",
@@ -153,13 +146,20 @@
   {
    "fieldname": "column_break_ikje",
    "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "work_order.production_item",
+   "fieldname": "finished_good",
+   "fieldtype": "Link",
+   "label": "Finished Good",
+   "options": "Work Order"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-17 17:10:13.560939",
+ "modified": "2025-11-20 11:49:34.549595",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Hourly Production",
