@@ -1,0 +1,292 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-28 14:41:08.600765",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_hdkj",
+  "amended_from",
+  "status",
+  "production_date",
+  "bom",
+  "manufacturing_item",
+  "column_break_wmso",
+  "shift_type",
+  "machine_used",
+  "operator_name",
+  "supervisor_name",
+  "finished_goods_details_section",
+  "qty_to_manufacture",
+  "manufactured_qty",
+  "gross_weight",
+  "column_break_nnxl",
+  "weight_of_fabric_packing",
+  "net_weight",
+  "section_break_knfm",
+  "material_consumption",
+  "section_break_siec",
+  "remarks",
+  "column_break_fozg",
+  "tab_3_tab",
+  "section_break_bkha",
+  "opening_qty_in_hopper_and_tray",
+  "column_break_lksb",
+  "add_or_used",
+  "closing_qty",
+  "mip_tab",
+  "opening_qty_mip",
+  "mip_generate",
+  "mip_generate_weight",
+  "column_break_baij",
+  "mip_used",
+  "closing_qty_mip",
+  "process_loss_weight"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_hdkj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Production Log Book",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "\nIn Process\nCompleted\nStopped\nCancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "bom",
+   "fieldtype": "Link",
+   "label": "BOM",
+   "options": "BOM",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "bom.item",
+   "fetch_if_empty": 1,
+   "fieldname": "manufacturing_item",
+   "fieldtype": "Data",
+   "label": "Manufacturing Item"
+  },
+  {
+   "fieldname": "column_break_wmso",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "production_date",
+   "fieldtype": "Date",
+   "label": "Production Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "shift_type",
+   "fieldtype": "Select",
+   "label": "Shift Type",
+   "options": "\nDay\nNight\nBoth",
+   "reqd": 1
+  },
+  {
+   "fieldname": "machine_used",
+   "fieldtype": "Select",
+   "label": "Machine Used",
+   "options": "\nMachine No 1\nMachine No 2\nMachine No 3\nMachine No 4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "operator_name",
+   "fieldtype": "Data",
+   "label": "Operator Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "supervisor_name",
+   "fieldtype": "Data",
+   "label": "Supervisor Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_knfm",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "material_consumption",
+   "fieldtype": "Table",
+   "label": "Material Consumption",
+   "options": "Production Log Book Table"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "section_break_siec",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_fozg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_bkha",
+   "fieldtype": "Section Break",
+   "label": "Hopper & Tray Details"
+  },
+  {
+   "fieldname": "opening_qty_in_hopper_and_tray",
+   "fieldtype": "Float",
+   "label": "Opening Qty",
+   "precision": "4"
+  },
+  {
+   "fieldname": "column_break_lksb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "add_or_used",
+   "fieldtype": "Float",
+   "label": "Add or Used",
+   "precision": "4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "closing_qty",
+   "fieldtype": "Float",
+   "label": "Closing Qty",
+   "precision": "4"
+  },
+  {
+   "fieldname": "mip_tab",
+   "fieldtype": "Tab Break",
+   "label": "MIP"
+  },
+  {
+   "fieldname": "opening_qty_mip",
+   "fieldtype": "Float",
+   "label": "Opening Qty",
+   "precision": "4"
+  },
+  {
+   "fieldname": "closing_qty_mip",
+   "fieldtype": "Float",
+   "label": "Closing Qty",
+   "precision": "4"
+  },
+  {
+   "fieldname": "column_break_baij",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "mip_generate",
+   "fieldtype": "Float",
+   "label": "MIP Generate",
+   "precision": "4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "mip_used",
+   "fieldtype": "Float",
+   "label": "MIP Used",
+   "precision": "4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tab_3_tab",
+   "fieldtype": "Tab Break",
+   "label": "Hopper & Tray"
+  },
+  {
+   "fieldname": "finished_goods_details_section",
+   "fieldtype": "Section Break",
+   "label": "Finished Goods Details"
+  },
+  {
+   "fieldname": "manufactured_qty",
+   "fieldtype": "Int",
+   "label": "Manufactured Qty"
+  },
+  {
+   "fieldname": "column_break_nnxl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gross_weight",
+   "fieldtype": "Float",
+   "label": "Gross Weight",
+   "precision": "4"
+  },
+  {
+   "fieldname": "weight_of_fabric_packing",
+   "fieldtype": "Float",
+   "label": "Weight of Fabric Packing",
+   "precision": "4"
+  },
+  {
+   "fieldname": "net_weight",
+   "fieldtype": "Float",
+   "label": "Net Weight",
+   "precision": "4"
+  },
+  {
+   "fieldname": "mip_generate_weight",
+   "fieldtype": "Float",
+   "label": "MIP Generate (Weight)",
+   "precision": "4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "process_loss_weight",
+   "fieldtype": "Float",
+   "label": "Process Loss (Weight)",
+   "precision": "4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "qty_to_manufacture",
+   "fieldtype": "Float",
+   "label": "Qty to Manufacture",
+   "precision": "4",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-11-28 17:48:31.264125",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "Production Log Book",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
