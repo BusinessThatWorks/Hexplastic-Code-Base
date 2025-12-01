@@ -10,6 +10,7 @@
   "item_name",
   "stock_uom",
   "source_warehouse",
+  "target_warhouse",
   "column_break_zdoh",
   "item_description",
   "section_break_tfgq",
@@ -17,7 +18,8 @@
   "issued",
   "column_break_mged",
   "consumption",
-  "closing_stock"
+  "closing_stock",
+  "in_qty"
  ],
  "fields": [
   {
@@ -97,13 +99,29 @@
    "fieldname": "stock_uom",
    "fieldtype": "Data",
    "label": "Stock UOM"
+  },
+  {
+   "columns": 1,
+   "fieldname": "target_warhouse",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Target Warhouse",
+   "options": "Warehouse"
+  },
+  {
+   "columns": 1,
+   "fieldname": "in_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "In Qty",
+   "precision": "4"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-11-28 16:12:28.637646",
+ "modified": "2025-12-01 17:01:29.468857",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Production Log Book Table",
