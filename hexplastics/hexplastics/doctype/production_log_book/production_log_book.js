@@ -69,6 +69,9 @@ frappe.ui.form.on("Production Log Book", {
 						// After BOM items are loaded, recalculate issued if qty_to_manufacture is present
 						recalculate_issued_for_material_consumption(frm);
 
+						// Also recalculate consumption if manufactured_qty is present
+						recalculate_consumption_for_material_consumption(frm);
+
 						// Show success message
 						frappe.show_alert(
 							{
@@ -111,10 +114,19 @@ frappe.ui.form.on("Production Log Book", {
 		recalculate_issued_for_material_consumption(frm);
 	},
 
+	// Trigger recalculation when manufactured_qty changes
+	manufactured_qty: function (frm) {
+		recalculate_consumption_for_material_consumption(frm);
+	},
+
 	// On form refresh, re-run calculation for safety (e.g., when loading an existing doc)
 	refresh: function (frm) {
 		if (frm.doc.bom && frm.doc.qty_to_manufacture) {
 			recalculate_issued_for_material_consumption(frm);
+		}
+
+		if (frm.doc.bom && frm.doc.manufactured_qty) {
+			recalculate_consumption_for_material_consumption(frm);
 		}
 	},
 });
@@ -124,6 +136,7 @@ frappe.ui.form.on("Production Log Book Table", {
 	// When item_code is changed manually, recompute issued
 	item_code: function (frm, cdt, cdn) {
 		recalculate_issued_for_material_consumption(frm);
+		recalculate_consumption_for_material_consumption(frm);
 	},
 });
 
@@ -198,6 +211,84 @@ function recalculate_issued_for_material_consumption(frm) {
 
 				// If anything is missing or invalid, issued remains 0 as per requirement
 				frappe.model.set_value(row.doctype, row.name, "issued", issued || 0);
+			});
+
+			frm.refresh_field("material_consumption");
+		},
+	});
+}
+
+/**
+ * Recalculate 'consumption' for all rows in material_consumption child table.
+ *
+ * Logic:
+ *   base = item_quantity_from_BOM_items / BOM_main_quantity
+ *   consumption = base * manufactured_qty
+ *
+ * If any required value is missing or invalid, consumption is set to 0.
+ * Division by zero is prevented by checking BOM_main_quantity > 0.
+ */
+function recalculate_consumption_for_material_consumption(frm) {
+	const bom = frm.doc.bom;
+	const manufactured_qty = flt(frm.doc.manufactured_qty);
+
+	// If essential inputs are missing, set consumption = 0 for all rows and exit
+	if (!bom || !manufactured_qty) {
+		(frm.doc.material_consumption || []).forEach((row) => {
+			frappe.model.set_value(row.doctype, row.name, "consumption", 0);
+		});
+		return;
+	}
+
+	const rows = frm.doc.material_consumption || [];
+	if (!rows.length) {
+		return;
+	}
+
+	// Collect item codes in the child table
+	const item_codes = rows.map((row) => row.item_code).filter((c) => !!c);
+
+	if (!item_codes.length) {
+		// No valid item codes; set consumption = 0
+		rows.forEach((row) => {
+			frappe.model.set_value(row.doctype, row.name, "consumption", 0);
+		});
+		return;
+	}
+
+	// Reuse the same server method that provides BOM main quantity and item quantities
+	frappe.call({
+		method: "hexplastics.api.production_log_book.get_bom_item_quantities",
+		args: {
+			bom_name: bom,
+			item_codes: item_codes,
+		},
+		freeze: false,
+		callback: function (r) {
+			const data = r.message || {};
+			const bom_qty = flt(data.bom_qty);
+
+			// Prepare a quick lookup for item quantities from BOM
+			const qty_by_item = {};
+			(data.items || []).forEach((item) => {
+				if (item.item_code) {
+					qty_by_item[item.item_code] = flt(item.qty);
+				}
+			});
+
+			rows.forEach((row) => {
+				const item_code = row.item_code;
+				const bom_item_qty = qty_by_item[item_code] || 0;
+				let consumption = 0;
+
+				// Compute only if both BOM main quantity and item quantity are valid
+				if (bom_qty > 0 && bom_item_qty > 0 && manufactured_qty > 0) {
+					const base = bom_item_qty / bom_qty; // safe: bom_qty > 0
+					consumption = base * manufactured_qty;
+				}
+
+				// If anything is missing or invalid, consumption remains 0 as per requirement
+				frappe.model.set_value(row.doctype, row.name, "consumption", consumption || 0);
 			});
 
 			frm.refresh_field("material_consumption");
