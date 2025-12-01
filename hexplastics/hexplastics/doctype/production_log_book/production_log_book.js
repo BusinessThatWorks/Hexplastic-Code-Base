@@ -5,9 +5,6 @@ frappe.ui.form.on("Production Log Book", {
 	bom: function (frm) {
 		// When BOM field changes, fetch and populate BOM items
 		if (frm.doc.bom) {
-			// Show loading indicator
-			frm.dashboard.add_indicator(__("Fetching BOM items..."), "blue");
-
 			// Clear existing rows in material_consumption table
 			frm.clear_table("material_consumption");
 
@@ -91,13 +88,9 @@ frappe.ui.form.on("Production Log Book", {
 							3
 						);
 					}
-
-					// Remove loading indicator
-					frm.dashboard.clear_indicator();
 				},
 				error: function (r) {
 					// Handle error
-					frm.dashboard.clear_indicator();
 					frappe.msgprint({
 						title: __("Error"),
 						message: __("Failed to fetch BOM items. Please try again."),
