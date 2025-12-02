@@ -5,15 +5,15 @@ from frappe import _
 
 
 @frappe.whitelist()
-def get_bom_items(bom_name):
+def get_bom_items_only(bom_name):
     """
-    Fetch all items from a BOM and return them for populating the Production Log Book Table.
+    Fetch only BOM Items (from BOM Item child table) for populating the Production Log Book Table.
 
     Args:
         bom_name: Name of the BOM document
 
     Returns:
-        list: List of dictionaries containing item_code, qty, uom, and description
+        list: List of dictionaries containing item_code, qty, uom, description, item_name
     """
     try:
         if not bom_name:
@@ -31,8 +31,7 @@ def get_bom_items(bom_name):
             order_by="idx",
         )
 
-        # Return the items
-        return bom_items
+        return bom_items or []
 
     except frappe.DoesNotExistError:
         frappe.throw(_("BOM {0} does not exist").format(bom_name))
@@ -41,6 +40,99 @@ def get_bom_items(bom_name):
             message=frappe.get_traceback(), title=_("Error fetching BOM items")
         )
         frappe.throw(_("Error fetching BOM items"))
+
+
+@frappe.whitelist()
+def get_bom_main_and_scrap_items(bom_name):
+    """
+    Fetch BOM main item and BOM Scrap Items for populating the Production Log Book Table.
+    This is called when manufactured_qty is filled.
+
+    Args:
+        bom_name: Name of the BOM document
+
+    Returns:
+        dict: {
+            "main_item_code": <main item code from BOM> or None,
+            "items": [
+                {"item_code": "...", "qty": ..., "uom": "...", "description": "...", "item_name": "..."},
+                ...
+            ]
+        }
+    """
+    try:
+        if not bom_name:
+            return {"main_item_code": None, "items": []}
+
+        # Validate that BOM exists
+        if not frappe.db.exists("BOM", bom_name):
+            frappe.throw(_("BOM {0} does not exist").format(bom_name))
+
+        all_items = []
+        main_item_code = None
+
+        # 1. Fetch the main item from BOM doctype
+        bom_doc = frappe.get_doc("BOM", bom_name)
+        if bom_doc.item:
+            main_item_code = bom_doc.item
+            # Get item details if item exists
+            if frappe.db.exists("Item", bom_doc.item):
+                item_doc = frappe.get_doc("Item", bom_doc.item)
+                main_item = {
+                    "item_code": bom_doc.item,
+                    "item_name": item_doc.item_name,
+                    "qty": bom_doc.quantity or 1,
+                    "uom": bom_doc.uom or item_doc.stock_uom,
+                    "description": item_doc.description,
+                }
+                all_items.append(main_item)
+            else:
+                # Item doesn't exist, but still add it with basic info
+                main_item = {
+                    "item_code": bom_doc.item,
+                    "item_name": bom_doc.item,
+                    "qty": bom_doc.quantity or 1,
+                    "uom": bom_doc.uom or "",
+                    "description": "",
+                }
+                all_items.append(main_item)
+
+        # 2. Fetch BOM Scrap Items from the BOM Scrap Item child table
+        # Note: BOM Scrap Item has stock_uom (not uom) and no description field
+        bom_scrap_items = frappe.get_all(
+            "BOM Scrap Item",
+            filters={"parent": bom_name},
+            fields=["item_code", "stock_qty", "stock_uom", "item_name"],
+            order_by="idx",
+        )
+
+        # Normalize field names for consistency with BOM Items
+        for item in bom_scrap_items:
+            # Rename stock_qty to qty for consistency with BOM Items
+            if "stock_qty" in item:
+                item["qty"] = item.pop("stock_qty")
+            # Rename stock_uom to uom for consistency with BOM Items
+            if "stock_uom" in item:
+                item["uom"] = item.pop("stock_uom")
+            # Add description from Item master if item_code exists
+            if item.get("item_code") and frappe.db.exists("Item", item["item_code"]):
+                item["description"] = (
+                    frappe.db.get_value("Item", item["item_code"], "description") or ""
+                )
+            else:
+                item["description"] = ""
+            all_items.append(item)
+
+        return {"main_item_code": main_item_code, "items": all_items}
+
+    except frappe.DoesNotExistError:
+        frappe.throw(_("BOM {0} does not exist").format(bom_name))
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching BOM main and scrap items"),
+        )
+        frappe.throw(_("Error fetching BOM main and scrap items"))
 
 
 @frappe.whitelist()

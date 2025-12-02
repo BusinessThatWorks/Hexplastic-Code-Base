@@ -3,65 +3,24 @@
 
 frappe.ui.form.on("Production Log Book", {
 	bom: function (frm) {
-		// When BOM field changes, fetch and populate BOM items
+		// When BOM field changes, fetch and populate ONLY BOM Items
+		// Clear cached main item code when BOM changes
+		frm._bom_main_item_code = null;
+
 		if (frm.doc.bom) {
 			// Clear existing rows in material_consumption table
 			frm.clear_table("material_consumption");
 
-			// Fetch BOM items from server
+			// Fetch only BOM Items from server
 			frappe.call({
-				method: "hexplastics.api.production_log_book.get_bom_items",
+				method: "hexplastics.api.production_log_book.get_bom_items_only",
 				args: {
 					bom_name: frm.doc.bom,
 				},
 				callback: function (r) {
 					if (r.message && r.message.length > 0) {
-						// Track added item codes to prevent duplicates
-						const added_items = new Set();
-
-						// Add each BOM item to the child table
-						r.message.forEach(function (item) {
-							// Skip if item_code is already added (prevent duplicates)
-							if (item.item_code && !added_items.has(item.item_code)) {
-								let row = frm.add_child("material_consumption");
-
-								// Set item_code using frappe.model.set_value to trigger auto-fetch
-								// This will auto-fetch item_name, stock_uom, item_description from Item master
-								frappe.model.set_value(
-									row.doctype,
-									row.name,
-									"item_code",
-									item.item_code
-								);
-
-								// Do NOT set 'issued' from BOM qty directly.
-								// 'issued' will be computed based on qty_to_manufacture and BOM ratios.
-								frappe.model.set_value(row.doctype, row.name, "issued", 0);
-
-								// Set UOM from BOM if provided (will override auto-fetched value)
-								if (item.uom) {
-									frappe.model.set_value(
-										row.doctype,
-										row.name,
-										"stock_uom",
-										item.uom
-									);
-								}
-
-								// Set description from BOM if provided (will override auto-fetched value)
-								if (item.description) {
-									frappe.model.set_value(
-										row.doctype,
-										row.name,
-										"item_description",
-										item.description
-									);
-								}
-
-								// Mark item as added
-								added_items.add(item.item_code);
-							}
-						});
+						// Add BOM items to the child table
+						add_items_to_table(frm, r.message);
 
 						// Refresh the child table to show new rows
 						frm.refresh_field("material_consumption");
@@ -72,10 +31,15 @@ frappe.ui.form.on("Production Log Book", {
 						// Also recalculate consumption if manufactured_qty is present
 						recalculate_consumption_for_material_consumption(frm);
 
+						// If manufactured_qty is already filled, also fetch main item and scrap items
+						if (frm.doc.manufactured_qty) {
+							fetch_and_append_main_and_scrap_items(frm);
+						}
+
 						// Show success message
 						frappe.show_alert(
 							{
-								message: __("{0} items added from BOM", [r.message.length]),
+								message: __("{0} BOM items added", [r.message.length]),
 								indicator: "green",
 							},
 							3
@@ -103,9 +67,10 @@ frappe.ui.form.on("Production Log Book", {
 				},
 			});
 		} else {
-			// If BOM is cleared, clear the child table and reset issued
+			// If BOM is cleared, clear the child table and cached main item code
 			frm.clear_table("material_consumption");
 			frm.refresh_field("material_consumption");
+			frm._bom_main_item_code = null;
 		}
 	},
 
@@ -116,7 +81,31 @@ frappe.ui.form.on("Production Log Book", {
 
 	// Trigger recalculation when manufactured_qty changes
 	manufactured_qty: function (frm) {
+		// Recalculate consumption
 		recalculate_consumption_for_material_consumption(frm);
+
+		// If manufactured_qty is filled and BOM exists
+		if (frm.doc.manufactured_qty && frm.doc.bom) {
+			// Check if main item already exists in the table
+			const rows = frm.doc.material_consumption || [];
+			let main_item_exists = false;
+
+			// Try to get main item code from cached value or check if any row might be main item
+			if (frm._bom_main_item_code) {
+				main_item_exists = rows.some((row) => row.item_code === frm._bom_main_item_code);
+			}
+
+			if (main_item_exists) {
+				// Main item exists, just update its in_qty
+				update_main_item_in_qty(frm);
+			} else {
+				// Main item doesn't exist, fetch and add it (along with scrap items)
+				fetch_and_append_main_and_scrap_items(frm);
+			}
+		} else {
+			// If manufactured_qty is cleared, update main item in_qty to 0 (if exists)
+			update_main_item_in_qty(frm);
+		}
 	},
 
 	// On form refresh, re-run calculation for safety (e.g., when loading an existing doc)
@@ -127,6 +116,8 @@ frappe.ui.form.on("Production Log Book", {
 
 		if (frm.doc.bom && frm.doc.manufactured_qty) {
 			recalculate_consumption_for_material_consumption(frm);
+			// Ensure main item in_qty is updated if manufactured_qty exists
+			update_main_item_in_qty(frm);
 		}
 	},
 });
@@ -139,6 +130,193 @@ frappe.ui.form.on("Production Log Book Table", {
 		recalculate_consumption_for_material_consumption(frm);
 	},
 });
+
+/**
+ * Helper function to add items to the material_consumption child table.
+ * Prevents duplicate entries based on item_code.
+ * Auto-fills in_qty for main item with manufactured_qty value.
+ *
+ * @param {Object} frm - The form object
+ * @param {Array} items - Array of item objects to add
+ * @param {string} main_item_code - The main item code from BOM (optional)
+ * @returns {number} - Number of items actually added (excluding duplicates)
+ */
+function add_items_to_table(frm, items, main_item_code = null) {
+	if (!items || items.length === 0) {
+		return 0;
+	}
+
+	// Get existing item codes in the table to prevent duplicates
+	const existing_item_codes = new Set();
+	(frm.doc.material_consumption || []).forEach((row) => {
+		if (row.item_code) {
+			existing_item_codes.add(row.item_code);
+		}
+	});
+
+	let added_count = 0;
+	const manufactured_qty = flt(frm.doc.manufactured_qty) || 0;
+
+	// Add each item to the child table
+	items.forEach(function (item) {
+		// Skip if item_code is missing or already exists
+		if (!item.item_code || existing_item_codes.has(item.item_code)) {
+			return;
+		}
+
+		let row = frm.add_child("material_consumption");
+
+		// Set item_code using frappe.model.set_value to trigger auto-fetch
+		// This will auto-fetch item_name, stock_uom, item_description from Item master
+		frappe.model.set_value(row.doctype, row.name, "item_code", item.item_code);
+
+		// Do NOT set 'issued' from BOM qty directly.
+		// 'issued' will be computed based on qty_to_manufacture and BOM ratios.
+		frappe.model.set_value(row.doctype, row.name, "issued", 0);
+
+		// Set UOM from BOM if provided (will override auto-fetched value)
+		if (item.uom) {
+			frappe.model.set_value(row.doctype, row.name, "stock_uom", item.uom);
+		}
+
+		// Set description from BOM if provided (will override auto-fetched value)
+		if (item.description) {
+			frappe.model.set_value(row.doctype, row.name, "item_description", item.description);
+		}
+
+		// Auto-fill in_qty for main item only with manufactured_qty
+		// Check if this is the main item by comparing item_code
+		if (main_item_code && item.item_code === main_item_code && manufactured_qty > 0) {
+			frappe.model.set_value(row.doctype, row.name, "in_qty", manufactured_qty);
+		}
+
+		// Mark item as added
+		existing_item_codes.add(item.item_code);
+		added_count++;
+	});
+
+	return added_count;
+}
+
+/**
+ * Fetch BOM main item and scrap items, then append them to the material_consumption table.
+ * This is called when manufactured_qty is filled.
+ * Auto-fills in_qty for main item with manufactured_qty value.
+ *
+ * @param {Object} frm - The form object
+ */
+function fetch_and_append_main_and_scrap_items(frm) {
+	if (!frm.doc.bom) {
+		return;
+	}
+
+	// Fetch main item and scrap items from server
+	frappe.call({
+		method: "hexplastics.api.production_log_book.get_bom_main_and_scrap_items",
+		args: {
+			bom_name: frm.doc.bom,
+		},
+		callback: function (r) {
+			if (r.message && r.message.items && r.message.items.length > 0) {
+				const main_item_code = r.message.main_item_code;
+				const items = r.message.items;
+
+				// Store main_item_code in form for later reference
+				frm._bom_main_item_code = main_item_code;
+
+				// Append items to the table (without removing existing BOM Items)
+				// Pass main_item_code to auto-fill in_qty for main item
+				const added_count = add_items_to_table(frm, items, main_item_code);
+
+				// Refresh the child table to show new rows
+				frm.refresh_field("material_consumption");
+
+				// Recalculate consumption after adding new items
+				recalculate_consumption_for_material_consumption(frm);
+
+				// Show success message if items were added
+				if (added_count > 0) {
+					frappe.show_alert(
+						{
+							message: __("{0} item(s) added (main item and scrap items)", [
+								added_count,
+							]),
+							indicator: "green",
+						},
+						3
+					);
+				}
+			}
+		},
+		error: function (r) {
+			// Handle error silently or show a message
+			console.error("Error fetching BOM main and scrap items:", r);
+		},
+	});
+}
+
+/**
+ * Update the in_qty field for the main item in Material Consumption Table
+ * when manufactured_qty changes. Only updates the main item, not BOM items or scrap items.
+ *
+ * @param {Object} frm - The form object
+ */
+function update_main_item_in_qty(frm) {
+	if (!frm.doc.bom) {
+		return;
+	}
+
+	// Get the main item code from BOM
+	// First try to get it from cached value, otherwise fetch from BOM
+	if (!frm._bom_main_item_code) {
+		frappe.call({
+			method: "hexplastics.api.production_log_book.get_bom_main_and_scrap_items",
+			args: {
+				bom_name: frm.doc.bom,
+			},
+			callback: function (r) {
+				if (r.message && r.message.main_item_code) {
+					frm._bom_main_item_code = r.message.main_item_code;
+					update_main_item_in_qty_in_table(frm, r.message.main_item_code);
+				}
+			},
+		});
+	} else {
+		update_main_item_in_qty_in_table(frm, frm._bom_main_item_code);
+	}
+}
+
+/**
+ * Helper function to update in_qty for main item in the material_consumption table.
+ *
+ * @param {Object} frm - The form object
+ * @param {string} main_item_code - The main item code from BOM
+ */
+function update_main_item_in_qty_in_table(frm, main_item_code) {
+	if (!main_item_code) {
+		return;
+	}
+
+	const manufactured_qty = flt(frm.doc.manufactured_qty) || 0;
+	const rows = frm.doc.material_consumption || [];
+
+	// Find the row with the main item code and update its in_qty
+	let main_item_found = false;
+	rows.forEach((row) => {
+		if (row.item_code === main_item_code) {
+			frappe.model.set_value(row.doctype, row.name, "in_qty", manufactured_qty);
+			main_item_found = true;
+		}
+	});
+
+	// If main item not found in table but manufactured_qty exists, fetch and add it
+	if (!main_item_found && manufactured_qty > 0) {
+		fetch_and_append_main_and_scrap_items(frm);
+	} else if (main_item_found) {
+		// Refresh the field to show updated in_qty
+		frm.refresh_field("material_consumption");
+	}
+}
 
 /**
  * Recalculate 'issued' for all rows in material_consumption child table.
