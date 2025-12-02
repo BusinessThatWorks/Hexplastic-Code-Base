@@ -24,7 +24,8 @@
   "section_break_yqsk",
   "weight_of_finished_material",
   "weight_of_packing_material",
-  "per_of_loss_or_profit",
+  "per_of_loss",
+  "per_of_profit",
   "column_break_uqjl",
   "total_weight",
   "actual_kata_weight",
@@ -154,18 +155,26 @@
    "options": "Weight Bridge Entry Purchase Invoice"
   },
   {
-   "fieldname": "per_of_loss_or_profit",
+   "fieldname": "per_of_loss",
    "fieldtype": "Float",
-   "label": "% Loss/Profit",
-   "precision": "2"
+   "label": "% Loss",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "per_of_profit",
+   "fieldtype": "Float",
+   "label": "% Profit",
+   "precision": "2",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-29 11:20:28.346962",
- "modified_by": "Administrator",
+ "modified": "2025-12-02 16:24:56.091117",
+ "modified_by": "ritika@clapgrow.com",
  "module": "Hexplastics",
  "name": "Weight Bridge Entry",
  "naming_rule": "Expression",
