@@ -10,8 +10,8 @@ from hexplastics.utils.stock_utils import get_item_stock_quantity
 
 def check_stock_levels_and_send_alert():
 	"""
-	Check all items' stock quantity against safety_stock across 3 warehouses.
-	Sum stock from: Production - HEX, Raw Material - HEX, Finished Goods - HEX
+	Check all items' stock quantity against safety_stock in a specific warehouse.
+	Currently we only check: Raw Material - HEX
 	Send red alert email if total stock < safety_stock, else send green alert.
 	Runs at 9:00 AM daily.
 	"""
@@ -19,8 +19,8 @@ def check_stock_levels_and_send_alert():
 	sys.stdout.flush()
 
 	try:
-		# List of warehouses to check
-		warehouses = ["Production - HEX", "Raw Material - HEX", "Finished Goods - HEX"]
+		# Warehouse to check (business rule: only Raw Material - HEX should be considered)
+		warehouses = ["Raw Material - HEX"]
 
 		# Get all items with safety_stock > 0
 		items = frappe.get_all(
@@ -36,22 +36,20 @@ def check_stock_levels_and_send_alert():
 
 		low_stock_items = []
 
-		# Check each item's stock across all 3 warehouses
+		# Check each item's stock in the configured warehouse(s)
 		for item in items:
 			item_code = item.name
 			safety_stock = item.safety_stock or 0
 
 			# Get stock quantity for this item from each warehouse and sum them
 			total_stock = 0
-			warehouse_stocks = {}
 
 			for warehouse in warehouses:
 				stock_data = get_item_stock_quantity(item_code=item_code, warehouse=warehouse)
 				warehouse_qty = stock_data.get("actual_qty", 0) or 0
-				warehouse_stocks[warehouse] = warehouse_qty
 				total_stock += warehouse_qty
 
-			# Check if total stock is less than safety_stock
+			# Check if stock in Raw Material - HEX is less than safety_stock
 			if total_stock < safety_stock:
 				low_stock_items.append(
 					{
@@ -59,7 +57,6 @@ def check_stock_levels_and_send_alert():
 						"item_name": item.item_name,
 						"safety_stock": safety_stock,
 						"current_stock": total_stock,
-						"warehouse_stocks": warehouse_stocks,  # Store individual warehouse stocks
 					}
 				)
 
@@ -73,7 +70,7 @@ def check_stock_levels_and_send_alert():
 			# Create HTML table for better formatting
 			message = f"""
 			<p>Dear Team,</p>
-			<p>The following items have stock quantity below their safety stock level across warehouses: <strong>{warehouse_list}</strong>:</p>
+			<p>The following items have stock quantity below their safety stock level in warehouse: <strong>{warehouse_list}</strong>:</p>
 			<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
 				<thead>
 					<tr style="background-color: #f0f0f0;">
@@ -82,7 +79,6 @@ def check_stock_levels_and_send_alert():
 						<th>Safety Stock</th>
 						<th>Total Current Stock</th>
 						<th>Shortage</th>
-						<th>Warehouse Breakdown</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -90,8 +86,6 @@ def check_stock_levels_and_send_alert():
 
 			for item in low_stock_items:
 				shortage = item["safety_stock"] - item["current_stock"]
-				warehouse_details = item.get("warehouse_stocks", {})
-				warehouse_breakdown = ", ".join([f"{wh}: {qty:.2f}" for wh, qty in warehouse_details.items()])
 				message += f"""
 					<tr>
 						<td>{item["item_code"]}</td>
@@ -99,7 +93,6 @@ def check_stock_levels_and_send_alert():
 						<td>{item["safety_stock"]:.2f}</td>
 						<td style="color: red; font-weight: bold;">{item["current_stock"]:.2f}</td>
 						<td style="color: red; font-weight: bold;">{shortage:.2f}</td>
-						<td>{warehouse_breakdown}</td>
 					</tr>
 				"""
 
@@ -114,7 +107,7 @@ def check_stock_levels_and_send_alert():
 			subject = "🟢 Stock Status: All Items Have Correct Stock"
 			message = f"""
 			<p>Dear Team,</p>
-			<p><strong style="color: green;">✅ All your items have correct stock across warehouses: {warehouse_list}.</strong></p>
+			<p><strong style="color: green;">✅ All your items have correct stock in warehouse: {warehouse_list}.</strong></p>
 			<p>All items meet or exceed their safety stock levels.</p>
 			<p>This is an automated alert from Hexplastics Stock Monitoring System.</p>
 			"""
