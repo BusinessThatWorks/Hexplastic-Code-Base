@@ -127,6 +127,50 @@ frappe.ui.form.on("Production Log Book", {
 
 		// Recalculate closing_stock for raw materials on form refresh
 		recalculate_closing_stock_for_raw_materials(frm);
+
+		// Recalculate Hopper & Tray closing quantity
+		calculate_hopper_closing_qty(frm);
+
+		// Recalculate MIP closing quantity
+		calculate_mip_closing_qty(frm);
+
+		// Make closing quantity fields read-only
+		make_closing_qty_fields_readonly(frm);
+	},
+
+	// When opening_qty_in_hopper_and_tray changes, recalculate closing qty
+	opening_qty_in_hopper_and_tray: function (frm) {
+		calculate_hopper_closing_qty(frm);
+	},
+
+	// When add_or_used changes, recalculate closing qty
+	add_or_used: function (frm) {
+		calculate_hopper_closing_qty(frm);
+	},
+
+	// When opening_qty_mip changes, recalculate closing qty
+	opening_qty_mip: function (frm) {
+		calculate_mip_closing_qty(frm);
+	},
+
+	// When mip_generate changes, recalculate closing qty
+	mip_generate: function (frm) {
+		calculate_mip_closing_qty(frm);
+	},
+
+	// When mip_used changes, recalculate closing qty
+	mip_used: function (frm) {
+		calculate_mip_closing_qty(frm);
+	},
+
+	// After form loads, ensure closing quantity fields are read-only
+	onload_post_render: function (frm) {
+		// Make closing quantity fields read-only
+		make_closing_qty_fields_readonly(frm);
+
+		// Recalculate closing quantities on form load
+		calculate_hopper_closing_qty(frm);
+		calculate_mip_closing_qty(frm);
 	},
 });
 
@@ -591,4 +635,61 @@ function recalculate_closing_stock_for_raw_materials(frm) {
 
 	// Refresh the field to show updated values
 	frm.refresh_field("material_consumption");
+}
+
+/**
+ * Calculate Hopper & Tray closing quantity.
+ * Formula: closing_qty = opening_qty_in_hopper_and_tray - add_or_used
+ *
+ * @param {Object} frm - The form object
+ */
+function calculate_hopper_closing_qty(frm) {
+	// Get values, defaulting to 0 if undefined or null
+	const opening_qty = flt(frm.doc.opening_qty_in_hopper_and_tray) || 0;
+	const add_or_used = flt(frm.doc.add_or_used) || 0;
+
+	// Calculate closing_qty: opening_qty - add_or_used
+	const closing_qty = opening_qty - add_or_used;
+
+	// Update the closing_qty field
+	frm.set_value("closing_qty", closing_qty);
+	frm.refresh_field("closing_qty");
+}
+
+/**
+ * Calculate MIP closing quantity.
+ * Formula: closing_qty_mip = opening_qty_mip + mip_generate - mip_used
+ *
+ * @param {Object} frm - The form object
+ */
+function calculate_mip_closing_qty(frm) {
+	// Get values, defaulting to 0 if undefined or null
+	const opening_qty = flt(frm.doc.opening_qty_mip) || 0;
+	const mip_generate = flt(frm.doc.mip_generate) || 0;
+	const mip_used = flt(frm.doc.mip_used) || 0;
+
+	// Calculate closing_qty_mip: opening_qty + mip_generate - mip_used
+	const closing_qty_mip = opening_qty + mip_generate - mip_used;
+
+	// Update the closing_qty_mip field
+	frm.set_value("closing_qty_mip", closing_qty_mip);
+	frm.refresh_field("closing_qty_mip");
+}
+
+/**
+ * Make closing quantity fields read-only dynamically.
+ * This ensures the fields remain read-only even after form refresh or field updates.
+ *
+ * @param {Object} frm - The form object
+ */
+function make_closing_qty_fields_readonly(frm) {
+	// Make hopper closing_qty read-only
+	if (frm.fields_dict.closing_qty) {
+		frm.set_df_property("closing_qty", "read_only", 1);
+	}
+
+	// Make MIP closing_qty_mip read-only
+	if (frm.fields_dict.closing_qty_mip) {
+		frm.set_df_property("closing_qty_mip", "read_only", 1);
+	}
 }

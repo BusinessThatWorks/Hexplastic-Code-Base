@@ -165,7 +165,8 @@
    "fieldname": "closing_qty",
    "fieldtype": "Float",
    "label": "Closing Qty",
-   "precision": "4"
+   "precision": "4",
+   "read_only": 1
   },
   {
    "fieldname": "mip_tab",
@@ -182,7 +183,8 @@
    "fieldname": "closing_qty_mip",
    "fieldtype": "Float",
    "label": "Closing Qty",
-   "precision": "4"
+   "precision": "4",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_baij",
