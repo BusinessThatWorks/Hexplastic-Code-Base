@@ -184,6 +184,11 @@ function add_items_to_table(frm, items, main_item_code = null) {
 			frappe.model.set_value(row.doctype, row.name, "item_description", item.description);
 		}
 
+		// Set item_type to distinguish BOM Item, Main Item, or Scrap Item
+		if (item.item_type) {
+			frappe.model.set_value(row.doctype, row.name, "item_type", item.item_type);
+		}
+
 		// Auto-fill in_qty for main item only with manufactured_qty
 		// Check if this is the main item by comparing item_code
 		if (main_item_code && item.item_code === main_item_code && manufactured_qty > 0) {

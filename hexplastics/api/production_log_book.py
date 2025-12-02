@@ -31,6 +31,10 @@ def get_bom_items_only(bom_name):
             order_by="idx",
         )
 
+        # Add item_type flag to each BOM item
+        for item in bom_items:
+            item["item_type"] = "BOM Item"
+
         return bom_items or []
 
     except frappe.DoesNotExistError:
@@ -84,6 +88,7 @@ def get_bom_main_and_scrap_items(bom_name):
                     "qty": bom_doc.quantity or 1,
                     "uom": bom_doc.uom or item_doc.stock_uom,
                     "description": item_doc.description,
+                    "item_type": "Main Item",
                 }
                 all_items.append(main_item)
             else:
@@ -94,6 +99,7 @@ def get_bom_main_and_scrap_items(bom_name):
                     "qty": bom_doc.quantity or 1,
                     "uom": bom_doc.uom or "",
                     "description": "",
+                    "item_type": "Main Item",
                 }
                 all_items.append(main_item)
 
@@ -121,6 +127,7 @@ def get_bom_main_and_scrap_items(bom_name):
                 )
             else:
                 item["description"] = ""
+            item["item_type"] = "Scrap Item"
             all_items.append(item)
 
         return {"main_item_code": main_item_code, "items": all_items}
