@@ -31,6 +31,9 @@ frappe.ui.form.on("Production Log Book", {
 						// Also recalculate consumption if manufactured_qty is present
 						recalculate_consumption_for_material_consumption(frm);
 
+						// Recalculate closing_stock for raw materials
+						recalculate_closing_stock_for_raw_materials(frm);
+
 						// If manufactured_qty is already filled, also fetch main item and scrap items
 						if (frm.doc.manufactured_qty) {
 							fetch_and_append_main_and_scrap_items(frm);
@@ -77,12 +80,14 @@ frappe.ui.form.on("Production Log Book", {
 	// Trigger recalculation when qty_to_manufacture changes
 	qty_to_manufacture: function (frm) {
 		recalculate_issued_for_material_consumption(frm);
+		// closing_stock will be recalculated automatically via issued event handler
 	},
 
 	// Trigger recalculation when manufactured_qty changes
 	manufactured_qty: function (frm) {
 		// Recalculate consumption
 		recalculate_consumption_for_material_consumption(frm);
+		// closing_stock will be recalculated automatically via consumption event handler
 
 		// If manufactured_qty is filled and BOM exists
 		if (frm.doc.manufactured_qty && frm.doc.bom) {
@@ -119,6 +124,9 @@ frappe.ui.form.on("Production Log Book", {
 			// Ensure main item in_qty is updated if manufactured_qty exists
 			update_main_item_in_qty(frm);
 		}
+
+		// Recalculate closing_stock for raw materials on form refresh
+		recalculate_closing_stock_for_raw_materials(frm);
 	},
 });
 
@@ -128,6 +136,26 @@ frappe.ui.form.on("Production Log Book Table", {
 	item_code: function (frm, cdt, cdn) {
 		recalculate_issued_for_material_consumption(frm);
 		recalculate_consumption_for_material_consumption(frm);
+		// Recalculate closing_stock after item_code change
+		recalculate_closing_stock_for_raw_materials(frm);
+	},
+
+	// When opp_in_plant changes, recalculate closing_stock for raw materials
+	opp_in_plant: function (frm, cdt, cdn) {
+		// Calculate closing_stock for the specific row if it's a raw material
+		calculate_closing_stock_for_row(frm, cdt, cdn);
+	},
+
+	// When issued changes (auto-calculated), recalculate closing_stock for raw materials
+	issued: function (frm, cdt, cdn) {
+		// Calculate closing_stock for the specific row if it's a raw material
+		calculate_closing_stock_for_row(frm, cdt, cdn);
+	},
+
+	// When consumption changes (auto-calculated or manual), recalculate closing_stock for raw materials
+	consumption: function (frm, cdt, cdn) {
+		// Calculate closing_stock for the specific row if it's a raw material
+		calculate_closing_stock_for_row(frm, cdt, cdn);
 	},
 });
 
@@ -238,6 +266,9 @@ function fetch_and_append_main_and_scrap_items(frm) {
 
 				// Recalculate consumption after adding new items
 				recalculate_consumption_for_material_consumption(frm);
+
+				// Recalculate closing_stock for raw materials
+				recalculate_closing_stock_for_raw_materials(frm);
 
 				// Show success message if items were added
 				if (added_count > 0) {
@@ -397,6 +428,9 @@ function recalculate_issued_for_material_consumption(frm) {
 			});
 
 			frm.refresh_field("material_consumption");
+
+			// Recalculate closing_stock for raw materials after issued is updated
+			recalculate_closing_stock_for_raw_materials(frm);
 		},
 	});
 }
@@ -475,6 +509,86 @@ function recalculate_consumption_for_material_consumption(frm) {
 			});
 
 			frm.refresh_field("material_consumption");
+
+			// Recalculate closing_stock for raw materials after consumption is updated
+			recalculate_closing_stock_for_raw_materials(frm);
 		},
 	});
+}
+
+/**
+ * Check if a row represents a raw material.
+ * A row is considered a raw material if item_type === "BOM Item".
+ *
+ * @param {Object} row - The child table row object
+ * @returns {boolean} - True if the row is a raw material, false otherwise
+ */
+function is_raw_material(row) {
+	return row && row.item_type === "BOM Item";
+}
+
+/**
+ * Calculate closing_stock for a specific row if it's a raw material.
+ * Formula: closing_stock = opp_in_plant + issued - consumption
+ *
+ * @param {Object} frm - The form object
+ * @param {string} cdt - Child doctype name
+ * @param {string} cdn - Child document name
+ */
+function calculate_closing_stock_for_row(frm, cdt, cdn) {
+	const row = locals[cdt][cdn];
+	if (!row) {
+		return;
+	}
+
+	// Only calculate closing_stock for raw materials (BOM Items)
+	if (!is_raw_material(row)) {
+		// For non-raw materials, set closing_stock to 0 or leave it as is
+		// You may want to clear it, but we'll leave it unchanged for now
+		return;
+	}
+
+	// Get values, defaulting to 0 if undefined or null
+	const opp_in_plant = flt(row.opp_in_plant) || 0;
+	const issued = flt(row.issued) || 0;
+	const consumption = flt(row.consumption) || 0;
+
+	// Calculate closing_stock: opening_in_plant + issued - consumption
+	const closing_stock = opp_in_plant + issued - consumption;
+
+	// Update the closing_stock field
+	frappe.model.set_value(cdt, cdn, "closing_stock", closing_stock);
+}
+
+/**
+ * Recalculate closing_stock for all raw material rows in the material_consumption table.
+ * Only applies to rows where item_type === "BOM Item".
+ * Formula: closing_stock = opp_in_plant + issued - consumption
+ *
+ * @param {Object} frm - The form object
+ */
+function recalculate_closing_stock_for_raw_materials(frm) {
+	const rows = frm.doc.material_consumption || [];
+	if (!rows.length) {
+		return;
+	}
+
+	// Calculate closing_stock for each raw material row
+	rows.forEach((row) => {
+		if (is_raw_material(row)) {
+			// Get values, defaulting to 0 if undefined or null
+			const opp_in_plant = flt(row.opp_in_plant) || 0;
+			const issued = flt(row.issued) || 0;
+			const consumption = flt(row.consumption) || 0;
+
+			// Calculate closing_stock: opening_in_plant + issued - consumption
+			const closing_stock = opp_in_plant + issued - consumption;
+
+			// Update the closing_stock field
+			frappe.model.set_value(row.doctype, row.name, "closing_stock", closing_stock);
+		}
+	});
+
+	// Refresh the field to show updated values
+	frm.refresh_field("material_consumption");
 }
