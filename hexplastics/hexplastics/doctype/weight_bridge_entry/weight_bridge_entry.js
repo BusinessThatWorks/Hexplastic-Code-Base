@@ -100,42 +100,6 @@ frappe.ui.form.on('Weight Bridge Entry', {
         }
     },
 
-    refresh: function (frm) {
-        // Handle field visibility based on checkbox states
-        if (frm.doc.purchase) {
-            frm.set_df_property('purchase_invoice_details', 'hidden', 0);
-            frm.set_df_property('purchase_invoice_details', 'reqd', 1);
-            frm.set_df_property('sales_invoice_details', 'hidden', 1);
-            frm.set_df_property('sales_invoice_details', 'reqd', 0);
-            frm.set_df_property('purpose', 'hidden', 1);
-            frm.set_df_property('purpose', 'reqd', 0);
-        } else if (frm.doc.sales) {
-            frm.set_df_property('sales_invoice_details', 'hidden', 0);
-            frm.set_df_property('sales_invoice_details', 'reqd', 1);
-            frm.set_df_property('purchase_invoice_details', 'hidden', 1);
-            frm.set_df_property('purchase_invoice_details', 'reqd', 0);
-            frm.set_df_property('purpose', 'hidden', 1);
-            frm.set_df_property('purpose', 'reqd', 0);
-        } else if (frm.doc.others) {
-            frm.set_df_property('purpose', 'hidden', 0);
-            frm.set_df_property('purpose', 'reqd', 1);
-            frm.set_df_property('purchase_invoice_details', 'hidden', 1);
-            frm.set_df_property('purchase_invoice_details', 'reqd', 0);
-            frm.set_df_property('sales_invoice_details', 'hidden', 1);
-            frm.set_df_property('sales_invoice_details', 'reqd', 0);
-        } else {
-            // All checkboxes unchecked - hide all conditional sections
-            frm.set_df_property('purchase_invoice_details', 'hidden', 1);
-            frm.set_df_property('sales_invoice_details', 'hidden', 1);
-            frm.set_df_property('purpose', 'hidden', 1);
-        }
-
-        // Set query filters to exclude already used invoices
-        setup_invoice_filters(frm);
-
-        // Calculate values on form load
-        calculate_weights(frm);
-    },
 
     weight_of_packing_material: function (frm) {
         // Round to 2 decimal places if value exists
@@ -221,6 +185,53 @@ frappe.ui.form.on('Weight Bridge Entry', {
     },
     sales_invoice_details_remove: function (frm) {
         recompute_finished_material_weight(frm);
+    },
+
+    difference_in_weights: function (frm) {
+        calculate_loss_profit(frm);
+    },
+    total_weight: function (frm) {
+        calculate_loss_profit(frm);
+    },
+
+    refresh: function (frm) {
+        // Handle field visibility based on checkbox states
+        if (frm.doc.purchase) {
+            frm.set_df_property('purchase_invoice_details', 'hidden', 0);
+            frm.set_df_property('purchase_invoice_details', 'reqd', 1);
+            frm.set_df_property('sales_invoice_details', 'hidden', 1);
+            frm.set_df_property('sales_invoice_details', 'reqd', 0);
+            frm.set_df_property('purpose', 'hidden', 1);
+            frm.set_df_property('purpose', 'reqd', 0);
+        } else if (frm.doc.sales) {
+            frm.set_df_property('sales_invoice_details', 'hidden', 0);
+            frm.set_df_property('sales_invoice_details', 'reqd', 1);
+            frm.set_df_property('purchase_invoice_details', 'hidden', 1);
+            frm.set_df_property('purchase_invoice_details', 'reqd', 0);
+            frm.set_df_property('purpose', 'hidden', 1);
+            frm.set_df_property('purpose', 'reqd', 0);
+        } else if (frm.doc.others) {
+            frm.set_df_property('purpose', 'hidden', 0);
+            frm.set_df_property('purpose', 'reqd', 1);
+            frm.set_df_property('purchase_invoice_details', 'hidden', 1);
+            frm.set_df_property('purchase_invoice_details', 'reqd', 0);
+            frm.set_df_property('sales_invoice_details', 'hidden', 1);
+            frm.set_df_property('sales_invoice_details', 'reqd', 0);
+        } else {
+            // All checkboxes unchecked - hide all conditional sections
+            frm.set_df_property('purchase_invoice_details', 'hidden', 1);
+            frm.set_df_property('sales_invoice_details', 'hidden', 1);
+            frm.set_df_property('purpose', 'hidden', 1);
+        }
+
+        // Set query filters to exclude already used invoices
+        setup_invoice_filters(frm);
+
+        // Calculate values on form load
+        calculate_weights(frm);
+
+        // Update loss/profit visibility and values
+        calculate_loss_profit(frm);
     }
 });
 
@@ -428,4 +439,54 @@ function fetch_used_invoices(current_doc_name, current_purchase_invoices, curren
             callback([], []);
         }
     });
+}
+
+function calculate_loss_profit(frm) {
+    let diff = Number(frm.doc.difference_in_weights) || 0;
+    let total = Number(frm.doc.total_weight) || 0;
+
+    // Calculate new values
+    let new_per_of_loss = 0;
+    let new_per_of_profit = 0;
+    let show_loss = false;
+    let show_profit = false;
+
+    if (total > 0) {
+        if (diff > 0) {
+            new_per_of_loss = (diff / total) * 100;
+            show_loss = true;
+            show_profit = false;
+        } else if (diff < 0) {
+            new_per_of_profit = (Math.abs(diff) / total) * 100;
+            show_loss = false;
+            show_profit = true;
+        } else {
+            show_loss = false;
+            show_profit = false;
+        }
+    }
+
+    // Round to avoid floating point comparison issues
+    new_per_of_loss = Math.round(new_per_of_loss * 100) / 100;
+    new_per_of_profit = Math.round(new_per_of_profit * 100) / 100;
+
+    // Get current values for comparison
+    let current_loss = Math.round((Number(frm.doc.per_of_loss) || 0) * 100) / 100;
+    let current_profit = Math.round((Number(frm.doc.per_of_profit) || 0) * 100) / 100;
+
+    // Only set values if they're different (prevents marking document as dirty unnecessarily)
+    if (current_loss !== new_per_of_loss) {
+        frm.set_value("per_of_loss", new_per_of_loss);
+    }
+    if (current_profit !== new_per_of_profit) {
+        frm.set_value("per_of_profit", new_per_of_profit);
+    }
+
+    // Update visibility (this doesn't mark document as dirty)
+    frm.toggle_display("per_of_loss", show_loss);
+    frm.toggle_display("per_of_profit", show_profit);
+
+    // Refresh fields to update display
+    frm.refresh_field("per_of_loss");
+    frm.refresh_field("per_of_profit");
 }
