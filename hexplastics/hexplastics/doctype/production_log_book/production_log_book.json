@@ -6,16 +6,17 @@
  "engine": "InnoDB",
  "field_order": [
   "section_break_hdkj",
-  "amended_from",
   "status",
   "production_date",
   "bom",
   "manufacturing_item",
+  "stock_entry_no",
   "column_break_wmso",
   "shift_type",
   "machine_used",
   "operator_name",
   "supervisor_name",
+  "amended_from",
   "finished_goods_details_section",
   "qty_to_manufacture",
   "manufactured_qty",
@@ -77,8 +78,9 @@
    "fetch_from": "bom.item",
    "fetch_if_empty": 1,
    "fieldname": "manufacturing_item",
-   "fieldtype": "Data",
-   "label": "Manufacturing Item"
+   "fieldtype": "Link",
+   "label": "Manufacturing Item",
+   "options": "Item"
   },
   {
    "fieldname": "column_break_wmso",
@@ -261,13 +263,19 @@
    "label": "Qty to Manufacture",
    "precision": "4",
    "reqd": 1
+  },
+  {
+   "fieldname": "stock_entry_no",
+   "fieldtype": "Link",
+   "label": "Stock Entry No",
+   "options": "Stock Entry"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-28 17:48:31.264125",
+ "modified": "2025-12-03 17:03:07.972274",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Production Log Book",

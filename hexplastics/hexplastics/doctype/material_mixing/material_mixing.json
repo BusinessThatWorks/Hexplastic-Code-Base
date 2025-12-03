@@ -1,0 +1,179 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-12-03 16:35:15.329621",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_9dpu",
+  "mixing_date",
+  "time_from",
+  "time_to",
+  "production_log_no",
+  "column_break_jghq",
+  "manufacturing_item",
+  "bom",
+  "column_break_spqh",
+  "shift_type",
+  "machine_used",
+  "operator_name",
+  "supervisor_name",
+  "amended_from",
+  "section_break_lbxz",
+  "table_fuhw",
+  "section_break_jacw",
+  "total_mixed_qty",
+  "column_break_qghq",
+  "column_break_qimx",
+  "column_break_qrjc"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_9dpu",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Material Mixing",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "production_log_no",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Production Log No",
+   "options": "Production Log Book",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_jghq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "production_log_no.shift_type",
+   "fieldname": "shift_type",
+   "fieldtype": "Data",
+   "label": "Shift Type"
+  },
+  {
+   "fetch_from": "production_log_no.machine_used",
+   "fieldname": "machine_used",
+   "fieldtype": "Data",
+   "label": "Machine Used"
+  },
+  {
+   "fetch_from": "production_log_no.operator_name",
+   "fieldname": "operator_name",
+   "fieldtype": "Data",
+   "label": "Operator Name"
+  },
+  {
+   "fetch_from": "production_log_no.supervisor_name",
+   "fieldname": "supervisor_name",
+   "fieldtype": "Data",
+   "label": "Supervisor Name"
+  },
+  {
+   "fieldname": "section_break_lbxz",
+   "fieldtype": "Section Break",
+   "label": "Material Mix"
+  },
+  {
+   "fieldname": "table_fuhw",
+   "fieldtype": "Table",
+   "label": "Raw Material Details",
+   "options": "Material Mixing Item Table"
+  },
+  {
+   "fieldname": "mixing_date",
+   "fieldtype": "Date",
+   "label": "Mixing Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "time_from",
+   "fieldtype": "Time",
+   "label": "Time From",
+   "reqd": 1
+  },
+  {
+   "fieldname": "time_to",
+   "fieldtype": "Time",
+   "label": "Time To",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_jacw",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "total_mixed_qty",
+   "fieldtype": "Float",
+   "label": "Total Mixed Qty",
+   "precision": "4"
+  },
+  {
+   "fieldname": "column_break_qghq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_qimx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_qrjc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "production_log_no.manufacturing_item",
+   "fieldname": "manufacturing_item",
+   "fieldtype": "Link",
+   "label": "Manufacturing Item",
+   "options": "Item"
+  },
+  {
+   "fetch_from": "production_log_no.bom",
+   "fieldname": "bom",
+   "fieldtype": "Link",
+   "label": "BOM",
+   "options": "BOM"
+  },
+  {
+   "fieldname": "column_break_spqh",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-12-03 17:01:16.298354",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "Material Mixing",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
