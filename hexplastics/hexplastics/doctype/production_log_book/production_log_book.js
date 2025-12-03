@@ -177,10 +177,15 @@ frappe.ui.form.on("Production Log Book", {
 
 			// Recalculate MIP closing quantity
 			calculate_mip_closing_qty(frm);
+
+			// Recalculate net_weight
+			calculate_net_weight(frm);
 		}
 
 		// Make closing quantity fields read-only
 		make_closing_qty_fields_readonly(frm);
+		// Make net_weight read-only
+		make_net_weight_readonly(frm);
 	},
 
 	// When opening_qty_in_hopper_and_tray changes, recalculate closing qty
@@ -208,14 +213,27 @@ frappe.ui.form.on("Production Log Book", {
 		calculate_mip_closing_qty(frm);
 	},
 
+	// When gross_weight changes, recalculate net_weight
+	gross_weight: function (frm) {
+		calculate_net_weight(frm);
+	},
+
+	// When weight_of_fabric_packing changes, recalculate net_weight
+	weight_of_fabric_packing: function (frm) {
+		calculate_net_weight(frm);
+	},
+
 	// After form loads, ensure closing quantity fields are read-only
 	onload_post_render: function (frm) {
 		// Make closing quantity fields read-only
 		make_closing_qty_fields_readonly(frm);
+		// Make net_weight read-only
+		make_net_weight_readonly(frm);
 		// Only recalculate closing quantities for draft docs
 		if (frm.doc.docstatus === 0) {
 			calculate_hopper_closing_qty(frm);
 			calculate_mip_closing_qty(frm);
+			calculate_net_weight(frm);
 		}
 	},
 });
@@ -709,6 +727,11 @@ function calculate_hopper_closing_qty(frm) {
  * @param {Object} frm - The form object
  */
 function calculate_mip_closing_qty(frm) {
+	// Skip calculation for submitted documents
+	if (frm.doc.docstatus === 1) {
+		return;
+	}
+
 	// Get values, defaulting to 0 if undefined or null
 	const opening_qty = flt(frm.doc.opening_qty_mip) || 0;
 	const mip_generate = flt(frm.doc.mip_generate) || 0;
@@ -720,6 +743,30 @@ function calculate_mip_closing_qty(frm) {
 	// Update the closing_qty_mip field
 	frm.set_value("closing_qty_mip", closing_qty_mip);
 	frm.refresh_field("closing_qty_mip");
+}
+
+/**
+ * Calculate net weight.
+ * Formula: net_weight = gross_weight - weight_of_fabric_packing
+ *
+ * @param {Object} frm - The form object
+ */
+function calculate_net_weight(frm) {
+	// Skip calculation for submitted documents
+	if (frm.doc.docstatus === 1) {
+		return;
+	}
+
+	// Get values, defaulting to 0 if undefined or null
+	const gross_weight = flt(frm.doc.gross_weight) || 0;
+	const weight_of_fabric_packing = flt(frm.doc.weight_of_fabric_packing) || 0;
+
+	// Calculate net_weight: gross_weight - weight_of_fabric_packing
+	const net_weight = gross_weight - weight_of_fabric_packing;
+
+	// Update the net_weight field
+	frm.set_value("net_weight", net_weight);
+	frm.refresh_field("net_weight");
 }
 
 /**
@@ -918,5 +965,18 @@ function make_closing_qty_fields_readonly(frm) {
 	// Make MIP closing_qty_mip read-only
 	if (frm.fields_dict.closing_qty_mip) {
 		frm.set_df_property("closing_qty_mip", "read_only", 1);
+	}
+}
+
+/**
+ * Make net_weight field read-only dynamically.
+ * This ensures the field remains read-only even after form refresh or field updates.
+ *
+ * @param {Object} frm - The form object
+ */
+function make_net_weight_readonly(frm) {
+	// Make net_weight read-only
+	if (frm.fields_dict.net_weight) {
+		frm.set_df_property("net_weight", "read_only", 1);
 	}
 }
