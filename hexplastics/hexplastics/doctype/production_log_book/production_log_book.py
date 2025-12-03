@@ -3,6 +3,7 @@
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import flt
 
 
 class ProductionLogBook(Document):
@@ -74,18 +75,25 @@ def _add_items_from_material_row(stock_entry, row) -> None:
     - If row.source_warehouse exists -> RAW MATERIAL row (s_warehouse, qty = consumption)
     - If row.target_warehouse exists -> MAIN / SCRAP row (t_warehouse, qty = in_qty)
     - Always set rate to 0
-    - Validate that warehouse is not blank and qty > 0
+    - Validate that warehouse is not blank and qty >= 0 (only negative values are blocked)
+    - Skip creating Stock Entry items when qty is 0 (no error thrown)
     """
 
     # RAW MATERIAL: source warehouse
     if getattr(row, "source_warehouse", None):
-        # For raw material rows, qty must be an integer (no fractions)
-        qty = int(row.consumption or 0)
-        if qty <= 0:
+        # Use flt() to preserve decimal values (0.1234, 0.0, etc.)
+        qty = flt(row.consumption or 0)
+
+        # Only block negative values; allow 0 and positive decimals
+        if qty < 0:
             frappe.throw(
                 f"Row for Item {row.item_code or ''}: "
-                "Consumption must be greater than 0 when Source Warehouse is set."
+                "Consumption cannot be negative when Source Warehouse is set."
             )
+
+        # Skip creating Stock Entry item if consumption is 0 (but don't throw error)
+        if qty == 0:
+            return
 
         stock_entry.append(
             "items",
@@ -103,12 +111,19 @@ def _add_items_from_material_row(stock_entry, row) -> None:
     # MAIN / SCRAP: target warehouse (note: fieldname is `target_warhouse` in the child table)
     target_warehouse = getattr(row, "target_warhouse", None)
     if target_warehouse:
-        qty = float(row.in_qty or 0)
-        if qty <= 0:
+        # Use flt() to preserve decimal values
+        qty = flt(row.in_qty or 0)
+
+        # Only block negative values; allow 0 and positive decimals
+        if qty < 0:
             frappe.throw(
                 f"Row for Item {row.item_code or ''}: "
-                "In Qty must be greater than 0 when Target Warehouse is set."
+                "In Qty cannot be negative when Target Warehouse is set."
             )
+
+        # Skip creating Stock Entry item if in_qty is 0 (but don't throw error)
+        if qty == 0:
+            return
 
         # Determine if this is a finished good or scrap based on item_type
         item_type = (row.item_type or "").strip()
@@ -158,8 +173,11 @@ def _make_stock_entry_item(
             "Either Source Warehouse or Target Warehouse must be set."
         )
 
-    if qty <= 0:
-        frappe.throw(f"Quantity must be greater than 0 for Item {item_code}.")
+    # Only block negative values; allow 0 and positive decimals
+    # Note: This function is only called when qty > 0 (after validation in _add_items_from_material_row),
+    # but we keep this check as a safety measure
+    if flt(qty) < 0:
+        frappe.throw(f"Quantity cannot be negative for Item {item_code}.")
 
     return {
         "item_code": item_code,
