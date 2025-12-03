@@ -487,3 +487,104 @@ def get_previous_hopper_opening_qty(
         )
         # Return 0 on error to avoid breaking the form
         return 0.0
+
+
+@frappe.whitelist()
+def get_previous_mip_opening_qty(
+    current_date: str, current_shift: str, exclude_docname: str | None = None
+) -> float:
+    """
+    Get the previous MIP closing quantity (used as opening for current doc)
+    based on the same shift-based priority logic as hopper and item-wise stock.
+
+    Priority Rules:
+    - If current_shift = NIGHT:
+        1. Check SAME DATE → DAY shift
+        2. If not found, go to PREVIOUS DATE (NIGHT → then DAY), continue backwards
+    - If current_shift = DAY:
+        1. Go to PREVIOUS DATE (NIGHT → then DAY), continue backwards
+
+    Args:
+        current_date: Current production date (YYYY-MM-DD format)
+        current_shift: Current shift type ("Day", "Night", or "Both")
+        exclude_docname: Document name to exclude from search (current document)
+
+    Returns:
+        float: closing_qty_mip from previous entry, or 0 if not found
+    """
+    try:
+        if not current_date or not current_shift:
+            return 0.0
+
+        # Normalize shift values
+        shift_normalized = current_shift.strip().lower()
+        if shift_normalized == "both":
+            shift_normalized = "day"
+
+        # Parse current date
+        try:
+            current_date_obj = frappe.utils.getdate(current_date)
+        except Exception:
+            frappe.throw(_("Invalid date format: {0}").format(current_date))
+
+        # Build list of date-shift combinations to check in priority order
+        search_sequence: list[tuple] = []
+
+        if shift_normalized == "night":
+            # Step 1: Same date, DAY shift
+            search_sequence.append((current_date_obj, "Day"))
+
+            # Step 2: Previous dates (NIGHT → DAY)
+            check_date = current_date_obj - timedelta(days=1)
+            max_days_back = 30
+            days_checked = 0
+
+            while days_checked < max_days_back:
+                search_sequence.append((check_date, "Night"))
+                search_sequence.append((check_date, "Day"))
+                check_date = check_date - timedelta(days=1)
+                days_checked += 1
+        else:
+            # Go directly to previous dates (NIGHT → DAY)
+            check_date = current_date_obj - timedelta(days=1)
+            max_days_back = 30
+            days_checked = 0
+
+            while days_checked < max_days_back:
+                search_sequence.append((check_date, "Night"))
+                search_sequence.append((check_date, "Day"))
+                check_date = check_date - timedelta(days=1)
+                days_checked += 1
+
+        # Search through the sequence
+        for check_date_obj, check_shift in search_sequence:
+            filters: dict = {
+                "production_date": check_date_obj,
+                "shift_type": check_shift,
+                "docstatus": 1,
+            }
+
+            if exclude_docname:
+                filters["name"] = ["!=", exclude_docname]
+
+            # Find Production Log Book documents matching date and shift
+            plb_docs = frappe.get_all(
+                "Production Log Book",
+                filters=filters,
+                fields=["name", "closing_qty_mip"],
+                order_by="creation desc",
+                limit=1,
+            )
+
+            if plb_docs:
+                closing_qty_mip = plb_docs[0].get("closing_qty_mip")
+                return flt(closing_qty_mip) or 0.0
+
+        return 0.0
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching previous MIP opening qty"),
+        )
+        return 0.0

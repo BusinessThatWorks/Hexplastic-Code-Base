@@ -32,6 +32,9 @@ frappe.ui.form.on("Production Log Book", {
 						// Also fetch hopper opening quantity using same shift-based logic
 						fill_hopper_opening_qty(frm);
 
+						// Also fetch MIP opening quantity using same shift-based logic
+						fill_mip_opening_qty(frm);
+
 						// After BOM items are loaded, recalculate issued if qty_to_manufacture is present
 						recalculate_issued_for_material_consumption(frm);
 
@@ -92,9 +95,12 @@ frappe.ui.form.on("Production Log Book", {
 				fill_opening_stock_for_items(frm);
 			}
 
-			// Also refetch hopper opening qty
+			// Also refetch hopper opening qty (depends on BOM-based process)
 			fill_hopper_opening_qty(frm);
 		}
+
+		// MIP opening does NOT depend on BOM; always refetch based on previous shift
+		fill_mip_opening_qty(frm);
 	},
 
 	// Trigger recalculation when shift_type changes
@@ -105,9 +111,12 @@ frappe.ui.form.on("Production Log Book", {
 				fill_opening_stock_for_items(frm);
 			}
 
-			// Also refetch hopper opening qty
+			// Also refetch hopper opening qty (depends on BOM-based process)
 			fill_hopper_opening_qty(frm);
 		}
+
+		// MIP opening does NOT depend on BOM; always refetch based on previous shift
+		fill_mip_opening_qty(frm);
 	},
 
 	// Trigger recalculation when qty_to_manufacture changes
@@ -843,6 +852,53 @@ function fill_hopper_opening_qty(frm) {
 		error: function (r) {
 			// Log error but don't break the form
 			console.error("Error fetching hopper opening qty:", r);
+		},
+	});
+}
+
+/**
+ * Fill MIP opening quantity on the parent document using the same
+ * shift-based priority logic as hopper and item-wise opening stock.
+ *
+ * This uses the previous document's closing_qty_mip as opening.
+ *
+ * @param {Object} frm - The form object
+ */
+function fill_mip_opening_qty(frm) {
+	// Require production_date and shift_type
+	if (!frm.doc.production_date || !frm.doc.shift_type) {
+		return;
+	}
+
+	frappe.call({
+		method: "hexplastics.api.production_log_book.get_previous_mip_opening_qty",
+		args: {
+			current_date: frm.doc.production_date,
+			current_shift: frm.doc.shift_type,
+			exclude_docname: frm.doc.name || null,
+		},
+		callback: function (r) {
+			if (r.message === undefined || r.message === null) {
+				return;
+			}
+
+			const opening_qty = flt(r.message) || 0;
+
+			// Support both possible fieldnames for MIP opening qty
+			const mip_fields = ["mip_opening_qty", "opening_qty_mip"];
+
+			mip_fields.forEach(function (fieldname) {
+				if (frm.fields_dict[fieldname]) {
+					const current_value = flt(frm.doc[fieldname]) || 0;
+					// Only auto-fill when empty/zero so user edits are preserved
+					if (!current_value) {
+						frm.set_value(fieldname, opening_qty);
+					}
+				}
+			});
+		},
+		error: function (r) {
+			console.error("Error fetching MIP opening qty:", r);
 		},
 	});
 }
