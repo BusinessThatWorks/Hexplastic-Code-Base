@@ -113,26 +113,29 @@ frappe.ui.form.on("Production Log Book", {
 		}
 	},
 
-	// On form refresh, re-run calculation for safety (e.g., when loading an existing doc)
+	// On form refresh, re-run calculation for safety (e.g., when loading an existing *draft* doc)
 	refresh: function (frm) {
-		if (frm.doc.bom && frm.doc.qty_to_manufacture) {
-			recalculate_issued_for_material_consumption(frm);
+		// Never recalculate for submitted/cancelled docs to avoid changing values after submission
+		if (frm.doc.docstatus === 0) {
+			if (frm.doc.bom && frm.doc.qty_to_manufacture) {
+				recalculate_issued_for_material_consumption(frm);
+			}
+
+			if (frm.doc.bom && frm.doc.manufactured_qty) {
+				recalculate_consumption_for_material_consumption(frm);
+				// Ensure main item in_qty is updated if manufactured_qty exists
+				update_main_item_in_qty(frm);
+			}
+
+			// Recalculate closing_stock for raw materials on form refresh
+			recalculate_closing_stock_for_raw_materials(frm);
+
+			// Recalculate Hopper & Tray closing quantity
+			calculate_hopper_closing_qty(frm);
+
+			// Recalculate MIP closing quantity
+			calculate_mip_closing_qty(frm);
 		}
-
-		if (frm.doc.bom && frm.doc.manufactured_qty) {
-			recalculate_consumption_for_material_consumption(frm);
-			// Ensure main item in_qty is updated if manufactured_qty exists
-			update_main_item_in_qty(frm);
-		}
-
-		// Recalculate closing_stock for raw materials on form refresh
-		recalculate_closing_stock_for_raw_materials(frm);
-
-		// Recalculate Hopper & Tray closing quantity
-		calculate_hopper_closing_qty(frm);
-
-		// Recalculate MIP closing quantity
-		calculate_mip_closing_qty(frm);
 
 		// Make closing quantity fields read-only
 		make_closing_qty_fields_readonly(frm);
@@ -167,10 +170,11 @@ frappe.ui.form.on("Production Log Book", {
 	onload_post_render: function (frm) {
 		// Make closing quantity fields read-only
 		make_closing_qty_fields_readonly(frm);
-
-		// Recalculate closing quantities on form load
-		calculate_hopper_closing_qty(frm);
-		calculate_mip_closing_qty(frm);
+		// Only recalculate closing quantities for draft docs
+		if (frm.doc.docstatus === 0) {
+			calculate_hopper_closing_qty(frm);
+			calculate_mip_closing_qty(frm);
+		}
 	},
 });
 
