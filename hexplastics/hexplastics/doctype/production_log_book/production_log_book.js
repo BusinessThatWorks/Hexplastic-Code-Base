@@ -25,6 +25,13 @@ frappe.ui.form.on("Production Log Book", {
 						// Refresh the child table to show new rows
 						frm.refresh_field("material_consumption");
 
+						// Fetch opening stock (previous closing_stock) for all items
+						// This must be done after items are added to the table
+						fill_opening_stock_for_items(frm);
+
+						// Also fetch hopper opening quantity using same shift-based logic
+						fill_hopper_opening_qty(frm);
+
 						// After BOM items are loaded, recalculate issued if qty_to_manufacture is present
 						recalculate_issued_for_material_consumption(frm);
 
@@ -74,6 +81,32 @@ frappe.ui.form.on("Production Log Book", {
 			frm.clear_table("material_consumption");
 			frm.refresh_field("material_consumption");
 			frm._bom_main_item_code = null;
+		}
+	},
+
+	// Trigger recalculation when production_date changes
+	production_date: function (frm) {
+		// Refetch opening stock when date changes
+		if (frm.doc.bom) {
+			if (frm.doc.material_consumption && frm.doc.material_consumption.length > 0) {
+				fill_opening_stock_for_items(frm);
+			}
+
+			// Also refetch hopper opening qty
+			fill_hopper_opening_qty(frm);
+		}
+	},
+
+	// Trigger recalculation when shift_type changes
+	shift_type: function (frm) {
+		// Refetch opening stock when shift changes
+		if (frm.doc.bom) {
+			if (frm.doc.material_consumption && frm.doc.material_consumption.length > 0) {
+				fill_opening_stock_for_items(frm);
+			}
+
+			// Also refetch hopper opening qty
+			fill_hopper_opening_qty(frm);
 		}
 	},
 
@@ -678,6 +711,140 @@ function calculate_mip_closing_qty(frm) {
 	// Update the closing_qty_mip field
 	frm.set_value("closing_qty_mip", closing_qty_mip);
 	frm.refresh_field("closing_qty_mip");
+}
+
+/**
+ * Fill opening_opp_in_plant field for all items in material_consumption table
+ * based on shift-based priority logic (previous closing_stock).
+ *
+ * This function:
+ * 1. Collects all item_codes from material_consumption table
+ * 2. Calls server-side API to get previous closing_stock for each item
+ * 3. Sets opp_in_plant field for each row
+ *
+ * @param {Object} frm - The form object
+ */
+function fill_opening_stock_for_items(frm) {
+	// Check if required fields are present
+	if (!frm.doc.production_date || !frm.doc.shift_type) {
+		// Cannot fetch opening stock without date and shift
+		return;
+	}
+
+	// Get all item codes from material_consumption table
+	const material_consumption = frm.doc.material_consumption || [];
+	if (material_consumption.length === 0) {
+		return;
+	}
+
+	// Collect unique item codes (only for BOM items, not main/scrap items)
+	const item_codes = [];
+	material_consumption.forEach(function (row) {
+		if (row.item_code && row.item_type === "BOM Item") {
+			item_codes.push(row.item_code);
+		}
+	});
+
+	if (item_codes.length === 0) {
+		return;
+	}
+
+	// Call server-side API to get opening stock for all items at once
+	frappe.call({
+		method: "hexplastics.api.production_log_book.get_opening_stock_for_items",
+		args: {
+			item_codes: item_codes,
+			current_date: frm.doc.production_date,
+			current_shift: frm.doc.shift_type,
+			exclude_docname: frm.doc.name || null, // Exclude current document if it exists
+		},
+		callback: function (r) {
+			if (r.message && typeof r.message === "object") {
+				const opening_stock_map = r.message;
+
+				// Update opp_in_plant for each row
+				material_consumption.forEach(function (row) {
+					if (
+						row.item_code &&
+						row.item_type === "BOM Item" &&
+						opening_stock_map[row.item_code] !== undefined
+					) {
+						// Only set if value exists in the map
+						const opening_stock = flt(opening_stock_map[row.item_code]) || 0;
+
+						// Use frappe.model.set_value to update the field
+						frappe.model.set_value(
+							row.doctype,
+							row.name,
+							"opp_in_plant",
+							opening_stock
+						);
+					}
+				});
+
+				// Refresh the field to show updated values
+				frm.refresh_field("material_consumption");
+			}
+		},
+		error: function (r) {
+			// Log error but don't break the form
+			console.error("Error fetching opening stock:", r);
+		},
+	});
+}
+
+/**
+ * Fill hopper opening quantity on the parent document using the same
+ * shift-based priority logic as item-wise opening stock.
+ *
+ * This uses the previous document's hopper closing_qty as opening.
+ *
+ * @param {Object} frm - The form object
+ */
+function fill_hopper_opening_qty(frm) {
+	// Require production_date and shift_type
+	if (!frm.doc.production_date || !frm.doc.shift_type) {
+		return;
+	}
+
+	// Call server-side API to get previous hopper closing quantity
+	frappe.call({
+		method: "hexplastics.api.production_log_book.get_previous_hopper_opening_qty",
+		args: {
+			current_date: frm.doc.production_date,
+			current_shift: frm.doc.shift_type,
+			exclude_docname: frm.doc.name || null, // Exclude current document if it exists
+		},
+		callback: function (r) {
+			if (r.message === undefined || r.message === null) {
+				return;
+			}
+
+			const opening_qty = flt(r.message) || 0;
+
+			// Support both possible fieldnames for hopper opening qty
+			const hopper_fields = [
+				"hopper_opening_qty", // if a dedicated field exists
+				"opening_qty_in_hopper_and_tray", // current fieldname in DocType
+			];
+
+			hopper_fields.forEach(function (fieldname) {
+				if (frm.fields_dict[fieldname]) {
+					const current_value = flt(frm.doc[fieldname]) || 0;
+
+					// Only auto-fill when the field is empty/zero to avoid
+					// overwriting user edits after initial fill.
+					if (!current_value) {
+						frm.set_value(fieldname, opening_qty);
+					}
+				}
+			});
+		},
+		error: function (r) {
+			// Log error but don't break the form
+			console.error("Error fetching hopper opening qty:", r);
+		},
+	});
 }
 
 /**
