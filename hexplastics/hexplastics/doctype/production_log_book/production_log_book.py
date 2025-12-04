@@ -30,12 +30,17 @@ def create_stock_entry_for_production_log_book(doc: ProductionLogBook) -> None:
     - RAW MATERIAL rows: when source_warehouse is set
             * s_warehouse = source_warehouse
             * qty         = consumption
-            * rate        = 0
+            * rate        = calculated from warehouse valuation
 
-    - MAIN / SCRAP rows: when target_warehouse is set
+    - MAIN ITEM rows: when target_warehouse is set and item_type is "Main Item"
             * t_warehouse = target_warehouse
             * qty         = in_qty
-            * rate        = 0
+            * rate        = calculated from source items
+
+    - SCRAP ITEM rows: when target_warehouse is set and item_type is "Scrap Item"
+            * t_warehouse = target_warehouse
+            * qty         = in_qty
+            * rate        = calculated from source items (same as finished goods)
     """
 
     if not getattr(doc, "material_consumption", None):
@@ -63,8 +68,21 @@ def create_stock_entry_for_production_log_book(doc: ProductionLogBook) -> None:
             "No valid Stock Entry Items could be created from Material Consumption table."
         )
 
-    # Insert and submit the Stock Entry
+    # Insert the Stock Entry
     stock_entry.insert(ignore_permissions=True)
+
+    # Calculate rates for all items - this will set basic_rate from warehouse valuation
+    # For source items (raw materials), it gets the valuation rate from the warehouse
+    # For finished goods, it calculates from source items
+    stock_entry.calculate_rate_and_amount()
+
+    # Manually calculate rates for scrap items if they're still 0
+    # ERPNext's calculate_rate_and_amount() may not always set scrap item rates properly
+    _calculate_scrap_item_rates(stock_entry)
+
+    stock_entry.save(ignore_permissions=True)
+
+    # Submit the Stock Entry
     stock_entry.submit()
 
     # Update Production Log Book with the Stock Entry reference
@@ -80,7 +98,7 @@ def _add_items_from_material_row(stock_entry, row) -> None:
     Rules:
     - If row.source_warehouse exists -> RAW MATERIAL row (s_warehouse, qty = consumption)
     - If row.target_warehouse exists -> MAIN / SCRAP row (t_warehouse, qty = in_qty)
-    - Always set rate to 0
+    - Rate is calculated automatically by ERPNext after insert
     - Validate that warehouse is not blank and qty >= 0 (only negative values are blocked)
     - Skip creating Stock Entry items when qty is 0 (no error thrown)
     """
@@ -158,6 +176,81 @@ def _add_items_from_material_row(stock_entry, row) -> None:
             )
 
 
+def _calculate_scrap_item_rates(stock_entry) -> None:
+    """Calculate basic_rate for scrap items based on source items.
+
+    In manufacture stock entries, scrap items should get their rate from source items.
+    First, try to get valuation rate from warehouse. If not available, calculate from source items.
+    """
+    scrap_items = [item for item in stock_entry.items if item.is_scrap_item]
+
+    if not scrap_items:
+        return
+
+    # Get all source items (raw materials) to calculate total cost
+    source_items = [
+        item
+        for item in stock_entry.items
+        if item.s_warehouse and not item.is_finished_item and not item.is_scrap_item
+    ]
+
+    # Calculate total cost from source items
+    total_source_cost = sum(
+        flt(item.basic_rate) * flt(item.qty)
+        for item in source_items
+        if flt(item.basic_rate) > 0
+    )
+
+    # Get finished goods quantity to calculate rate per unit
+    finished_items = [item for item in stock_entry.items if item.is_finished_item]
+    total_finished_qty = sum(flt(item.qty) for item in finished_items)
+
+    for scrap_item in scrap_items:
+        if flt(scrap_item.basic_rate) == 0:
+            # First, try to get valuation rate from the target warehouse
+            if scrap_item.t_warehouse:
+                try:
+                    # Get latest valuation rate from Stock Ledger Entry
+                    sle = frappe.get_all(
+                        "Stock Ledger Entry",
+                        filters={
+                            "item_code": scrap_item.item_code,
+                            "warehouse": scrap_item.t_warehouse,
+                        },
+                        fields=["valuation_rate"],
+                        order_by="posting_date desc, posting_time desc, creation desc",
+                        limit_page_length=1,
+                    )
+
+                    if sle and sle[0].get("valuation_rate"):
+                        scrap_item.basic_rate = flt(sle[0].valuation_rate)
+                        scrap_item.amount = flt(scrap_item.basic_rate) * flt(
+                            scrap_item.qty
+                        )
+                        continue
+                except Exception:
+                    pass
+
+            # If warehouse valuation not available, calculate from source items
+            # Scrap items get rate based on source items cost
+            if total_source_cost > 0 and total_finished_qty > 0:
+                # Calculate rate per finished unit
+                cost_per_finished_unit = total_source_cost / total_finished_qty
+                # Scrap items typically get a proportion of the source cost
+                # Use the same rate as cost per finished unit
+                scrap_item.basic_rate = cost_per_finished_unit
+            elif total_source_cost > 0 and source_items:
+                # Fallback: use average rate from source items
+                total_source_qty = sum(flt(item.qty) for item in source_items)
+                if total_source_qty > 0:
+                    avg_source_rate = total_source_cost / total_source_qty
+                    scrap_item.basic_rate = avg_source_rate
+
+            # Recalculate amount
+            if flt(scrap_item.basic_rate) > 0:
+                scrap_item.amount = flt(scrap_item.basic_rate) * flt(scrap_item.qty)
+
+
 def _make_stock_entry_item(
     *,
     item_code: str,
@@ -168,7 +261,7 @@ def _make_stock_entry_item(
     is_finished_item: int = 0,
     is_scrap_item: int = 0,
 ):
-    """Helper to construct a single Stock Entry Item with rate fixed to 0."""
+    """Helper to construct a single Stock Entry Item. Rate will be calculated by ERPNext."""
 
     if not item_code:
         frappe.throw("Item Code is mandatory in Material Consumption rows.")
@@ -185,7 +278,9 @@ def _make_stock_entry_item(
     if flt(qty) < 0:
         frappe.throw(f"Quantity cannot be negative for Item {item_code}.")
 
-    return {
+    # Don't set basic_rate here - let ERPNext calculate it automatically
+    # The calculate_rate_and_amount() method will set it properly after insert
+    item_dict = {
         "item_code": item_code,
         "qty": qty,
         "s_warehouse": s_warehouse,
@@ -193,11 +288,13 @@ def _make_stock_entry_item(
         "uom": stock_uom,
         "stock_uom": stock_uom,
         "conversion_factor": 1,
-        "basic_rate": 0,  # Ensure rate is always 0
-        "allow_zero_valuation_rate": 1,  # Explicitly allow zero valuation
         "is_finished_item": is_finished_item,
         "is_scrap_item": is_scrap_item,
     }
+
+    # Only set allow_zero_valuation_rate if we can't determine the rate
+    # This will be handled by ERPNext's rate calculation
+    return item_dict
 
 
 def on_production_log_book_submit(doc, method) -> None:
