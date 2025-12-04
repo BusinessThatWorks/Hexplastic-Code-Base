@@ -22,8 +22,18 @@ frappe.ui.form.on("Production Log Book", {
 						// Add BOM items to the child table
 						add_items_to_table(frm, r.message);
 
-						// Refresh the child table to show new rows
+						// Refresh the child table to show new rows first
 						frm.refresh_field("material_consumption");
+
+						// Assign warehouses for all rows after BOM items are added
+						// Use longer timeout to ensure all set_value callbacks have completed
+						setTimeout(function () {
+							assign_warehouses_for_all_rows(frm);
+							// Refresh again after assigning warehouses to show the values
+							setTimeout(function () {
+								frm.refresh_field("material_consumption");
+							}, 200);
+						}, 400);
 
 						// Fetch opening stock (previous closing_stock) for all items
 						// This must be done after items are added to the table
@@ -152,6 +162,8 @@ frappe.ui.form.on("Production Log Book", {
 				update_main_item_in_qty(frm);
 				// Recalculate scrap in_qty for all scrap rows
 				recalculate_scrap_in_qty_for_material_consumption(frm);
+				// Ensure warehouses are assigned correctly
+				assign_warehouses_for_all_rows(frm);
 			} else {
 				// Main item doesn't exist, fetch and add it (along with scrap items)
 				fetch_and_append_main_and_scrap_items(frm);
@@ -168,6 +180,9 @@ frappe.ui.form.on("Production Log Book", {
 	refresh: function (frm) {
 		// Never recalculate for submitted/cancelled docs to avoid changing values after submission
 		if (frm.doc.docstatus === 0) {
+			// Assign warehouses for all rows on form refresh
+			assign_warehouses_for_all_rows(frm);
+
 			if (frm.doc.bom && frm.doc.qty_to_manufacture) {
 				recalculate_issued_for_material_consumption(frm);
 			}
@@ -257,6 +272,11 @@ frappe.ui.form.on("Production Log Book Table", {
 		recalculate_consumption_for_material_consumption(frm);
 		// Recalculate closing_stock after item_code change
 		recalculate_closing_stock_for_raw_materials(frm);
+		// Assign warehouses based on item type after item_code is set
+		// Use setTimeout to ensure item_code and related fields are set first
+		setTimeout(function () {
+			assign_warehouses(frm, cdt, cdn);
+		}, 100);
 	},
 
 	// When item_type changes, recalculate scrap in_qty if it becomes a scrap item
@@ -265,6 +285,9 @@ frappe.ui.form.on("Production Log Book Table", {
 		if (!row) {
 			return;
 		}
+
+		// Assign warehouses based on item type
+		assign_warehouses(frm, cdt, cdn);
 
 		// If this row is now a scrap item, calculate its in_qty
 		if (is_scrap_item_row(row)) {
@@ -302,7 +325,142 @@ frappe.ui.form.on("Production Log Book Table", {
 		// Calculate closing_stock for the specific row if it's a raw material
 		calculate_closing_stock_for_row(frm, cdt, cdn);
 	},
+
+	// When a row is manually added, assign warehouses if item_type is set
+	material_consumption_add: function (frm) {
+		// Assign warehouses for all rows after a new row is added
+		setTimeout(function () {
+			assign_warehouses_for_all_rows(frm);
+		}, 100);
+	},
+
+	// When child table is refreshed, ensure warehouses are assigned
+	material_consumption_refresh: function (frm) {
+		// Assign warehouses for all rows after table refresh
+		if (frm.doc.docstatus === 0) {
+			setTimeout(function () {
+				assign_warehouses_for_all_rows(frm);
+			}, 100);
+		}
+	},
 });
+
+/**
+ * Assign warehouses for a specific row based on item type.
+ * This function automatically sets source_warehouse and target_warehouse
+ * based on the item_type field.
+ *
+ * Rules:
+ * - Raw Material (item_type === "BOM Item"):
+ *     source_warehouse = "Raw Material-Hex"
+ *     target_warehouse = ""
+ * - Scrap Item (item_type === "Scrap Item"):
+ *     target_warehouse = "Production - HEX"
+ *     source_warehouse = ""
+ * - Main Item (item_type === "Main Item"):
+ *     target_warehouse = "Finished Good"
+ *     source_warehouse = ""
+ *
+ * @param {Object} frm - The form object
+ * @param {string} cdt - Child doctype name
+ * @param {string} cdn - Child document name
+ */
+function assign_warehouses(frm, cdt, cdn) {
+	// Don't modify submitted documents
+	if (frm.doc.docstatus === 1) {
+		return;
+	}
+
+	const row = locals[cdt][cdn];
+	if (!row) {
+		return;
+	}
+
+	// If item_type is not set yet, try to infer it or skip
+	if (!row.item_type) {
+		// If item_code exists but item_type doesn't, it might be a BOM item
+		// This can happen if item_type hasn't been set yet
+		// We'll skip and let it be set later when item_type is available
+		return;
+	}
+
+	// Prevent infinite loops by checking if we're already in the middle of assignment
+	if (row._assigning_warehouses) {
+		return;
+	}
+
+	// Mark row to prevent infinite loops
+	row._assigning_warehouses = true;
+
+	const item_type = row.item_type;
+	let source_warehouse = "";
+	let target_warehouse = "";
+
+	// Assign warehouses based on item type
+	if (item_type === "BOM Item") {
+		// Raw Material
+		source_warehouse = "Raw Material - HEX";
+		target_warehouse = "";
+	} else if (item_type === "Scrap Item") {
+		// Scrap Item
+		source_warehouse = "";
+		target_warehouse = "Production - HEX";
+	} else if (item_type === "Main Item") {
+		// Main Item
+		source_warehouse = "";
+		target_warehouse = "Finished Goods - HEX";
+	} else {
+		// Unknown item type, clear flag and return
+		row._assigning_warehouses = false;
+		return;
+	}
+
+	// Update warehouses - always set them to ensure they're correct
+	// Set source_warehouse
+	if (row.source_warehouse !== source_warehouse) {
+		frappe.model.set_value(cdt, cdn, "source_warehouse", source_warehouse);
+	}
+
+	// Note: fieldname is "target_warhouse" (typo in doctype definition)
+	if (row.target_warhouse !== target_warehouse) {
+		frappe.model.set_value(cdt, cdn, "target_warhouse", target_warehouse);
+	}
+
+	// Clear the flag after a short delay
+	setTimeout(function () {
+		if (row) {
+			row._assigning_warehouses = false;
+		}
+	}, 100);
+}
+
+/**
+ * Assign warehouses for all rows in the material_consumption table.
+ * This is called after BOM selection or when main/scrap items are added.
+ *
+ * @param {Object} frm - The form object
+ */
+function assign_warehouses_for_all_rows(frm) {
+	// Don't modify submitted documents
+	if (frm.doc.docstatus === 1) {
+		return;
+	}
+
+	const rows = frm.doc.material_consumption || [];
+	if (!rows.length) {
+		return;
+	}
+
+	// Assign warehouses for each row that has an item_type
+	rows.forEach(function (row) {
+		if (row && row.item_type) {
+			// Use setTimeout to ensure row is fully initialized
+			setTimeout(function () {
+				assign_warehouses(frm, row.doctype, row.name);
+			}, 50);
+		}
+	});
+}
 
 /**
  * Helper function to add items to the material_consumption child table.
@@ -359,18 +517,38 @@ function add_items_to_table(frm, items, main_item_code = null) {
 
 		// Set item_type to distinguish BOM Item, Main Item, or Scrap Item
 		if (item.item_type) {
-			frappe.model.set_value(row.doctype, row.name, "item_type", item.item_type);
+			// Set item_type directly on the row first (synchronous)
+			row.item_type = item.item_type;
 
-			// If this is a scrap item and manufactured_qty is available, calculate in_qty immediately
-			if (item.item_type === "Scrap Item" && manufactured_qty > 0 && frm.doc.bom) {
-				// Use setTimeout to ensure row is fully initialized before calculation
-				setTimeout(function () {
-					const scrap_row = locals[row.doctype][row.name];
-					if (scrap_row) {
-						recalculate_scrap_in_qty_for_row(frm, scrap_row);
+			// Then use set_value to persist it and assign warehouses in callback
+			frappe.model.set_value(
+				row.doctype,
+				row.name,
+				"item_type",
+				item.item_type,
+				function () {
+					// Assign warehouses after item_type is set
+					assign_warehouses(frm, row.doctype, row.name);
+
+					// If this is a scrap item and manufactured_qty is available, calculate in_qty
+					if (item.item_type === "Scrap Item" && manufactured_qty > 0 && frm.doc.bom) {
+						setTimeout(function () {
+							const scrap_row = locals[row.doctype][row.name];
+							if (scrap_row) {
+								recalculate_scrap_in_qty_for_row(frm, scrap_row);
+							}
+						}, 100);
 					}
-				}, 100);
-			}
+				}
+			);
+
+			// Also try to assign warehouses immediately (in case callback doesn't fire)
+			setTimeout(function () {
+				const current_row = locals[row.doctype][row.name];
+				if (current_row && current_row.item_type) {
+					assign_warehouses(frm, row.doctype, row.name);
+				}
+			}, 150);
 		}
 
 		// Auto-fill in_qty for main item only with manufactured_qty
@@ -420,8 +598,18 @@ function fetch_and_append_main_and_scrap_items(frm) {
 				// Pass main_item_code to auto-fill in_qty for main item
 				const added_count = add_items_to_table(frm, items, main_item_code);
 
-				// Refresh the child table to show new rows
+				// Refresh the child table to show new rows first
 				frm.refresh_field("material_consumption");
+
+				// Assign warehouses for all rows after main/scrap items are added
+				// Use longer timeout to ensure all set_value callbacks have completed
+				setTimeout(function () {
+					assign_warehouses_for_all_rows(frm);
+					// Refresh again after assigning warehouses to show the values
+					setTimeout(function () {
+						frm.refresh_field("material_consumption");
+					}, 200);
+				}, 400);
 
 				// Recalculate consumption after adding new items
 				recalculate_consumption_for_material_consumption(frm);
