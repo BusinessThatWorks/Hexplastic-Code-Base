@@ -67,6 +67,12 @@ def create_stock_entry_for_production_log_book(doc: ProductionLogBook) -> None:
     stock_entry.insert(ignore_permissions=True)
     stock_entry.submit()
 
+    # Update Production Log Book with the Stock Entry reference
+    # Use frappe.db.set_value to avoid dirtying the document and prevent recursion
+    frappe.db.set_value(
+        "Production Log Book", doc.name, "stock_entry_no", stock_entry.name
+    )
+
 
 def _add_items_from_material_row(stock_entry, row) -> None:
     """Append one or two Stock Entry Items based on a single Material Consumption row.
