@@ -49,6 +49,11 @@ frappe.ui.form.on("Production Log Book", {
 							fetch_and_append_main_and_scrap_items(frm);
 						}
 
+						// If manufactured_qty and BOM are present, recalculate scrap in_qty
+						if (frm.doc.manufactured_qty) {
+							recalculate_scrap_in_qty_for_material_consumption(frm);
+						}
+
 						// Show success message
 						frappe.show_alert(
 							{
@@ -145,6 +150,8 @@ frappe.ui.form.on("Production Log Book", {
 			if (main_item_exists) {
 				// Main item exists, just update its in_qty
 				update_main_item_in_qty(frm);
+				// Recalculate scrap in_qty for all scrap rows
+				recalculate_scrap_in_qty_for_material_consumption(frm);
 			} else {
 				// Main item doesn't exist, fetch and add it (along with scrap items)
 				fetch_and_append_main_and_scrap_items(frm);
@@ -152,6 +159,8 @@ frappe.ui.form.on("Production Log Book", {
 		} else {
 			// If manufactured_qty is cleared, update main item in_qty to 0 (if exists)
 			update_main_item_in_qty(frm);
+			// Also reset scrap in_qty to 0 when manufactured_qty is cleared
+			reset_scrap_in_qty_for_material_consumption(frm);
 		}
 	},
 
@@ -167,6 +176,8 @@ frappe.ui.form.on("Production Log Book", {
 				recalculate_consumption_for_material_consumption(frm);
 				// Ensure main item in_qty is updated if manufactured_qty exists
 				update_main_item_in_qty(frm);
+				// Ensure scrap in_qty is also updated on form refresh
+				recalculate_scrap_in_qty_for_material_consumption(frm);
 			}
 
 			// Recalculate closing_stock for raw materials on form refresh
@@ -248,6 +259,32 @@ frappe.ui.form.on("Production Log Book Table", {
 		recalculate_closing_stock_for_raw_materials(frm);
 	},
 
+	// When item_type changes, recalculate scrap in_qty if it becomes a scrap item
+	item_type: function (frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row) {
+			return;
+		}
+
+		// If this row is now a scrap item, calculate its in_qty
+		if (is_scrap_item_row(row)) {
+			recalculate_scrap_in_qty_for_row(frm, row);
+		}
+	},
+
+	// When target_warhouse is set/changed, recalculate scrap in_qty for that row
+	target_warhouse: function (frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row) {
+			return;
+		}
+
+		// Only apply to scrap rows
+		if (is_scrap_item_row(row)) {
+			recalculate_scrap_in_qty_for_row(frm, row);
+		}
+	},
+
 	// When opp_in_plant changes, recalculate closing_stock for raw materials
 	opp_in_plant: function (frm, cdt, cdn) {
 		// Calculate closing_stock for the specific row if it's a raw material
@@ -323,6 +360,17 @@ function add_items_to_table(frm, items, main_item_code = null) {
 		// Set item_type to distinguish BOM Item, Main Item, or Scrap Item
 		if (item.item_type) {
 			frappe.model.set_value(row.doctype, row.name, "item_type", item.item_type);
+
+			// If this is a scrap item and manufactured_qty is available, calculate in_qty immediately
+			if (item.item_type === "Scrap Item" && manufactured_qty > 0 && frm.doc.bom) {
+				// Use setTimeout to ensure row is fully initialized before calculation
+				setTimeout(function () {
+					const scrap_row = locals[row.doctype][row.name];
+					if (scrap_row) {
+						recalculate_scrap_in_qty_for_row(frm, scrap_row);
+					}
+				}, 100);
+			}
 		}
 
 		// Auto-fill in_qty for main item only with manufactured_qty
@@ -330,6 +378,9 @@ function add_items_to_table(frm, items, main_item_code = null) {
 		if (main_item_code && item.item_code === main_item_code && manufactured_qty > 0) {
 			frappe.model.set_value(row.doctype, row.name, "in_qty", manufactured_qty);
 		}
+
+		// For scrap items, in_qty will be auto-calculated from BOM Scrap ratios
+		// based on manufactured_qty and BOM scrap quantities.
 
 		// Mark item as added
 		existing_item_codes.add(item.item_code);
@@ -377,6 +428,11 @@ function fetch_and_append_main_and_scrap_items(frm) {
 
 				// Recalculate closing_stock for raw materials
 				recalculate_closing_stock_for_raw_materials(frm);
+
+				// Recalculate scrap in_qty for scrap items if manufactured_qty is present
+				if (frm.doc.manufactured_qty) {
+					recalculate_scrap_in_qty_for_material_consumption(frm);
+				}
 
 				// Show success message if items were added
 				if (added_count > 0) {
@@ -621,6 +677,130 @@ function recalculate_consumption_for_material_consumption(frm) {
 			// Recalculate closing_stock for raw materials after consumption is updated
 			recalculate_closing_stock_for_raw_materials(frm);
 		},
+	});
+}
+
+/**
+ * Identify if a row in Material Consumption is a scrap item row.
+ *
+ * Rules:
+ * - item_type === "Scrap Item"
+ *
+ * Note: target_warehouse is not required for calculation, only for final validation.
+ *
+ * @param {Object} row - The child table row object
+ * @returns {boolean} - True if the row is a scrap item row, false otherwise
+ */
+function is_scrap_item_row(row) {
+	if (!row) {
+		return false;
+	}
+
+	return row.item_type === "Scrap Item";
+}
+
+/**
+ * Recalculate in_qty for a single scrap item row using the server-side BOM ratio.
+ *
+ * Calls:
+ *   hexplastics.api.production_log_book.calculate_scrap_in_qty
+ *
+ * If any required value is missing, in_qty is set to 0 as per requirements.
+ *
+ * @param {Object} frm - The form object
+ * @param {Object} row - The child table row object
+ */
+function recalculate_scrap_in_qty_for_row(frm, row) {
+	if (!frm || !row) {
+		return;
+	}
+
+	// Only operate on scrap rows (identified by item_type)
+	if (!is_scrap_item_row(row)) {
+		return;
+	}
+
+	const bom = frm.doc.bom;
+	const manufactured_qty = flt(frm.doc.manufactured_qty) || 0;
+	const item_code = row.item_code;
+
+	// If any required value is missing, set in_qty = 0
+	if (!bom || !item_code || !manufactured_qty) {
+		frappe.model.set_value(row.doctype, row.name, "in_qty", 0);
+		return;
+	}
+
+	frappe.call({
+		method: "hexplastics.api.production_log_book.calculate_scrap_in_qty",
+		args: {
+			bom_name: bom,
+			item_code: item_code,
+			manufactured_qty: manufactured_qty,
+		},
+		freeze: false,
+		callback: function (r) {
+			const data = r.message || {};
+			const in_qty = flt(data.in_qty) || 0;
+
+			// Set calculated in_qty back on the row
+			frappe.model.set_value(row.doctype, row.name, "in_qty", in_qty);
+		},
+		error: function (err) {
+			// On error, fail-safe to 0 and log
+			console.error("Error calculating scrap in_qty:", err);
+			frappe.model.set_value(row.doctype, row.name, "in_qty", 0);
+		},
+	});
+}
+
+/**
+ * Recalculate in_qty for all scrap rows in the Material Consumption table.
+ *
+ * This is invoked when:
+ * - manufactured_qty changes
+ * - form is refreshed (for draft docs)
+ * - BOM is changed and manufactured_qty is present
+ *
+ * @param {Object} frm - The form object
+ */
+function recalculate_scrap_in_qty_for_material_consumption(frm) {
+	if (!frm || !frm.doc || !frm.doc.material_consumption) {
+		return;
+	}
+
+	const rows = frm.doc.material_consumption || [];
+	if (!rows.length) {
+		return;
+	}
+
+	rows.forEach((row) => {
+		if (is_scrap_item_row(row)) {
+			recalculate_scrap_in_qty_for_row(frm, row);
+		}
+	});
+}
+
+/**
+ * Reset in_qty to 0 for all scrap rows in the Material Consumption table.
+ *
+ * Used when manufactured_qty is cleared.
+ *
+ * @param {Object} frm - The form object
+ */
+function reset_scrap_in_qty_for_material_consumption(frm) {
+	if (!frm || !frm.doc || !frm.doc.material_consumption) {
+		return;
+	}
+
+	const rows = frm.doc.material_consumption || [];
+	if (!rows.length) {
+		return;
+	}
+
+	rows.forEach((row) => {
+		if (row && row.item_type === "Scrap Item") {
+			frappe.model.set_value(row.doctype, row.name, "in_qty", 0);
+		}
 	});
 }
 

@@ -215,6 +215,87 @@ def get_bom_item_quantities(bom_name, item_codes=None):
 
 
 @frappe.whitelist()
+def calculate_scrap_in_qty(
+    bom_name: str, item_code: str, manufactured_qty: float | int
+):
+    """
+    Calculate in_qty for a scrap item based on BOM Scrap & Process Loss table.
+
+    Formula:
+        in_qty = ( scrap_qty_from_BOM / bom_main_qty ) * manufactured_qty
+
+    Where:
+        - scrap_qty_from_BOM: stock_qty from BOM Scrap Item for the given item_code
+        - bom_main_qty: quantity field on the BOM (parent)
+        - manufactured_qty: Production Log Book.manufactured_qty
+
+    If any required value is missing or invalid, in_qty is 0.
+    Division by zero is prevented.
+
+    Args:
+        bom_name: Name of the BOM document
+        item_code: Scrap item code
+        manufactured_qty: Manufactured quantity from Production Log Book
+
+    Returns:
+        dict: {"in_qty": <calculated float>}
+    """
+    try:
+        # Basic validation
+        if not bom_name or not item_code:
+            return {"in_qty": 0.0}
+
+        # Normalize manufactured_qty safely
+        manufactured_qty = flt(manufactured_qty) or 0.0
+        if manufactured_qty <= 0:
+            return {"in_qty": 0.0}
+
+        # Ensure BOM exists
+        if not frappe.db.exists("BOM", bom_name):
+            frappe.throw(_("BOM {0} does not exist").format(bom_name))
+
+        # Fetch BOM main quantity
+        bom_main_qty = flt(frappe.db.get_value("BOM", bom_name, "quantity")) or 0.0
+        if bom_main_qty <= 0:
+            # Avoid division by zero and invalid BOM state
+            return {"in_qty": 0.0}
+
+        # Fetch scrap quantity for this item from BOM Scrap Item table
+        scrap_rows = frappe.get_all(
+            "BOM Scrap Item",
+            filters={"parent": bom_name, "item_code": item_code},
+            fields=["stock_qty"],
+        )
+
+        if not scrap_rows:
+            # Item is not present in BOM Scrap table
+            return {"in_qty": 0.0}
+
+        # Sum stock_qty in case there are multiple rows for the same item
+        scrap_qty_from_bom = sum(flt(row.stock_qty) for row in scrap_rows) or 0.0
+        if scrap_qty_from_bom <= 0:
+            return {"in_qty": 0.0}
+
+        # Apply formula
+        in_qty = (scrap_qty_from_bom / bom_main_qty) * manufactured_qty
+
+        # Ensure non-negative result
+        in_qty = max(0.0, flt(in_qty))
+
+        return {"in_qty": in_qty}
+
+    except frappe.DoesNotExistError:
+        frappe.throw(_("BOM {0} does not exist").format(bom_name))
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error calculating scrap in_qty"),
+        )
+        # Return 0 on error to avoid breaking client-side logic
+        return {"in_qty": 0.0}
+
+
+@frappe.whitelist()
 def get_previous_closing_stock(
     item_code, current_date, current_shift, exclude_docname=None
 ):
