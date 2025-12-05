@@ -12,6 +12,7 @@
   "stock_uom",
   "source_warehouse",
   "target_warhouse",
+  "user_changed_warehouse",
   "column_break_zdoh",
   "item_description",
   "section_break_tfgq",
@@ -126,6 +127,13 @@
    "in_list_view": 1,
    "label": "In Qty",
    "precision": "4"
+  },
+  {
+   "default": "0",
+   "fieldname": "user_changed_warehouse",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "User Changed Warehouse"
   }
  ],
  "grid_page_length": 50,

@@ -302,10 +302,66 @@ frappe.ui.form.on("Production Log Book Table", {
 			return;
 		}
 
+		// Mark that user has manually changed the warehouse (unless we're auto-assigning)
+		// Check if this is a user change (not programmatic)
+		// Use a small delay to ensure _auto_assigning flag is checked correctly
+		setTimeout(function () {
+			const current_row = locals[cdt][cdn];
+			if (!current_row) return;
+
+			// Only mark as user-changed if we're NOT in the middle of auto-assignment
+			if (!current_row._assigning_warehouses && !current_row._auto_assigning) {
+				// User manually changed the warehouse - mark it so we don't overwrite it
+				// Check if flag is not already set
+				const already_marked =
+					current_row.user_changed_warehouse === 1 ||
+					current_row.user_changed_warehouse === "1" ||
+					current_row.user_changed_warehouse === true;
+
+				if (!already_marked) {
+					// Set the flag to prevent future auto-assignment
+					current_row.user_changed_warehouse = 1;
+					frappe.model.set_value(cdt, cdn, "user_changed_warehouse", 1);
+				}
+			}
+		}, 50);
+
 		// Only apply to scrap rows
 		if (is_scrap_item_row(row)) {
 			recalculate_scrap_in_qty_for_row(frm, row);
 		}
+	},
+
+	// When source_warehouse is changed manually, mark it as user-modified
+	source_warehouse: function (frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row) {
+			return;
+		}
+
+		// Mark that user has manually changed the warehouse (unless we're auto-assigning)
+		// Check if this is a user change (not programmatic)
+		// Use a small delay to ensure _auto_assigning flag is checked correctly
+		setTimeout(function () {
+			const current_row = locals[cdt][cdn];
+			if (!current_row) return;
+
+			// Only mark as user-changed if we're NOT in the middle of auto-assignment
+			if (!current_row._assigning_warehouses && !current_row._auto_assigning) {
+				// User manually changed the warehouse - mark it so we don't overwrite it
+				// Check if flag is not already set
+				const already_marked =
+					current_row.user_changed_warehouse === 1 ||
+					current_row.user_changed_warehouse === "1" ||
+					current_row.user_changed_warehouse === true;
+
+				if (!already_marked) {
+					// Set the flag to prevent future auto-assignment
+					current_row.user_changed_warehouse = 1;
+					frappe.model.set_value(cdt, cdn, "user_changed_warehouse", 1);
+				}
+			}
+		}, 50);
 	},
 
 	// When opp_in_plant changes, recalculate closing_stock for raw materials
@@ -334,9 +390,9 @@ frappe.ui.form.on("Production Log Book Table", {
 		}, 100);
 	},
 
-	// When child table is refreshed, ensure warehouses are assigned
+	// When child table is refreshed, ensure warehouses are assigned (only for new rows)
 	material_consumption_refresh: function (frm) {
-		// Assign warehouses for all rows after table refresh
+		// Only assign warehouses for new rows (not user-modified ones) after table refresh
 		if (frm.doc.docstatus === 0) {
 			setTimeout(function () {
 				assign_warehouses_for_all_rows(frm);
@@ -350,15 +406,20 @@ frappe.ui.form.on("Production Log Book Table", {
  * This function automatically sets source_warehouse and target_warehouse
  * based on the item_type field.
  *
+ * IMPORTANT: This function will ONLY auto-assign warehouses if:
+ * - The row is new (user_changed_warehouse is 0 or undefined)
+ * - The warehouse field is empty
+ * - The user has not manually changed the warehouse
+ *
  * Rules:
  * - Raw Material (item_type === "BOM Item"):
- *     source_warehouse = "Raw Material-Hex"
+ *     source_warehouse = "Raw Material - HEX"
  *     target_warehouse = ""
  * - Scrap Item (item_type === "Scrap Item"):
  *     target_warehouse = "Production - HEX"
  *     source_warehouse = ""
  * - Main Item (item_type === "Main Item"):
- *     target_warehouse = "Finished Good"
+ *     target_warehouse = "Finished Goods - HEX"
  *     source_warehouse = ""
  *
  * @param {Object} frm - The form object
@@ -376,21 +437,34 @@ function assign_warehouses(frm, cdt, cdn) {
 		return;
 	}
 
-	// If item_type is not set yet, try to infer it or skip
+	// If item_type is not set yet, skip
 	if (!row.item_type) {
-		// If item_code exists but item_type doesn't, it might be a BOM item
-		// This can happen if item_type hasn't been set yet
-		// We'll skip and let it be set later when item_type is available
+		return;
+	}
+
+	// CRITICAL: If user has manually changed the warehouse, NEVER overwrite it
+	// Check both number 1 and string "1" for compatibility, and also check if value exists and is truthy
+	const user_changed =
+		row.user_changed_warehouse === 1 ||
+		row.user_changed_warehouse === "1" ||
+		row.user_changed_warehouse === true ||
+		(row.user_changed_warehouse &&
+			row.user_changed_warehouse !== 0 &&
+			row.user_changed_warehouse !== "0" &&
+			row.user_changed_warehouse !== false);
+
+	if (user_changed) {
 		return;
 	}
 
 	// Prevent infinite loops by checking if we're already in the middle of assignment
-	if (row._assigning_warehouses) {
+	if (row._assigning_warehouses || row._auto_assigning) {
 		return;
 	}
 
-	// Mark row to prevent infinite loops
+	// Mark row to prevent infinite loops and to indicate we're auto-assigning
 	row._assigning_warehouses = true;
+	row._auto_assigning = true;
 
 	const item_type = row.item_type;
 	let source_warehouse = "";
@@ -410,28 +484,69 @@ function assign_warehouses(frm, cdt, cdn) {
 		source_warehouse = "";
 		target_warehouse = "Finished Goods - HEX";
 	} else {
-		// Unknown item type, clear flag and return
+		// Unknown item type, clear flags and return
 		row._assigning_warehouses = false;
+		row._auto_assigning = false;
 		return;
 	}
 
-	// Update warehouses - always set them to ensure they're correct
-	// Set source_warehouse
-	if (row.source_warehouse !== source_warehouse) {
-		frappe.model.set_value(cdt, cdn, "source_warehouse", source_warehouse);
+	// Only auto-assign if the warehouse field is empty
+	// This ensures we only fill empty fields, not overwrite existing values
+	let should_update_source = false;
+	let should_update_target = false;
+
+	if (item_type === "BOM Item") {
+		// For raw materials, only set source_warehouse if it's empty
+		if (!row.source_warehouse || row.source_warehouse === "") {
+			should_update_source = true;
+		}
+		// Clear target_warehouse if it's set (raw materials shouldn't have target)
+		if (row.target_warhouse && row.target_warhouse !== "") {
+			should_update_target = true;
+		}
+	} else if (item_type === "Scrap Item" || item_type === "Main Item") {
+		// For scrap/main items, only set target_warehouse if it's empty
+		if (!row.target_warhouse || row.target_warhouse === "") {
+			should_update_target = true;
+		}
+		// Clear source_warehouse if it's set (scrap/main items shouldn't have source)
+		if (row.source_warehouse && row.source_warehouse !== "") {
+			should_update_source = true;
+		}
+	}
+
+	// Track how many updates we're making
+	let update_count = 0;
+	const total_updates = (should_update_source ? 1 : 0) + (should_update_target ? 1 : 0);
+
+	const clear_flags = function () {
+		update_count++;
+		if (update_count >= total_updates) {
+			// All updates complete, clear flags after a delay
+			setTimeout(function () {
+				if (row) {
+					row._assigning_warehouses = false;
+					row._auto_assigning = false;
+				}
+			}, 200);
+		}
+	};
+
+	// Update warehouses only if needed
+	if (should_update_source) {
+		frappe.model.set_value(cdt, cdn, "source_warehouse", source_warehouse, clear_flags);
 	}
 
 	// Note: fieldname is "target_warhouse" (typo in doctype definition)
-	if (row.target_warhouse !== target_warehouse) {
-		frappe.model.set_value(cdt, cdn, "target_warhouse", target_warehouse);
+	if (should_update_target) {
+		frappe.model.set_value(cdt, cdn, "target_warhouse", target_warehouse, clear_flags);
 	}
 
-	// Clear the flag after a short delay
-	setTimeout(function () {
-		if (row) {
-			row._assigning_warehouses = false;
-		}
-	}, 100);
+	// If no updates were needed, clear flags immediately
+	if (total_updates === 0) {
+		row._assigning_warehouses = false;
+		row._auto_assigning = false;
+	}
 }
 
 /**
@@ -496,6 +611,9 @@ function add_items_to_table(frm, items, main_item_code = null) {
 		}
 
 		let row = frm.add_child("material_consumption");
+
+		// Initialize user_changed_warehouse to 0 for new rows
+		row.user_changed_warehouse = 0;
 
 		// Set item_code using frappe.model.set_value to trigger auto-fetch
 		// This will auto-fetch item_name, stock_uom, item_description from Item master
