@@ -669,3 +669,39 @@ def get_previous_mip_opening_qty(
             title=_("Error fetching previous MIP opening qty"),
         )
         return 0.0
+
+
+@frappe.whitelist()
+def get_stock_entry_no(docname: str) -> str | None:
+    """
+    Fetch the stock_entry_no from the Production Log Book document.
+
+    This is used to update the UI after document submission without
+    making the document dirty or changing its status.
+
+    Args:
+        docname: Name of the Production Log Book document
+
+    Returns:
+        str | None: The stock_entry_no value, or None if not found
+    """
+    try:
+        if not docname:
+            return None
+
+        # Validate that document exists
+        if not frappe.db.exists("Production Log Book", docname):
+            return None
+
+        # Fetch stock_entry_no from database
+        stock_entry_no = frappe.db.get_value(
+            "Production Log Book", docname, "stock_entry_no"
+        )
+        return stock_entry_no or None
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching stock_entry_no"),
+        )
+        return None

@@ -2,6 +2,60 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Production Log Book", {
+	// Hook into form setup to ensure after_submit is called after successful submit
+	setup: function (frm) {
+		// Store original submit method if not already stored
+		if (!frm._original_submit_hooked) {
+			frm._original_submit_hooked = true;
+			const original_submit = frm.submit;
+
+			// Override submit to call after_submit after successful submit
+			frm.submit = function (callback) {
+				const self = this;
+				const prev_docstatus = self.doc.docstatus || 0;
+
+				return original_submit.call(this, function (r) {
+					// Call original callback if provided
+					if (callback) {
+						callback(r);
+					}
+
+					// If submit was successful and docstatus changed to 1, trigger after_submit
+					if (
+						r &&
+						!r.exc &&
+						prev_docstatus === 0 &&
+						self.doc &&
+						self.doc.docstatus === 1
+					) {
+						// Small delay to ensure submit is fully complete
+						setTimeout(function () {
+							// Try to call after_submit handler via event system
+							if (
+								self.script_manager &&
+								self.script_manager.events &&
+								self.script_manager.events.after_submit
+							) {
+								self.script_manager.events.after_submit.forEach(function (
+									handler
+								) {
+									try {
+										handler(self);
+									} catch (e) {
+										console.error("Error in after_submit handler:", e);
+									}
+								});
+							} else {
+								// Fallback: call update function directly if event system doesn't work
+								update_stock_entry_no_after_submit_direct(self);
+							}
+						}, 100);
+					}
+				});
+			};
+		}
+	},
+
 	bom: function (frm) {
 		// When BOM field changes, fetch and populate ONLY BOM Items
 		// Clear cached main item code when BOM changes
@@ -178,6 +232,17 @@ frappe.ui.form.on("Production Log Book", {
 
 	// On form refresh, re-run calculation for safety (e.g., when loading an existing *draft* doc)
 	refresh: function (frm) {
+		// Check if document was just submitted (docstatus changed from 0 to 1)
+		if (frm.doc.docstatus === 1 && frm._previous_docstatus === 0) {
+			// Document was just submitted, reload to get stock_entry_no from server
+			// This will refresh the form with latest data without making it dirty
+			setTimeout(function () {
+				frm.reload_doc();
+			}, 300);
+		}
+		// Store current docstatus for next refresh
+		frm._previous_docstatus = frm.doc.docstatus;
+
 		// Never recalculate for submitted/cancelled docs to avoid changing values after submission
 		if (frm.doc.docstatus === 0) {
 			// Assign warehouses for all rows on form refresh
@@ -261,6 +326,99 @@ frappe.ui.form.on("Production Log Book", {
 			calculate_mip_closing_qty(frm);
 			calculate_net_weight(frm);
 		}
+	},
+
+	// After document is submitted, update stock_entry_no in UI without making document dirty
+	after_submit: function (frm) {
+		// Safety guard: only run if document is actually submitted
+		if (frm.doc.docstatus !== 1) {
+			return;
+		}
+
+		// Safety guard: only update if stock_entry_no field exists
+		if (!frm.fields_dict.stock_entry_no) {
+			return;
+		}
+
+		// Call the whitelisted function to retrieve stock_entry_no from backend
+		frappe.call({
+			method: "hexplastics.api.production_log_book.get_stock_entry_no",
+			args: {
+				docname: frm.doc.name,
+			},
+			callback: function (r) {
+				// Safety guard: ensure document is still submitted
+				if (frm.doc.docstatus !== 1) {
+					return;
+				}
+
+				// Safety guard: ensure field still exists
+				if (!frm.fields_dict.stock_entry_no) {
+					return;
+				}
+
+				// Update UI safely without using frm.set_value()
+				// This prevents the document from becoming dirty
+				if (r.message) {
+					// Update the document object in locals (source of truth)
+					if (
+						locals["Production Log Book"] &&
+						locals["Production Log Book"][frm.doc.name]
+					) {
+						locals["Production Log Book"][frm.doc.name].stock_entry_no = r.message;
+					}
+					// Update frm.doc as well
+					frm.doc.stock_entry_no = r.message;
+					// Update the field value directly
+					frm.fields_dict.stock_entry_no.value = r.message;
+					// Refresh the field to ensure UI updates
+					frm.refresh_field("stock_entry_no");
+				}
+			},
+			error: function (r) {
+				// Log error but don't break the form
+				console.error("Error fetching stock_entry_no:", r);
+			},
+		});
+	},
+
+	// On form refresh, re-run calculation for safety (e.g., when loading an existing *draft* doc)
+	refresh: function (frm) {
+		// Existing refresh logic
+		// Never recalculate for submitted/cancelled docs to avoid changing values after submission
+		if (frm.doc.docstatus === 0) {
+			// Assign warehouses for all rows on form refresh
+			assign_warehouses_for_all_rows(frm);
+
+			if (frm.doc.bom && frm.doc.qty_to_manufacture) {
+				recalculate_issued_for_material_consumption(frm);
+			}
+
+			if (frm.doc.bom && frm.doc.manufactured_qty) {
+				recalculate_consumption_for_material_consumption(frm);
+				// Ensure main item in_qty is updated if manufactured_qty exists
+				update_main_item_in_qty(frm);
+				// Ensure scrap in_qty is also updated on form refresh
+				recalculate_scrap_in_qty_for_material_consumption(frm);
+			}
+
+			// Recalculate closing_stock for raw materials on form refresh
+			recalculate_closing_stock_for_raw_materials(frm);
+
+			// Recalculate Hopper & Tray closing quantity
+			calculate_hopper_closing_qty(frm);
+
+			// Recalculate MIP closing quantity
+			calculate_mip_closing_qty(frm);
+
+			// Recalculate net_weight
+			calculate_net_weight(frm);
+		}
+
+		// Make closing quantity fields read-only
+		make_closing_qty_fields_readonly(frm);
+		// Make net_weight read-only
+		make_net_weight_readonly(frm);
 	},
 });
 
@@ -1465,4 +1623,116 @@ function make_net_weight_readonly(frm) {
 	if (frm.fields_dict.net_weight) {
 		frm.set_df_property("net_weight", "read_only", 1);
 	}
+}
+
+/**
+ * Update stock_entry_no field in UI after document submission (direct call version).
+ * This function updates the field without making the document dirty.
+ *
+ * @param {Object} frm - The form object
+ */
+function update_stock_entry_no_after_submit_direct(frm) {
+	// Safety guard: only run if document is actually submitted
+	if (frm.doc.docstatus !== 1) {
+		return;
+	}
+
+	// Safety guard: only update if stock_entry_no field exists
+	if (!frm.fields_dict.stock_entry_no) {
+		return;
+	}
+
+	// Call the whitelisted function to retrieve stock_entry_no from backend
+	frappe.call({
+		method: "hexplastics.api.production_log_book.get_stock_entry_no",
+		args: {
+			docname: frm.doc.name,
+		},
+		callback: function (r) {
+			// Safety guard: ensure document is still submitted
+			if (frm.doc.docstatus !== 1) {
+				return;
+			}
+
+			// Safety guard: ensure field still exists
+			if (!frm.fields_dict.stock_entry_no) {
+				return;
+			}
+
+			// Update UI safely without using frm.set_value()
+			// This prevents the document from becoming dirty
+			if (r.message) {
+				// Update the document object in locals (source of truth)
+				if (locals["Production Log Book"] && locals["Production Log Book"][frm.doc.name]) {
+					locals["Production Log Book"][frm.doc.name].stock_entry_no = r.message;
+				}
+				// Update frm.doc as well
+				frm.doc.stock_entry_no = r.message;
+				// Update the field value directly
+				frm.fields_dict.stock_entry_no.value = r.message;
+				// Refresh the field to ensure UI updates
+				frm.refresh_field("stock_entry_no");
+			}
+		},
+		error: function (r) {
+			// Log error but don't break the form
+			console.error("Error fetching stock_entry_no:", r);
+		},
+	});
+}
+
+/**
+ * Update stock_entry_no field in UI after document submission.
+ * This function updates the field without making the document dirty.
+ *
+ * @param {Object} frm - The form object
+ */
+function update_stock_entry_no_after_submit(frm) {
+	// Safety guard: only run if document is actually submitted
+	if (frm.doc.docstatus !== 1) {
+		return;
+	}
+
+	// Safety guard: only update if stock_entry_no field exists
+	if (!frm.fields_dict.stock_entry_no) {
+		return;
+	}
+
+	// Call the whitelisted function to retrieve stock_entry_no from backend
+	frappe.call({
+		method: "hexplastics.api.production_log_book.get_stock_entry_no",
+		args: {
+			docname: frm.doc.name,
+		},
+		callback: function (r) {
+			// Safety guard: ensure document is still submitted
+			if (frm.doc.docstatus !== 1) {
+				return;
+			}
+
+			// Safety guard: ensure field still exists
+			if (!frm.fields_dict.stock_entry_no) {
+				return;
+			}
+
+			// Update UI safely without using frm.set_value()
+			// This prevents the document from becoming dirty
+			if (r.message) {
+				// Update the document object in locals (source of truth)
+				if (locals["Production Log Book"] && locals["Production Log Book"][frm.doc.name]) {
+					locals["Production Log Book"][frm.doc.name].stock_entry_no = r.message;
+				}
+				// Update frm.doc as well
+				frm.doc.stock_entry_no = r.message;
+				// Update the field value directly
+				frm.fields_dict.stock_entry_no.value = r.message;
+				// Refresh the field to ensure UI updates
+				frm.refresh_field("stock_entry_no");
+			}
+		},
+		error: function (r) {
+			// Log error but don't break the form
+			console.error("Error fetching stock_entry_no:", r);
+		},
+	});
 }
