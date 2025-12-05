@@ -13,6 +13,8 @@
   "source_warehouse",
   "target_warhouse",
   "user_changed_warehouse",
+  "user_changed_consumption",
+  "user_changed_in_qty",
   "column_break_zdoh",
   "item_description",
   "section_break_tfgq",
@@ -134,6 +136,20 @@
    "fieldtype": "Check",
    "hidden": 1,
    "label": "User Changed Warehouse"
+  },
+  {
+   "default": "0",
+   "fieldname": "user_changed_consumption",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "User Changed Consumption"
+  },
+  {
+   "default": "0",
+   "fieldname": "user_changed_in_qty",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "User Changed In Qty"
   }
  ],
  "grid_page_length": 50,

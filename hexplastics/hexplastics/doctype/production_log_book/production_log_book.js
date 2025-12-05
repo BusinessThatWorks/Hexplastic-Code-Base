@@ -245,31 +245,24 @@ frappe.ui.form.on("Production Log Book", {
 
 		// Never recalculate for submitted/cancelled docs to avoid changing values after submission
 		if (frm.doc.docstatus === 0) {
-			// Assign warehouses for all rows on form refresh
+			// Assign warehouses for all rows on form refresh (only for rows that haven't been user-modified)
 			assign_warehouses_for_all_rows(frm);
 
-			if (frm.doc.bom && frm.doc.qty_to_manufacture) {
-				recalculate_issued_for_material_consumption(frm);
-			}
+			// CRITICAL: Do NOT run auto-calculation on refresh after save
+			// Auto-calculation should only run when specific fields change (BOM, manufactured_qty, etc.)
+			// This prevents overwriting user edits after save/refresh
+			// Only recalculate derived fields that don't depend on user input:
 
-			if (frm.doc.bom && frm.doc.manufactured_qty) {
-				recalculate_consumption_for_material_consumption(frm);
-				// Ensure main item in_qty is updated if manufactured_qty exists
-				update_main_item_in_qty(frm);
-				// Ensure scrap in_qty is also updated on form refresh
-				recalculate_scrap_in_qty_for_material_consumption(frm);
-			}
-
-			// Recalculate closing_stock for raw materials on form refresh
+			// Recalculate closing_stock for raw materials on form refresh (this is a calculated field)
 			recalculate_closing_stock_for_raw_materials(frm);
 
-			// Recalculate Hopper & Tray closing quantity
+			// Recalculate Hopper & Tray closing quantity (this is a calculated field)
 			calculate_hopper_closing_qty(frm);
 
-			// Recalculate MIP closing quantity
+			// Recalculate MIP closing quantity (this is a calculated field)
 			calculate_mip_closing_qty(frm);
 
-			// Recalculate net_weight
+			// Recalculate net_weight (this is a calculated field)
 			calculate_net_weight(frm);
 		}
 
@@ -380,45 +373,6 @@ frappe.ui.form.on("Production Log Book", {
 				console.error("Error fetching stock_entry_no:", r);
 			},
 		});
-	},
-
-	// On form refresh, re-run calculation for safety (e.g., when loading an existing *draft* doc)
-	refresh: function (frm) {
-		// Existing refresh logic
-		// Never recalculate for submitted/cancelled docs to avoid changing values after submission
-		if (frm.doc.docstatus === 0) {
-			// Assign warehouses for all rows on form refresh
-			assign_warehouses_for_all_rows(frm);
-
-			if (frm.doc.bom && frm.doc.qty_to_manufacture) {
-				recalculate_issued_for_material_consumption(frm);
-			}
-
-			if (frm.doc.bom && frm.doc.manufactured_qty) {
-				recalculate_consumption_for_material_consumption(frm);
-				// Ensure main item in_qty is updated if manufactured_qty exists
-				update_main_item_in_qty(frm);
-				// Ensure scrap in_qty is also updated on form refresh
-				recalculate_scrap_in_qty_for_material_consumption(frm);
-			}
-
-			// Recalculate closing_stock for raw materials on form refresh
-			recalculate_closing_stock_for_raw_materials(frm);
-
-			// Recalculate Hopper & Tray closing quantity
-			calculate_hopper_closing_qty(frm);
-
-			// Recalculate MIP closing quantity
-			calculate_mip_closing_qty(frm);
-
-			// Recalculate net_weight
-			calculate_net_weight(frm);
-		}
-
-		// Make closing quantity fields read-only
-		make_closing_qty_fields_readonly(frm);
-		// Make net_weight read-only
-		make_net_weight_readonly(frm);
 	},
 });
 
@@ -536,8 +490,69 @@ frappe.ui.form.on("Production Log Book Table", {
 
 	// When consumption changes (auto-calculated or manual), recalculate closing_stock for raw materials
 	consumption: function (frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row) {
+			return;
+		}
+
+		// CRITICAL: Check synchronously if this is auto-calculation
+		// If _auto_calculating_consumption flag is set, this is programmatic change - don't mark as user edit
+		if (!row._auto_calculating_consumption) {
+			// This appears to be a user edit - mark it immediately
+			// Check if flag is not already set
+			const already_marked =
+				row.user_changed_consumption === 1 ||
+				row.user_changed_consumption === "1" ||
+				row.user_changed_consumption === true ||
+				(row.user_changed_consumption &&
+					row.user_changed_consumption !== 0 &&
+					row.user_changed_consumption !== "0" &&
+					row.user_changed_consumption !== false);
+
+			if (!already_marked) {
+				// Set the flag immediately to prevent future auto-calculation
+				row.user_changed_consumption = 1;
+				// Use set_value to persist it, but don't wait for callback
+				frappe.model.set_value(cdt, cdn, "user_changed_consumption", 1, function () {
+					// Flag is now persisted
+				});
+			}
+		}
+
 		// Calculate closing_stock for the specific row if it's a raw material
 		calculate_closing_stock_for_row(frm, cdt, cdn);
+	},
+
+	// When in_qty changes (auto-calculated or manual), mark if user edited it
+	in_qty: function (frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row) {
+			return;
+		}
+
+		// CRITICAL: Check synchronously if this is auto-calculation
+		// If _auto_calculating_in_qty flag is set, this is programmatic change - don't mark as user edit
+		if (!row._auto_calculating_in_qty) {
+			// This appears to be a user edit - mark it immediately
+			// Check if flag is not already set
+			const already_marked =
+				row.user_changed_in_qty === 1 ||
+				row.user_changed_in_qty === "1" ||
+				row.user_changed_in_qty === true ||
+				(row.user_changed_in_qty &&
+					row.user_changed_in_qty !== 0 &&
+					row.user_changed_in_qty !== "0" &&
+					row.user_changed_in_qty !== false);
+
+			if (!already_marked) {
+				// Set the flag immediately to prevent future auto-calculation
+				row.user_changed_in_qty = 1;
+				// Use set_value to persist it, but don't wait for callback
+				frappe.model.set_value(cdt, cdn, "user_changed_in_qty", 1, function () {
+					// Flag is now persisted
+				});
+			}
+		}
 	},
 
 	// When a row is manually added, assign warehouses if item_type is set
@@ -770,8 +785,10 @@ function add_items_to_table(frm, items, main_item_code = null) {
 
 		let row = frm.add_child("material_consumption");
 
-		// Initialize user_changed_warehouse to 0 for new rows
+		// Initialize user_changed flags to 0 for new rows
 		row.user_changed_warehouse = 0;
+		row.user_changed_consumption = 0;
+		row.user_changed_in_qty = 0;
 
 		// Set item_code using frappe.model.set_value to trigger auto-fetch
 		// This will auto-fetch item_name, stock_uom, item_description from Item master
@@ -830,7 +847,16 @@ function add_items_to_table(frm, items, main_item_code = null) {
 		// Auto-fill in_qty for main item only with manufactured_qty
 		// Check if this is the main item by comparing item_code
 		if (main_item_code && item.item_code === main_item_code && manufactured_qty > 0) {
-			frappe.model.set_value(row.doctype, row.name, "in_qty", manufactured_qty);
+			// CRITICAL: Set flag BEFORE calling set_value to prevent event handler from marking as user-changed
+			row._auto_calculating_in_qty = true;
+			frappe.model.set_value(row.doctype, row.name, "in_qty", manufactured_qty, function () {
+				setTimeout(function () {
+					const current_row = locals[row.doctype] && locals[row.doctype][row.name];
+					if (current_row) {
+						current_row._auto_calculating_in_qty = false;
+					}
+				}, 200);
+			});
 		}
 
 		// For scrap items, in_qty will be auto-calculated from BOM Scrap ratios
@@ -953,11 +979,20 @@ function update_main_item_in_qty(frm) {
 /**
  * Helper function to update in_qty for main item in the material_consumption table.
  *
+ * IMPORTANT: This function will ONLY auto-calculate in_qty if:
+ * - The row is new (user_changed_in_qty is 0 or undefined)
+ * - The user has not manually changed the in_qty
+ *
  * @param {Object} frm - The form object
  * @param {string} main_item_code - The main item code from BOM
  */
 function update_main_item_in_qty_in_table(frm, main_item_code) {
 	if (!main_item_code) {
+		return;
+	}
+
+	// Never recalculate for submitted/cancelled docs to avoid changing values after submission
+	if (frm.doc.docstatus === 1) {
 		return;
 	}
 
@@ -968,7 +1003,35 @@ function update_main_item_in_qty_in_table(frm, main_item_code) {
 	let main_item_found = false;
 	rows.forEach((row) => {
 		if (row.item_code === main_item_code) {
-			frappe.model.set_value(row.doctype, row.name, "in_qty", manufactured_qty);
+			// CRITICAL: If user has manually changed in_qty, NEVER overwrite it
+			const user_changed =
+				row.user_changed_in_qty === 1 ||
+				row.user_changed_in_qty === "1" ||
+				row.user_changed_in_qty === true ||
+				(row.user_changed_in_qty &&
+					row.user_changed_in_qty !== 0 &&
+					row.user_changed_in_qty !== "0" &&
+					row.user_changed_in_qty !== false);
+
+			if (!user_changed) {
+				// CRITICAL: Set flag BEFORE calling set_value to prevent event handler from marking as user-changed
+				row._auto_calculating_in_qty = true;
+				frappe.model.set_value(
+					row.doctype,
+					row.name,
+					"in_qty",
+					manufactured_qty,
+					function () {
+						setTimeout(function () {
+							const current_row =
+								locals[row.doctype] && locals[row.doctype][row.name];
+							if (current_row) {
+								current_row._auto_calculating_in_qty = false;
+							}
+						}, 200);
+					}
+				);
+			}
 			main_item_found = true;
 		}
 	});
@@ -1072,15 +1135,45 @@ function recalculate_issued_for_material_consumption(frm) {
  *
  * If any required value is missing or invalid, consumption is set to 0.
  * Division by zero is prevented by checking BOM_main_quantity > 0.
+ *
+ * IMPORTANT: This function will ONLY auto-calculate consumption if:
+ * - The row is new (user_changed_consumption is 0 or undefined)
+ * - The user has not manually changed the consumption
  */
 function recalculate_consumption_for_material_consumption(frm) {
+	// Never recalculate for submitted/cancelled docs to avoid changing values after submission
+	if (frm.doc.docstatus === 1) {
+		return;
+	}
+
 	const bom = frm.doc.bom;
 	const manufactured_qty = flt(frm.doc.manufactured_qty);
 
-	// If essential inputs are missing, set consumption = 0 for all rows and exit
+	// If essential inputs are missing, set consumption = 0 for all rows that haven't been user-modified
 	if (!bom || !manufactured_qty) {
 		(frm.doc.material_consumption || []).forEach((row) => {
-			frappe.model.set_value(row.doctype, row.name, "consumption", 0);
+			// Only auto-set to 0 if user hasn't manually changed it
+			const user_changed =
+				row.user_changed_consumption === 1 ||
+				row.user_changed_consumption === "1" ||
+				row.user_changed_consumption === true ||
+				(row.user_changed_consumption &&
+					row.user_changed_consumption !== 0 &&
+					row.user_changed_consumption !== "0" &&
+					row.user_changed_consumption !== false);
+
+			if (!user_changed) {
+				// CRITICAL: Set flag BEFORE calling set_value
+				row._auto_calculating_consumption = true;
+				frappe.model.set_value(row.doctype, row.name, "consumption", 0, function () {
+					setTimeout(function () {
+						const current_row = locals[row.doctype] && locals[row.doctype][row.name];
+						if (current_row) {
+							current_row._auto_calculating_consumption = false;
+						}
+					}, 200);
+				});
+			}
 		});
 		return;
 	}
@@ -1094,9 +1187,29 @@ function recalculate_consumption_for_material_consumption(frm) {
 	const item_codes = rows.map((row) => row.item_code).filter((c) => !!c);
 
 	if (!item_codes.length) {
-		// No valid item codes; set consumption = 0
+		// No valid item codes; set consumption = 0 for rows that haven't been user-modified
 		rows.forEach((row) => {
-			frappe.model.set_value(row.doctype, row.name, "consumption", 0);
+			const user_changed =
+				row.user_changed_consumption === 1 ||
+				row.user_changed_consumption === "1" ||
+				row.user_changed_consumption === true ||
+				(row.user_changed_consumption &&
+					row.user_changed_consumption !== 0 &&
+					row.user_changed_consumption !== "0" &&
+					row.user_changed_consumption !== false);
+
+			if (!user_changed) {
+				// CRITICAL: Set flag BEFORE calling set_value
+				row._auto_calculating_consumption = true;
+				frappe.model.set_value(row.doctype, row.name, "consumption", 0, function () {
+					setTimeout(function () {
+						const current_row = locals[row.doctype] && locals[row.doctype][row.name];
+						if (current_row) {
+							current_row._auto_calculating_consumption = false;
+						}
+					}, 200);
+				});
+			}
 		});
 		return;
 	}
@@ -1122,6 +1235,21 @@ function recalculate_consumption_for_material_consumption(frm) {
 			});
 
 			rows.forEach((row) => {
+				// CRITICAL: If user has manually changed consumption, NEVER overwrite it
+				// Check both the row object and the persisted value
+				const row_user_changed =
+					row.user_changed_consumption === 1 ||
+					row.user_changed_consumption === "1" ||
+					row.user_changed_consumption === true ||
+					(row.user_changed_consumption &&
+						row.user_changed_consumption !== 0 &&
+						row.user_changed_consumption !== "0" &&
+						row.user_changed_consumption !== false);
+
+				if (row_user_changed) {
+					return; // Skip this row - user has manually edited consumption
+				}
+
 				const item_code = row.item_code;
 				const bom_item_qty = qty_by_item[item_code] || 0;
 				let consumption = 0;
@@ -1132,8 +1260,27 @@ function recalculate_consumption_for_material_consumption(frm) {
 					consumption = base * manufactured_qty;
 				}
 
+				// CRITICAL: Set flag BEFORE calling set_value to prevent event handler from marking as user edit
+				// This must be set synchronously before the set_value call
+				row._auto_calculating_consumption = true;
+
 				// If anything is missing or invalid, consumption remains 0 as per requirement
-				frappe.model.set_value(row.doctype, row.name, "consumption", consumption || 0);
+				frappe.model.set_value(
+					row.doctype,
+					row.name,
+					"consumption",
+					consumption || 0,
+					function () {
+						// After set_value completes, clear the flag with a delay to ensure event handler has finished
+						setTimeout(function () {
+							const current_row =
+								locals[row.doctype] && locals[row.doctype][row.name];
+							if (current_row) {
+								current_row._auto_calculating_consumption = false;
+							}
+						}, 200);
+					}
+				);
 			});
 
 			frm.refresh_field("material_consumption");
@@ -1171,6 +1318,10 @@ function is_scrap_item_row(row) {
  *
  * If any required value is missing, in_qty is set to 0 as per requirements.
  *
+ * IMPORTANT: This function will ONLY auto-calculate in_qty if:
+ * - The row is new (user_changed_in_qty is 0 or undefined)
+ * - The user has not manually changed the in_qty
+ *
  * @param {Object} frm - The form object
  * @param {Object} row - The child table row object
  */
@@ -1179,18 +1330,46 @@ function recalculate_scrap_in_qty_for_row(frm, row) {
 		return;
 	}
 
+	// Never recalculate for submitted/cancelled docs to avoid changing values after submission
+	if (frm.doc.docstatus === 1) {
+		return;
+	}
+
 	// Only operate on scrap rows (identified by item_type)
 	if (!is_scrap_item_row(row)) {
 		return;
+	}
+
+	// CRITICAL: If user has manually changed in_qty, NEVER overwrite it
+	const user_changed =
+		row.user_changed_in_qty === 1 ||
+		row.user_changed_in_qty === "1" ||
+		row.user_changed_in_qty === true ||
+		(row.user_changed_in_qty &&
+			row.user_changed_in_qty !== 0 &&
+			row.user_changed_in_qty !== "0" &&
+			row.user_changed_in_qty !== false);
+
+	if (user_changed) {
+		return; // Skip this row - user has manually edited in_qty
 	}
 
 	const bom = frm.doc.bom;
 	const manufactured_qty = flt(frm.doc.manufactured_qty) || 0;
 	const item_code = row.item_code;
 
-	// If any required value is missing, set in_qty = 0
+	// If any required value is missing, set in_qty = 0 (only if user hasn't changed it)
 	if (!bom || !item_code || !manufactured_qty) {
-		frappe.model.set_value(row.doctype, row.name, "in_qty", 0);
+		// CRITICAL: Set flag BEFORE calling set_value
+		row._auto_calculating_in_qty = true;
+		frappe.model.set_value(row.doctype, row.name, "in_qty", 0, function () {
+			setTimeout(function () {
+				const current_row = locals[row.doctype] && locals[row.doctype][row.name];
+				if (current_row) {
+					current_row._auto_calculating_in_qty = false;
+				}
+			}, 200);
+		});
 		return;
 	}
 
@@ -1206,13 +1385,32 @@ function recalculate_scrap_in_qty_for_row(frm, row) {
 			const data = r.message || {};
 			const in_qty = flt(data.in_qty) || 0;
 
+			// CRITICAL: Set flag BEFORE calling set_value to prevent event handler from marking as user-changed
+			row._auto_calculating_in_qty = true;
+
 			// Set calculated in_qty back on the row
-			frappe.model.set_value(row.doctype, row.name, "in_qty", in_qty);
+			frappe.model.set_value(row.doctype, row.name, "in_qty", in_qty, function () {
+				setTimeout(function () {
+					const current_row = locals[row.doctype] && locals[row.doctype][row.name];
+					if (current_row) {
+						current_row._auto_calculating_in_qty = false;
+					}
+				}, 200);
+			});
 		},
 		error: function (err) {
 			// On error, fail-safe to 0 and log
 			console.error("Error calculating scrap in_qty:", err);
-			frappe.model.set_value(row.doctype, row.name, "in_qty", 0);
+			// CRITICAL: Set flag BEFORE calling set_value
+			row._auto_calculating_in_qty = true;
+			frappe.model.set_value(row.doctype, row.name, "in_qty", 0, function () {
+				setTimeout(function () {
+					const current_row = locals[row.doctype] && locals[row.doctype][row.name];
+					if (current_row) {
+						current_row._auto_calculating_in_qty = false;
+					}
+				}, 200);
+			});
 		},
 	});
 }
@@ -1248,11 +1446,18 @@ function recalculate_scrap_in_qty_for_material_consumption(frm) {
  * Reset in_qty to 0 for all scrap rows in the Material Consumption table.
  *
  * Used when manufactured_qty is cleared.
+ * Note: This will reset even if user has manually changed in_qty, since the source
+ * (manufactured_qty) is being cleared by the user.
  *
  * @param {Object} frm - The form object
  */
 function reset_scrap_in_qty_for_material_consumption(frm) {
 	if (!frm || !frm.doc || !frm.doc.material_consumption) {
+		return;
+	}
+
+	// Never reset for submitted/cancelled docs
+	if (frm.doc.docstatus === 1) {
 		return;
 	}
 
@@ -1263,7 +1468,16 @@ function reset_scrap_in_qty_for_material_consumption(frm) {
 
 	rows.forEach((row) => {
 		if (row && row.item_type === "Scrap Item") {
-			frappe.model.set_value(row.doctype, row.name, "in_qty", 0);
+			// CRITICAL: Set flag BEFORE calling set_value to prevent event handler from marking as user-changed
+			row._auto_calculating_in_qty = true;
+			frappe.model.set_value(row.doctype, row.name, "in_qty", 0, function () {
+				setTimeout(function () {
+					const current_row = locals[row.doctype] && locals[row.doctype][row.name];
+					if (current_row) {
+						current_row._auto_calculating_in_qty = false;
+					}
+				}, 200);
+			});
 		}
 	});
 }
