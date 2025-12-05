@@ -646,7 +646,7 @@ function assign_warehouses(frm, cdt, cdn) {
 	// Assign warehouses based on item type
 	if (item_type === "BOM Item") {
 		// Raw Material
-		source_warehouse = "Raw Material - HEX";
+		source_warehouse = "Production - HEX";
 		target_warehouse = "";
 	} else if (item_type === "Scrap Item") {
 		// Scrap Item
