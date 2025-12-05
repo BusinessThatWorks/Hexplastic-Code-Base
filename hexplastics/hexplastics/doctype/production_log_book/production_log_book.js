@@ -282,18 +282,32 @@ frappe.ui.form.on("Production Log Book", {
 		calculate_hopper_closing_qty(frm);
 	},
 
+	// When net_weight changes, recalculate hopper closing qty
+	net_weight: function (frm) {
+		calculate_hopper_closing_qty(frm);
+	},
+
+	// When mip_used changes, recalculate hopper closing qty
+	mip_used: function (frm) {
+		calculate_hopper_closing_qty(frm);
+		// Also recalculate MIP closing qty
+		calculate_mip_closing_qty(frm);
+	},
+
+	// When mip_generate changes, recalculate hopper closing qty
+	mip_generate: function (frm) {
+		calculate_hopper_closing_qty(frm);
+		// Also recalculate MIP closing qty
+		calculate_mip_closing_qty(frm);
+	},
+
+	// When process_loss_weight changes, recalculate hopper closing qty
+	process_loss_weight: function (frm) {
+		calculate_hopper_closing_qty(frm);
+	},
+
 	// When opening_qty_mip changes, recalculate closing qty
 	opening_qty_mip: function (frm) {
-		calculate_mip_closing_qty(frm);
-	},
-
-	// When mip_generate changes, recalculate closing qty
-	mip_generate: function (frm) {
-		calculate_mip_closing_qty(frm);
-	},
-
-	// When mip_used changes, recalculate closing qty
-	mip_used: function (frm) {
 		calculate_mip_closing_qty(frm);
 	},
 
@@ -521,6 +535,9 @@ frappe.ui.form.on("Production Log Book Table", {
 
 		// Calculate closing_stock for the specific row if it's a raw material
 		calculate_closing_stock_for_row(frm, cdt, cdn);
+
+		// Recalculate hopper closing qty when consumption changes
+		calculate_hopper_closing_qty(frm);
 	},
 
 	// When in_qty changes (auto-calculated or manual), mark if user edited it
@@ -569,6 +586,8 @@ frappe.ui.form.on("Production Log Book Table", {
 		if (frm.doc.docstatus === 0) {
 			setTimeout(function () {
 				assign_warehouses_for_all_rows(frm);
+				// Recalculate hopper closing qty after table refresh (in case rows were added/removed)
+				calculate_hopper_closing_qty(frm);
 			}, 100);
 		}
 	},
@@ -1287,6 +1306,12 @@ function recalculate_consumption_for_material_consumption(frm) {
 
 			// Recalculate closing_stock for raw materials after consumption is updated
 			recalculate_closing_stock_for_raw_materials(frm);
+
+			// Recalculate hopper closing qty after consumption is updated
+			// Use setTimeout to ensure all set_value callbacks have completed
+			setTimeout(function () {
+				calculate_hopper_closing_qty(frm);
+			}, 300);
 		},
 	});
 }
@@ -1561,20 +1586,55 @@ function recalculate_closing_stock_for_raw_materials(frm) {
 
 /**
  * Calculate Hopper & Tray closing quantity.
- * Formula: closing_qty = opening_qty_in_hopper_and_tray - add_or_used
+ * Formula: hopper_closing_qty = (hopper_add_or_used + SUM(consumption of raw material rows) + mip_used) - (net_weight + mip_generate + process_loss_weight)
+ *
+ * Where:
+ * - hopper_add_or_used: from add_or_used field
+ * - SUM(consumption): sum of consumption for rows where source_warehouse is not empty (raw materials)
+ * - mip_used: from mip_used field
+ * - net_weight: from net_weight field
+ * - mip_generate: from mip_generate field
+ * - process_loss_weight: from process_loss_weight field
  *
  * @param {Object} frm - The form object
  */
 function calculate_hopper_closing_qty(frm) {
-	// Get values, defaulting to 0 if undefined or null
-	const opening_qty = flt(frm.doc.opening_qty_in_hopper_and_tray) || 0;
-	const add_or_used = flt(frm.doc.add_or_used) || 0;
+	// Skip calculation for submitted documents to avoid dirtying the document
+	if (frm.doc.docstatus === 1) {
+		return;
+	}
 
-	// Calculate closing_qty: opening_qty - add_or_used
-	const closing_qty = opening_qty - add_or_used;
+	// Get values from Hopper & Tray section, defaulting to 0 if undefined or null
+	const hopper_add_or_used = flt(frm.doc.add_or_used) || 0;
+
+	// Sum consumption for raw material rows (those with source_warehouse filled)
+	const material_consumption = frm.doc.material_consumption || [];
+	let raw_material_consumption_sum = 0;
+
+	material_consumption.forEach(function (row) {
+		// Only sum consumption for raw material rows (identified by source_warehouse not empty)
+		if (row.source_warehouse && row.source_warehouse.trim() !== "") {
+			const consumption = flt(row.consumption) || 0;
+			raw_material_consumption_sum += consumption;
+		}
+	});
+
+	// Get values from MIP section, defaulting to 0 if undefined or null
+	const mip_used = flt(frm.doc.mip_used) || 0;
+	const mip_generate = flt(frm.doc.mip_generate) || 0;
+	const process_loss_weight = flt(frm.doc.process_loss_weight) || 0;
+
+	// Get value from main section, defaulting to 0 if undefined or null
+	const net_weight = flt(frm.doc.net_weight) || 0;
+
+	// Calculate hopper_closing_qty using the new formula:
+	// (hopper_add_or_used + SUM(raw material consumption) + mip_used) - (net_weight + mip_generate + process_loss_weight)
+	const additions = hopper_add_or_used + raw_material_consumption_sum + mip_used;
+	const subtractions = net_weight + mip_generate + process_loss_weight;
+	const hopper_closing_qty = additions - subtractions;
 
 	// Update the closing_qty field
-	frm.set_value("closing_qty", closing_qty);
+	frm.set_value("closing_qty", hopper_closing_qty);
 	frm.refresh_field("closing_qty");
 }
 
