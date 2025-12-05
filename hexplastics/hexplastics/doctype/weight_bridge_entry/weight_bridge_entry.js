@@ -378,31 +378,27 @@ function setup_invoice_filters(frm) {
         // Filter for Purchase Invoice field in child table
         // Second parameter should be the parent fieldname, not the child doctype name
         frm.set_query('purchase_invoice', 'purchase_invoice_details', function () {
+            let filters = [
+                ['docstatus', '!=', 2]  // Exclude canceled invoices (docstatus 2 = Canceled)
+            ];
             // Only apply filter if there are used invoices
             if (used_purchase.length > 0) {
-                return {
-                    filters: [
-                        ['name', 'not in', used_purchase]
-                    ]
-                };
+                filters.push(['name', 'not in', used_purchase]);
             }
-            // If no used invoices, return empty filters (show all)
-            return {};
+            return { filters: filters };
         });
 
         // Filter for Sales Invoice field in child table
         // Second parameter should be the parent fieldname, not the child doctype name
         frm.set_query('sales_invoice', 'sales_invoice_details', function () {
+            let filters = [
+                ['docstatus', '!=', 2]  // Exclude canceled invoices (docstatus 2 = Canceled)
+            ];
             // Only apply filter if there are used invoices
             if (used_sales.length > 0) {
-                return {
-                    filters: [
-                        ['name', 'not in', used_sales]
-                    ]
-                };
+                filters.push(['name', 'not in', used_sales]);
             }
-            // If no used invoices, return empty filters (show all)
-            return {};
+            return { filters: filters };
         });
     });
 }

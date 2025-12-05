@@ -120,6 +120,9 @@ def check_stock_levels_and_send_alert():
 			"rohanathex@gmail.com",
 			"avinashathex@gmail.com",
 			"gauravmartinian@gmail.com",
+			"hooghlyextrusionsworks@gmail.com",
+			"sanchaitaathex@gmail.com",
+			"gazal@hexplastic.com",
 		]
 
 		# Log email content for debugging
