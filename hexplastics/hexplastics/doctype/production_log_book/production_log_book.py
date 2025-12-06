@@ -55,9 +55,11 @@ def create_stock_entry_for_production_log_book(doc: ProductionLogBook) -> None:
     stock_entry.shift_type = doc.shift_type
     stock_entry.machine_used = doc.machine_used
 
-    # Optional: align posting date with production date if present
-    if getattr(doc, "production_date", None):
-        stock_entry.posting_date = doc.production_date
+    # Set posting_date to match production_date from Production Log Book
+    # This ensures the Stock Entry is posted on the same date as production
+    prod_date = doc.production_date
+    stock_entry.posting_date = prod_date
+    stock_entry.set_posting_time = 1  # Ensures posting date/time is not overridden
 
     # Build Stock Entry Items from Material Consumption table
     for row in doc.material_consumption:
