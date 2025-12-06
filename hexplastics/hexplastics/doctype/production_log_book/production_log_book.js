@@ -394,10 +394,36 @@ frappe.ui.form.on("Production Log Book", {
 frappe.ui.form.on("Production Log Book Table", {
 	// When item_code is changed manually, recompute issued
 	item_code: function (frm, cdt, cdn) {
-		recalculate_issued_for_material_consumption(frm);
-		recalculate_consumption_for_material_consumption(frm);
-		// Recalculate closing_stock after item_code change
-		recalculate_closing_stock_for_raw_materials(frm);
+		const row = locals[cdt][cdn];
+		if (!row) {
+			return;
+		}
+
+		// CRITICAL: Check if this is a new row (doesn't have warehouses assigned yet)
+		// If it's a new row, only recalculate for this specific row
+		// If it's an existing row, recalculate globally (existing behavior)
+		const has_source = row.source_warehouse && row.source_warehouse.trim() !== "";
+		const has_target = row.target_warhouse && row.target_warhouse.trim() !== "";
+		const is_new_row = !has_source && !has_target;
+
+		if (is_new_row) {
+			// This is a new row - only recalculate for this specific row
+			recalculate_issued_for_single_row(frm, cdt, cdn);
+			recalculate_consumption_for_single_row(frm, cdt, cdn);
+			// Calculate closing_stock for this row if it's a raw material
+			if (is_raw_material(row)) {
+				setTimeout(function () {
+					calculate_closing_stock_for_row(frm, cdt, cdn);
+				}, 200);
+			}
+		} else {
+			// This is an existing row - recalculate globally (existing behavior)
+			// This maintains backward compatibility for when users change item_code on existing rows
+			recalculate_issued_for_material_consumption(frm);
+			recalculate_consumption_for_material_consumption(frm);
+			recalculate_closing_stock_for_raw_materials(frm);
+		}
+
 		// Assign warehouses based on item type after item_code is set
 		// Use setTimeout to ensure item_code and related fields are set first
 		setTimeout(function () {
@@ -574,9 +600,58 @@ frappe.ui.form.on("Production Log Book Table", {
 
 	// When a row is manually added, assign warehouses if item_type is set
 	material_consumption_add: function (frm) {
-		// Assign warehouses for all rows after a new row is added
+		// CRITICAL: Only process the newly added row, not all rows
+		// Find rows that need processing (have item_type but no warehouses assigned yet)
 		setTimeout(function () {
-			assign_warehouses_for_all_rows(frm);
+			const rows = frm.doc.material_consumption || [];
+			if (!rows.length) {
+				return;
+			}
+
+			// Find rows that need processing:
+			// 1. Have item_type set
+			// 2. Don't have warehouses assigned yet
+			// 3. User hasn't manually modified warehouses
+			const rows_to_process = rows.filter(function (row) {
+				if (!row || !row.item_type) {
+					return false;
+				}
+
+				// Skip if user has already modified warehouses
+				const user_changed_warehouse =
+					row.user_changed_warehouse === 1 ||
+					row.user_changed_warehouse === "1" ||
+					row.user_changed_warehouse === true ||
+					(row.user_changed_warehouse &&
+						row.user_changed_warehouse !== 0 &&
+						row.user_changed_warehouse !== "0" &&
+						row.user_changed_warehouse !== false);
+
+				if (user_changed_warehouse) {
+					return false;
+				}
+
+				// Check if warehouses are already assigned
+				const has_source = row.source_warehouse && row.source_warehouse.trim() !== "";
+				const has_target = row.target_warhouse && row.target_warhouse.trim() !== "";
+
+				// If item_type is set but warehouses are not assigned, this row needs processing
+				return !has_source && !has_target;
+			});
+
+			// Process only the rows that need processing (typically just the newly added row)
+			rows_to_process.forEach(function (row) {
+				// Assign warehouses for the new row only
+				assign_warehouses(frm, row.doctype, row.name);
+
+				// Calculate closing_stock for new raw material rows
+				// Use a longer timeout to ensure opp_in_plant, issued, and consumption are available
+				if (is_raw_material(row)) {
+					setTimeout(function () {
+						calculate_closing_stock_for_row(frm, row.doctype, row.name);
+					}, 200);
+				}
+			});
 		}, 100);
 	},
 
@@ -1312,6 +1387,191 @@ function recalculate_consumption_for_material_consumption(frm) {
 			setTimeout(function () {
 				calculate_hopper_closing_qty(frm);
 			}, 300);
+		},
+	});
+}
+
+/**
+ * Recalculate 'issued' for a single row in material_consumption child table.
+ * This function only processes the specified row, not all rows.
+ *
+ * Logic:
+ *   base = item_quantity_from_BOM_items / BOM_main_quantity
+ *   issued = base * qty_to_manufacture
+ *
+ * @param {Object} frm - The form object
+ * @param {string} cdt - Child doctype name
+ * @param {string} cdn - Child document name
+ */
+function recalculate_issued_for_single_row(frm, cdt, cdn) {
+	const row = locals[cdt][cdn];
+	if (!row || !row.item_code) {
+		return;
+	}
+
+	const bom = frm.doc.bom;
+	const qty_to_manufacture = flt(frm.doc.qty_to_manufacture);
+
+	// If essential inputs are missing, set issued = 0 for this row
+	if (!bom || !qty_to_manufacture) {
+		frappe.model.set_value(cdt, cdn, "issued", 0);
+		return;
+	}
+
+	// Fetch BOM main quantity and BOM item quantity for this specific item
+	frappe.call({
+		method: "hexplastics.api.production_log_book.get_bom_item_quantities",
+		args: {
+			bom_name: bom,
+			item_codes: [row.item_code],
+		},
+		freeze: false,
+		callback: function (r) {
+			const data = r.message || {};
+			const bom_qty = flt(data.bom_qty);
+
+			// Get item quantity from BOM
+			let bom_item_qty = 0;
+			if (data.items && data.items.length > 0) {
+				const item = data.items.find((item) => item.item_code === row.item_code);
+				if (item) {
+					bom_item_qty = flt(item.qty);
+				}
+			}
+
+			let issued = 0;
+
+			// Compute only if both BOM main quantity and item quantity are valid
+			if (bom_qty > 0 && bom_item_qty > 0 && qty_to_manufacture > 0) {
+				const base = bom_item_qty / bom_qty; // safe: bom_qty > 0
+				issued = base * qty_to_manufacture;
+			}
+
+			// Update issued for this row only
+			frappe.model.set_value(cdt, cdn, "issued", issued || 0);
+
+			// Recalculate closing_stock for this row if it's a raw material
+			if (is_raw_material(row)) {
+				setTimeout(function () {
+					calculate_closing_stock_for_row(frm, cdt, cdn);
+				}, 100);
+			}
+		},
+	});
+}
+
+/**
+ * Recalculate 'consumption' for a single row in material_consumption child table.
+ * This function only processes the specified row, not all rows.
+ *
+ * Logic:
+ *   base = item_quantity_from_BOM_items / BOM_main_quantity
+ *   consumption = base * manufactured_qty
+ *
+ * IMPORTANT: This function will ONLY auto-calculate consumption if:
+ * - The user has not manually changed the consumption
+ *
+ * @param {Object} frm - The form object
+ * @param {string} cdt - Child doctype name
+ * @param {string} cdn - Child document name
+ */
+function recalculate_consumption_for_single_row(frm, cdt, cdn) {
+	const row = locals[cdt][cdn];
+	if (!row || !row.item_code) {
+		return;
+	}
+
+	// Never recalculate for submitted/cancelled docs
+	if (frm.doc.docstatus === 1) {
+		return;
+	}
+
+	// CRITICAL: If user has manually changed consumption, NEVER overwrite it
+	const user_changed =
+		row.user_changed_consumption === 1 ||
+		row.user_changed_consumption === "1" ||
+		row.user_changed_consumption === true ||
+		(row.user_changed_consumption &&
+			row.user_changed_consumption !== 0 &&
+			row.user_changed_consumption !== "0" &&
+			row.user_changed_consumption !== false);
+
+	if (user_changed) {
+		return; // Skip this row - user has manually edited consumption
+	}
+
+	const bom = frm.doc.bom;
+	const manufactured_qty = flt(frm.doc.manufactured_qty);
+
+	// If essential inputs are missing, set consumption = 0 for this row
+	if (!bom || !manufactured_qty) {
+		// CRITICAL: Set flag BEFORE calling set_value
+		row._auto_calculating_consumption = true;
+		frappe.model.set_value(cdt, cdn, "consumption", 0, function () {
+			setTimeout(function () {
+				const current_row = locals[cdt] && locals[cdt][cdn];
+				if (current_row) {
+					current_row._auto_calculating_consumption = false;
+				}
+			}, 200);
+		});
+		return;
+	}
+
+	// Fetch BOM main quantity and BOM item quantity for this specific item
+	frappe.call({
+		method: "hexplastics.api.production_log_book.get_bom_item_quantities",
+		args: {
+			bom_name: bom,
+			item_codes: [row.item_code],
+		},
+		freeze: false,
+		callback: function (r) {
+			const data = r.message || {};
+			const bom_qty = flt(data.bom_qty);
+
+			// Get item quantity from BOM
+			let bom_item_qty = 0;
+			if (data.items && data.items.length > 0) {
+				const item = data.items.find((item) => item.item_code === row.item_code);
+				if (item) {
+					bom_item_qty = flt(item.qty);
+				}
+			}
+
+			let consumption = 0;
+
+			// Compute only if both BOM main quantity and item quantity are valid
+			if (bom_qty > 0 && bom_item_qty > 0 && manufactured_qty > 0) {
+				const base = bom_item_qty / bom_qty; // safe: bom_qty > 0
+				consumption = base * manufactured_qty;
+			}
+
+			// CRITICAL: Set flag BEFORE calling set_value to prevent event handler from marking as user edit
+			row._auto_calculating_consumption = true;
+
+			// Update consumption for this row only
+			frappe.model.set_value(cdt, cdn, "consumption", consumption || 0, function () {
+				// After set_value completes, clear the flag with a delay
+				setTimeout(function () {
+					const current_row = locals[cdt] && locals[cdt][cdn];
+					if (current_row) {
+						current_row._auto_calculating_consumption = false;
+					}
+				}, 200);
+			});
+
+			// Recalculate closing_stock for this row if it's a raw material
+			if (is_raw_material(row)) {
+				setTimeout(function () {
+					calculate_closing_stock_for_row(frm, cdt, cdn);
+				}, 100);
+			}
+
+			// Recalculate hopper closing qty after consumption is updated
+			setTimeout(function () {
+				calculate_hopper_closing_qty(frm);
+			}, 200);
 		},
 	});
 }
