@@ -44,10 +44,11 @@ app_license = "mit"
 
 # include js in doctype views
 doctype_js = {
-    "BOM": "public/js/bom.js",
-    "Production Plan": "public/js/production_plan.js",
-    "Leave Application": "public/js/leave_application.js",
-    "Employee": "public/js/employee.js",
+	"BOM": "public/js/bom.js",
+	"Production Plan": "public/js/production_plan.js",
+	"Leave Application": "public/js/leave_application.js",
+	"Employee": "public/js/employee.js",
+	"Purchase Order": "public/js/purchase_order.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
@@ -159,11 +160,9 @@ doctype_js = {
 # ---------------
 
 scheduler_events = {
-    "cron": {
-        "0 9 * * *": [
-            "hexplastics.tasks.check_stock_levels_and_send_alert"
-        ],  # Run at 9:00 AM every day
-    },
+	"cron": {
+		"0 9 * * *": ["hexplastics.tasks.check_stock_levels_and_send_alert"],  # Run at 9:00 AM every day
+	},
 }
 
 # Testing
@@ -246,7 +245,7 @@ scheduler_events = {
 fixtures = [{"doctype": "Custom Field", "filters": {"module": "Hexplastics"}}]
 
 doc_events = {
-    "Production Log Book": {
-        "on_submit": "hexplastics.hexplastics.doctype.production_log_book.production_log_book.on_production_log_book_submit",
-    }
+	"Production Log Book": {
+		"on_submit": "hexplastics.hexplastics.doctype.production_log_book.production_log_book.on_production_log_book_submit",
+	}
 }
