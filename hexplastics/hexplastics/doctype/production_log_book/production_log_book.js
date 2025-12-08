@@ -516,20 +516,33 @@ frappe.ui.form.on("Production Log Book Table", {
 		}, 50);
 	},
 
-	// When opp_in_plant changes, recalculate closing_stock for raw materials
+	// When opp_in_plant changes, recalculate closing_stock for the current row
 	opp_in_plant: function (frm, cdt, cdn) {
-		// Calculate closing_stock for the specific row if it's a raw material
+		// Skip calculation if document is submitted
+		if (frm.doc.docstatus === 1) {
+			return;
+		}
+		// Calculate closing_stock for the specific row
 		calculate_closing_stock_for_row(frm, cdt, cdn);
 	},
 
-	// When issued changes (auto-calculated), recalculate closing_stock for raw materials
+	// When issued changes, recalculate closing_stock for the current row
 	issued: function (frm, cdt, cdn) {
-		// Calculate closing_stock for the specific row if it's a raw material
+		// Skip calculation if document is submitted
+		if (frm.doc.docstatus === 1) {
+			return;
+		}
+		// Calculate closing_stock for the specific row
 		calculate_closing_stock_for_row(frm, cdt, cdn);
 	},
 
-	// When consumption changes (auto-calculated or manual), recalculate closing_stock for raw materials
+	// When consumption changes (auto-calculated or manual), recalculate closing_stock for the current row
 	consumption: function (frm, cdt, cdn) {
+		// Skip calculation if document is submitted
+		if (frm.doc.docstatus === 1) {
+			return;
+		}
+
 		const row = locals[cdt][cdn];
 		if (!row) {
 			return;
@@ -559,7 +572,7 @@ frappe.ui.form.on("Production Log Book Table", {
 			}
 		}
 
-		// Calculate closing_stock for the specific row if it's a raw material
+		// Calculate closing_stock for the specific row
 		calculate_closing_stock_for_row(frm, cdt, cdn);
 
 		// Recalculate hopper closing qty when consumption changes
@@ -1779,36 +1792,56 @@ function is_raw_material(row) {
 }
 
 /**
- * Calculate closing_stock for a specific row if it's a raw material.
+ * Calculate closing_stock for a specific row when user manually enters values.
  * Formula: closing_stock = opp_in_plant + issued - consumption
+ *
+ * This function:
+ * - Only calculates for the current row being edited
+ * - Treats empty values as 0
+ * - Updates closing_stock immediately in the UI
+ * - Works for any row (not just raw materials) when values are manually entered
  *
  * @param {Object} frm - The form object
  * @param {string} cdt - Child doctype name
  * @param {string} cdn - Child document name
  */
 function calculate_closing_stock_for_row(frm, cdt, cdn) {
+	// Skip calculation if document is submitted
+	if (frm.doc.docstatus === 1) {
+		return;
+	}
+
 	const row = locals[cdt][cdn];
 	if (!row) {
 		return;
 	}
 
-	// Only calculate closing_stock for raw materials (BOM Items)
-	if (!is_raw_material(row)) {
-		// For non-raw materials, set closing_stock to 0 or leave it as is
-		// You may want to clear it, but we'll leave it unchanged for now
-		return;
-	}
-
-	// Get values, defaulting to 0 if undefined or null
+	// Get values from the current row, defaulting to 0 if undefined, null, or empty
 	const opp_in_plant = flt(row.opp_in_plant) || 0;
 	const issued = flt(row.issued) || 0;
 	const consumption = flt(row.consumption) || 0;
 
-	// Calculate closing_stock: opening_in_plant + issued - consumption
+	// Calculate closing_stock: opp_in_plant + issued - consumption
 	const closing_stock = opp_in_plant + issued - consumption;
 
-	// Update the closing_stock field
-	frappe.model.set_value(cdt, cdn, "closing_stock", closing_stock);
+	// Update the closing_stock field for this row only
+	// This will immediately update the UI without affecting other rows
+	frappe.model.set_value(cdt, cdn, "closing_stock", closing_stock, function () {
+		// Refresh only the closing_stock field for this specific row to ensure UI updates immediately
+		// Use setTimeout to ensure the value is set before refreshing
+		setTimeout(function () {
+			if (
+				frm.fields_dict.material_consumption &&
+				frm.fields_dict.material_consumption.grid
+			) {
+				// Refresh the grid row to show updated closing_stock
+				const grid_row = frm.fields_dict.material_consumption.grid.get_row(cdn);
+				if (grid_row) {
+					grid_row.refresh_field("closing_stock");
+				}
+			}
+		}, 50);
+	});
 }
 
 /**
