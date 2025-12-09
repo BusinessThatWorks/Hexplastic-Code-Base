@@ -392,11 +392,21 @@ frappe.ui.form.on("Production Log Book", {
 
 // Child table: Production Log Book Table
 frappe.ui.form.on("Production Log Book Table", {
-	// When item_code is changed manually, recompute issued
+	// When item_code is changed manually, recompute issued and fetch item_name
 	item_code: function (frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 		if (!row) {
 			return;
+		}
+
+		// Fetch item_name from Item doctype when item_code is manually selected
+		if (row.item_code) {
+			frappe.db.get_value("Item", { name: row.item_code }, "item_name", function (r) {
+				if (r && r.item_name) {
+					// Set item_name in the child table row
+					frappe.model.set_value(cdt, cdn, "item_name", r.item_name);
+				}
+			});
 		}
 
 		// CRITICAL: Check if this is a new row (doesn't have warehouses assigned yet)
@@ -900,6 +910,12 @@ function add_items_to_table(frm, items, main_item_code = null) {
 		// Set item_code using frappe.model.set_value to trigger auto-fetch
 		// This will auto-fetch item_name, stock_uom, item_description from Item master
 		frappe.model.set_value(row.doctype, row.name, "item_code", item.item_code);
+
+		// Explicitly set item_name if available from BOM item data
+		// This ensures item_name is populated even if fetch_from doesn't work programmatically
+		if (item.item_name) {
+			frappe.model.set_value(row.doctype, row.name, "item_name", item.item_name);
+		}
 
 		// Do NOT set 'issued' from BOM qty directly.
 		// 'issued' will be computed based on qty_to_manufacture and BOM ratios.
