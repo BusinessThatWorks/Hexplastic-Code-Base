@@ -38,7 +38,6 @@
   "mip_tab",
   "opening_qty_mip",
   "mip_generate",
-  "mip_generate_weight",
   "column_break_baij",
   "mip_used",
   "closing_qty_mip",
@@ -195,7 +194,7 @@
   {
    "fieldname": "mip_generate",
    "fieldtype": "Float",
-   "label": "MIP Generate",
+   "label": "MIP Generate (Weight)",
    "precision": "4",
    "reqd": 1
   },
@@ -244,13 +243,6 @@
    "precision": "4"
   },
   {
-   "fieldname": "mip_generate_weight",
-   "fieldtype": "Float",
-   "label": "MIP Generate (Weight)",
-   "precision": "4",
-   "reqd": 1
-  },
-  {
    "fieldname": "process_loss_weight",
    "fieldtype": "Float",
    "label": "Process Loss (Weight)",
@@ -276,7 +268,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-12-04 17:53:40.747199",
+ "modified": "2025-12-08 17:32:43.102885",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Production Log Book",
