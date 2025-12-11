@@ -1,0 +1,145 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:Rejected Data - {rejection_date}",
+ "creation": "2025-12-11 13:16:15.283785",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_63xh",
+  "rejection_date",
+  "total_box_checked",
+  "amended_from",
+  "column_break_bygf",
+  "column_break_mkim",
+  "rejected_box_details_section",
+  "box_rejected_by_die_punching",
+  "box_rejected_by_printing",
+  "column_break_taom",
+  "box_rejected_by_bending",
+  "box_rejected_by_stepling",
+  "section_break_lwpz",
+  "total_rejection",
+  "rejection_in_",
+  "column_break_muur",
+  "column_break_xkcj"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_63xh",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Daily Rejection Data",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "rejection_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Rejection Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_bygf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_mkim",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rejected_box_details_section",
+   "fieldtype": "Section Break",
+   "label": "Rejected Box Details"
+  },
+  {
+   "fieldname": "box_rejected_by_die_punching",
+   "fieldtype": "Int",
+   "label": "Box Rejected by Die Punching"
+  },
+  {
+   "fieldname": "box_rejected_by_printing",
+   "fieldtype": "Int",
+   "label": "Box Rejected by Printing"
+  },
+  {
+   "fieldname": "column_break_taom",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "box_rejected_by_bending",
+   "fieldtype": "Int",
+   "label": "Box Rejected by Bending"
+  },
+  {
+   "fieldname": "box_rejected_by_stepling",
+   "fieldtype": "Int",
+   "label": "Box Rejected by Stepling"
+  },
+  {
+   "fieldname": "section_break_lwpz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "total_rejection",
+   "fieldtype": "Int",
+   "label": "Total Rejection"
+  },
+  {
+   "fieldname": "rejection_in_",
+   "fieldtype": "Float",
+   "label": "Rejection in %",
+   "precision": "2"
+  },
+  {
+   "fieldname": "column_break_muur",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_xkcj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_box_checked",
+   "fieldtype": "Int",
+   "label": "Total Box Checked",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-12-11 13:25:05.444417",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "Daily Rejection Data",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
