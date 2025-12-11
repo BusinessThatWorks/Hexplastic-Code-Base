@@ -82,6 +82,10 @@ def create_stock_entry_for_production_log_book(doc: ProductionLogBook) -> None:
     # ERPNext's calculate_rate_and_amount() may not always set scrap item rates properly
     _calculate_scrap_item_rates(stock_entry)
 
+    # Manually calculate rates for finished goods (Main Items) if they're still 0
+    # Similar to scrap items, ensure finished goods get proper rate calculation
+    _calculate_finished_item_rates(stock_entry)
+
     stock_entry.save(ignore_permissions=True)
 
     # Submit the Stock Entry
@@ -251,6 +255,80 @@ def _calculate_scrap_item_rates(stock_entry) -> None:
             # Recalculate amount
             if flt(scrap_item.basic_rate) > 0:
                 scrap_item.amount = flt(scrap_item.basic_rate) * flt(scrap_item.qty)
+
+
+def _calculate_finished_item_rates(stock_entry) -> None:
+    """Calculate basic_rate for finished goods (Main Items) based on source items.
+
+    In manufacture stock entries, finished goods should get their rate from source items.
+    First, try to get valuation rate from warehouse. If not available, calculate from source items.
+    """
+    finished_items = [item for item in stock_entry.items if item.is_finished_item]
+
+    if not finished_items:
+        return
+
+    # Get all source items (raw materials) to calculate total cost
+    source_items = [
+        item
+        for item in stock_entry.items
+        if item.s_warehouse and not item.is_finished_item and not item.is_scrap_item
+    ]
+
+    # Calculate total cost from source items
+    total_source_cost = sum(
+        flt(item.basic_rate) * flt(item.qty)
+        for item in source_items
+        if flt(item.basic_rate) > 0
+    )
+
+    # Get total finished goods quantity to calculate rate per unit
+    total_finished_qty = sum(flt(item.qty) for item in finished_items)
+
+    for finished_item in finished_items:
+        if flt(finished_item.basic_rate) == 0:
+            # First, try to get valuation rate from the target warehouse
+            if finished_item.t_warehouse:
+                try:
+                    # Get latest valuation rate from Stock Ledger Entry
+                    sle = frappe.get_all(
+                        "Stock Ledger Entry",
+                        filters={
+                            "item_code": finished_item.item_code,
+                            "warehouse": finished_item.t_warehouse,
+                        },
+                        fields=["valuation_rate"],
+                        order_by="posting_date desc, posting_time desc, creation desc",
+                        limit_page_length=1,
+                    )
+
+                    if sle and sle[0].get("valuation_rate"):
+                        finished_item.basic_rate = flt(sle[0].valuation_rate)
+                        finished_item.amount = flt(finished_item.basic_rate) * flt(
+                            finished_item.qty
+                        )
+                        continue
+                except Exception:
+                    pass
+
+            # If warehouse valuation not available, calculate from source items
+            # Finished goods get rate based on source items cost
+            if total_source_cost > 0 and total_finished_qty > 0:
+                # Calculate rate per finished unit
+                cost_per_finished_unit = total_source_cost / total_finished_qty
+                finished_item.basic_rate = cost_per_finished_unit
+            elif total_source_cost > 0 and source_items:
+                # Fallback: use average rate from source items
+                total_source_qty = sum(flt(item.qty) for item in source_items)
+                if total_source_qty > 0:
+                    avg_source_rate = total_source_cost / total_source_qty
+                    finished_item.basic_rate = avg_source_rate
+
+            # Recalculate amount
+            if flt(finished_item.basic_rate) > 0:
+                finished_item.amount = flt(finished_item.basic_rate) * flt(
+                    finished_item.qty
+                )
 
 
 def _make_stock_entry_item(
