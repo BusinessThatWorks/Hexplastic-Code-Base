@@ -18,6 +18,8 @@
   "column_break_taom",
   "box_rejected_by_bending",
   "box_rejected_by_stepling",
+  "column_break_aqiq",
+  "box_rejected_by_dry_problem",
   "section_break_lwpz",
   "total_rejection",
   "rejection_in_",
@@ -111,13 +113,22 @@
    "fieldtype": "Int",
    "label": "Total Box Checked",
    "reqd": 1
+  },
+  {
+   "fieldname": "column_break_aqiq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "box_rejected_by_dry_problem",
+   "fieldtype": "Int",
+   "label": "Box Rejected by Dry Problem"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-12-11 13:25:05.444417",
+ "modified": "2025-12-12 12:31:10.677875",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Daily Rejection Data",
