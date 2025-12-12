@@ -13,7 +13,8 @@ frappe.ui.form.on("Daily Rejection Data", {
 			(flt(frm.doc.box_rejected_by_die_punching) || 0) +
 			(flt(frm.doc.box_rejected_by_printing) || 0) +
 			(flt(frm.doc.box_rejected_by_bending) || 0) +
-			(flt(frm.doc.box_rejected_by_stepling) || 0);
+			(flt(frm.doc.box_rejected_by_stepling) || 0)+
+			(flt(frm.doc.box_rejected_by_dry_problem) || 0);
 
 		frm.set_value("total_rejection", total_rejection);
 
@@ -40,6 +41,9 @@ frappe.ui.form.on("Daily Rejection Data", {
 	},
 
 	box_rejected_by_stepling(frm) {
+		frm.trigger("calculate_rejection");
+	},
+	box_rejected_by_dry_problem(frm) {
 		frm.trigger("calculate_rejection");
 	},
 

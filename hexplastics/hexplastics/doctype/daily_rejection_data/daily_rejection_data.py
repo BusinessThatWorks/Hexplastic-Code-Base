@@ -13,7 +13,8 @@ class DailyRejectionData(Document):
 			(self.box_rejected_by_die_punching or 0) +
 			(self.box_rejected_by_printing or 0) +
 			(self.box_rejected_by_bending or 0) +
-			(self.box_rejected_by_stepling or 0)
+			(self.box_rejected_by_stepling or 0)+
+			(self.box_rejected_by_dry_problem or 0)
 		)
 		self.total_rejection = total_rejection
 		
