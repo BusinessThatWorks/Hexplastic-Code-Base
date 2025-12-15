@@ -55,11 +55,18 @@ def create_stock_entry_for_production_log_book(doc: ProductionLogBook) -> None:
     stock_entry.shift_type = doc.shift_type
     stock_entry.machine_used = doc.machine_used
 
-    # Set posting_date to match production_date from Production Log Book
-    # This ensures the Stock Entry is posted on the same date as production
+    # Set posting_date & posting_time to match Production Log Book
+    # This ensures the Stock Entry is posted on the same date & time as production
     prod_date = doc.production_date
+    prod_time = getattr(doc, "production_time", None)
+
     stock_entry.posting_date = prod_date
-    stock_entry.set_posting_time = 1  # Ensures posting date/time is not overridden
+    if prod_time:
+        # Respect the exact time entered on Production Log Book
+        stock_entry.posting_time = prod_time
+
+    # Must be set before insert so ERPNext does not override posting date/time
+    stock_entry.set_posting_time = 1
 
     # Build Stock Entry Items from Material Consumption table
     for row in doc.material_consumption:
