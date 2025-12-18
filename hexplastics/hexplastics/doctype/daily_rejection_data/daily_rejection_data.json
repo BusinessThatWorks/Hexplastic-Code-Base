@@ -12,18 +12,14 @@
   "amended_from",
   "column_break_bygf",
   "column_break_mkim",
-  "rejected_box_details_section",
-  "box_rejected_by_die_punching",
-  "box_rejected_by_printing",
-  "column_break_taom",
-  "box_rejected_by_bending",
-  "box_rejected_by_stepling",
-  "column_break_aqiq",
-  "box_rejected_by_dry_problem",
+  "section_break_pryo",
+  "table_zsze",
   "section_break_lwpz",
+  "total_rejected_in_day_shift",
+  "total_rejected_in_night_shift",
+  "column_break_muur",
   "total_rejection",
   "rejection_in_",
-  "column_break_muur",
   "column_break_xkcj"
  ],
  "fields": [
@@ -57,35 +53,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "rejected_box_details_section",
-   "fieldtype": "Section Break",
-   "label": "Rejected Box Details"
-  },
-  {
-   "fieldname": "box_rejected_by_die_punching",
-   "fieldtype": "Int",
-   "label": "Box Rejected by Die Punching"
-  },
-  {
-   "fieldname": "box_rejected_by_printing",
-   "fieldtype": "Int",
-   "label": "Box Rejected by Printing"
-  },
-  {
-   "fieldname": "column_break_taom",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "box_rejected_by_bending",
-   "fieldtype": "Int",
-   "label": "Box Rejected by Bending"
-  },
-  {
-   "fieldname": "box_rejected_by_stepling",
-   "fieldtype": "Int",
-   "label": "Box Rejected by Stepling"
-  },
-  {
    "fieldname": "section_break_lwpz",
    "fieldtype": "Section Break"
   },
@@ -115,20 +82,30 @@
    "reqd": 1
   },
   {
-   "fieldname": "column_break_aqiq",
-   "fieldtype": "Column Break"
+   "fieldname": "section_break_pryo",
+   "fieldtype": "Section Break"
   },
   {
-   "fieldname": "box_rejected_by_dry_problem",
+   "fieldname": "table_zsze",
+   "fieldtype": "Table",
+   "options": "Daily Rejection Data Table"
+  },
+  {
+   "fieldname": "total_rejected_in_day_shift",
    "fieldtype": "Int",
-   "label": "Box Rejected by Dry Problem"
+   "label": "Total Rejected in Day Shift"
+  },
+  {
+   "fieldname": "total_rejected_in_night_shift",
+   "fieldtype": "Int",
+   "label": "Total Rejected in Night Shift"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-12-12 12:31:10.677875",
+ "modified": "2025-12-18 12:44:47.800179",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Daily Rejection Data",

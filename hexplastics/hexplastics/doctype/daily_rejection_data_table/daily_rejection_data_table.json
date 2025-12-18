@@ -1,0 +1,76 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-12-18 12:36:41.853212",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "shift_type",
+  "box_rejected_by_die_punching",
+  "box_rejected_by_printing",
+  "box_rejected_by_bending",
+  "box_rejected_by_stepling",
+  "box_rejected_by_dry_problem"
+ ],
+ "fields": [
+  {
+   "columns": 1,
+   "fieldname": "shift_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Shift Type",
+   "options": "\nDay\nNight",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "box_rejected_by_die_punching",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Box Rejected by Die Punching"
+  },
+  {
+   "columns": 2,
+   "fieldname": "box_rejected_by_printing",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Box Rejected by Printing"
+  },
+  {
+   "columns": 2,
+   "fieldname": "box_rejected_by_bending",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Box Rejected by Bending"
+  },
+  {
+   "columns": 1,
+   "fieldname": "box_rejected_by_stepling",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Box Rejected by Stepling"
+  },
+  {
+   "columns": 2,
+   "fieldname": "box_rejected_by_dry_problem",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Box Rejected by Dry Problem"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-12-18 12:41:36.452762",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "Daily Rejection Data Table",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
