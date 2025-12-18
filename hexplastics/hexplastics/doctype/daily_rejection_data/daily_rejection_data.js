@@ -3,17 +3,26 @@
 
 frappe.ui.form.on("Daily Rejection Data", {
 	refresh(frm) {
+		// Skip calculation if document is submitted or cancelled
+		if (frm.doc.docstatus !== 0) {
+			return;
+		}
 		// Calculate on form refresh to populate existing values
 		frm.trigger("calculate_rejection");
 	},
 
 	calculate_rejection(frm) {
+		// Skip calculation if document is submitted or cancelled
+		if (frm.doc.docstatus !== 0) {
+			return;
+		}
+
 		// Calculate total_rejection
 		const total_rejection =
 			(flt(frm.doc.box_rejected_by_die_punching) || 0) +
 			(flt(frm.doc.box_rejected_by_printing) || 0) +
 			(flt(frm.doc.box_rejected_by_bending) || 0) +
-			(flt(frm.doc.box_rejected_by_stepling) || 0)+
+			(flt(frm.doc.box_rejected_by_stepling) || 0) +
 			(flt(frm.doc.box_rejected_by_dry_problem) || 0);
 
 		frm.set_value("total_rejection", total_rejection);
