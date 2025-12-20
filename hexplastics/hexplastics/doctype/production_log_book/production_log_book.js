@@ -254,6 +254,7 @@ frappe.ui.form.on("Production Log Book", {
 			// Only recalculate derived fields that don't depend on user input:
 
 			// Recalculate closing_stock for raw materials on form refresh (this is a calculated field)
+			// This also handles PRIME items (recalculate_closing_stock_for_raw_materials includes PRIME items)
 			recalculate_closing_stock_for_raw_materials(frm);
 
 			// Recalculate Hopper & Tray closing quantity (this is a calculated field)
@@ -275,16 +276,22 @@ frappe.ui.form.on("Production Log Book", {
 	// When opening_qty_in_hopper_and_tray changes, recalculate closing qty
 	opening_qty_in_hopper_and_tray: function (frm) {
 		calculate_hopper_closing_qty(frm);
+		// Also recalculate PRIME item closing_stock
+		recalculate_PRIME_items_closing_stock(frm);
 	},
 
 	// When add_or_used changes, recalculate closing qty
 	add_or_used: function (frm) {
 		calculate_hopper_closing_qty(frm);
+		// Also recalculate PRIME item closing_stock
+		recalculate_PRIME_items_closing_stock(frm);
 	},
 
 	// When net_weight changes, recalculate hopper closing qty
 	net_weight: function (frm) {
 		calculate_hopper_closing_qty(frm);
+		// Also recalculate PRIME item closing_stock
+		recalculate_PRIME_items_closing_stock(frm);
 	},
 
 	// When mip_used changes, recalculate hopper closing qty
@@ -292,6 +299,8 @@ frappe.ui.form.on("Production Log Book", {
 		calculate_hopper_closing_qty(frm);
 		// Also recalculate MIP closing qty
 		calculate_mip_closing_qty(frm);
+		// Also recalculate PRIME item closing_stock
+		recalculate_PRIME_items_closing_stock(frm);
 	},
 
 	// When mip_generate changes, recalculate hopper closing qty
@@ -299,11 +308,15 @@ frappe.ui.form.on("Production Log Book", {
 		calculate_hopper_closing_qty(frm);
 		// Also recalculate MIP closing qty
 		calculate_mip_closing_qty(frm);
+		// Also recalculate PRIME item closing_stock
+		recalculate_PRIME_items_closing_stock(frm);
 	},
 
 	// When process_loss_weight changes, recalculate hopper closing qty
 	process_loss_weight: function (frm) {
 		calculate_hopper_closing_qty(frm);
+		// Also recalculate PRIME item closing_stock
+		recalculate_PRIME_items_closing_stock(frm);
 	},
 
 	// When opening_qty_mip changes, recalculate closing qty
@@ -404,9 +417,35 @@ frappe.ui.form.on("Production Log Book Table", {
 			frappe.db.get_value("Item", { name: row.item_code }, "item_name", function (r) {
 				if (r && r.item_name) {
 					// Set item_name in the child table row
-					frappe.model.set_value(cdt, cdn, "item_name", r.item_name);
+					frappe.model.set_value(cdt, cdn, "item_name", r.item_name, function () {
+						// After item_name is set, check if it's a PRIME item and calculate closing_stock
+						setTimeout(function () {
+							const updated_row = locals[cdt][cdn];
+							if (updated_row && is_PRIME_item(updated_row)) {
+								calculate_closing_stock_for_row(frm, cdt, cdn);
+							}
+						}, 150);
+					});
+				} else {
+					// If item_name fetch failed, check if item_name was already set by fetch_from
+					// Wait a bit for Frappe's fetch_from to complete
+					setTimeout(function () {
+						const updated_row = locals[cdt][cdn];
+						if (updated_row && is_PRIME_item(updated_row)) {
+							calculate_closing_stock_for_row(frm, cdt, cdn);
+						}
+					}, 300);
 				}
 			});
+		} else {
+			// If item_code is cleared, check if item_name was already set (might be a PRIME item)
+			// This handles the case where user types item_name directly
+			setTimeout(function () {
+				const updated_row = locals[cdt][cdn];
+				if (updated_row && is_PRIME_item(updated_row)) {
+					calculate_closing_stock_for_row(frm, cdt, cdn);
+				}
+			}, 200);
 		}
 
 		// CRITICAL: Check if this is a new row (doesn't have warehouses assigned yet)
@@ -418,14 +457,19 @@ frappe.ui.form.on("Production Log Book Table", {
 
 		if (is_new_row) {
 			// This is a new row - only recalculate for this specific row
-			recalculate_issued_for_single_row(frm, cdt, cdn);
-			recalculate_consumption_for_single_row(frm, cdt, cdn);
-			// Calculate closing_stock for this row if it's a raw material
-			if (is_raw_material(row)) {
-				setTimeout(function () {
-					calculate_closing_stock_for_row(frm, cdt, cdn);
-				}, 200);
-			}
+			// Wait for item_name to be available before checking if it's a PRIME item
+			setTimeout(function () {
+				const current_row = locals[cdt][cdn];
+				if (!current_row) return;
+
+				// CRITICAL: Skip calculations for PRIME items - they don't use BOM-based calculations
+				if (!is_PRIME_item(current_row)) {
+					recalculate_issued_for_single_row(frm, cdt, cdn);
+					recalculate_consumption_for_single_row(frm, cdt, cdn);
+				}
+				// Calculate closing_stock for this row (handles both raw materials and PRIME items)
+				calculate_closing_stock_for_row(frm, cdt, cdn);
+			}, 300);
 		} else {
 			// This is an existing row - recalculate globally (existing behavior)
 			// This maintains backward compatibility for when users change item_code on existing rows
@@ -439,6 +483,36 @@ frappe.ui.form.on("Production Log Book Table", {
 		setTimeout(function () {
 			assign_warehouses(frm, cdt, cdn);
 		}, 100);
+	},
+
+	// When item_name changes, check if it's a PRIME item and calculate closing_stock
+	item_name: function (frm, cdt, cdn) {
+		// Skip calculation if document is submitted
+		if (frm.doc.docstatus === 1) {
+			return;
+		}
+
+		const row = locals[cdt][cdn];
+		if (!row) {
+			return;
+		}
+
+		console.log("📝 item_name changed to:", row.item_name, "| item_code:", row.item_code);
+
+		// If this is a PRIME item (item_code starts with "PRIME"), calculate closing_stock
+		// Use setTimeout to ensure the value is fully set
+		if (is_PRIME_item(row)) {
+			console.log("✅ PRIME item detected in item_name handler");
+			setTimeout(function () {
+				const current_row = locals[cdt][cdn];
+				if (current_row && is_PRIME_item(current_row)) {
+					console.log("🔄 Triggering closing_stock calculation for PRIME item");
+					calculate_closing_stock_for_row(frm, cdt, cdn);
+				}
+			}, 150);
+		} else {
+			console.log("❌ Not a PRIME item - item_code:", row.item_code);
+		}
 	},
 
 	// When item_type changes, recalculate scrap in_qty if it becomes a scrap item
@@ -582,11 +656,24 @@ frappe.ui.form.on("Production Log Book Table", {
 			}
 		}
 
-		// Calculate closing_stock for the specific row
+		// Calculate closing_stock for the specific row (handles both raw materials and PRIME items)
 		calculate_closing_stock_for_row(frm, cdt, cdn);
 
 		// Recalculate hopper closing qty when consumption changes
 		calculate_hopper_closing_qty(frm);
+
+		// If consumption changed for a raw material, recalculate all PRIME item closing_stock
+		// (since PRIME items depend on raw material consumption sum)
+		if (!is_PRIME_item(row)) {
+			setTimeout(function () {
+				const rows = frm.doc.material_consumption || [];
+				rows.forEach(function (PRIME_row) {
+					if (is_PRIME_item(PRIME_row)) {
+						calculate_PRIME_item_closing_stock(frm, PRIME_row.doctype, PRIME_row.name);
+					}
+				});
+			}, 100);
+		}
 	},
 
 	// When in_qty changes (auto-calculated or manual), mark if user edited it
@@ -667,13 +754,14 @@ frappe.ui.form.on("Production Log Book Table", {
 				// Assign warehouses for the new row only
 				assign_warehouses(frm, row.doctype, row.name);
 
-				// Calculate closing_stock for new raw material rows
-				// Use a longer timeout to ensure opp_in_plant, issued, and consumption are available
-				if (is_raw_material(row)) {
-					setTimeout(function () {
+				// Calculate closing_stock for new rows (handles both raw materials and PRIME items)
+				// Use a longer timeout to ensure item_name, opp_in_plant, issued, and consumption are available
+				setTimeout(function () {
+					const current_row = locals[row.doctype] && locals[row.doctype][row.name];
+					if (current_row) {
 						calculate_closing_stock_for_row(frm, row.doctype, row.name);
-					}, 200);
-				}
+					}
+				}, 400);
 			});
 		}, 100);
 	},
@@ -686,7 +774,9 @@ frappe.ui.form.on("Production Log Book Table", {
 				assign_warehouses_for_all_rows(frm);
 				// Recalculate hopper closing qty after table refresh (in case rows were added/removed)
 				calculate_hopper_closing_qty(frm);
-			}, 100);
+				// Also recalculate PRIME item closing_stock after table refresh
+				recalculate_PRIME_items_closing_stock(frm);
+			}, 200);
 		}
 	},
 });
@@ -1227,6 +1317,11 @@ function recalculate_issued_for_material_consumption(frm) {
 			});
 
 			rows.forEach((row) => {
+				// CRITICAL: Skip PRIME items - they don't use BOM-based calculations
+				if (is_PRIME_item(row)) {
+					return; // Skip this row - PRIME items don't use issued calculation
+				}
+
 				const item_code = row.item_code;
 				const bom_item_qty = qty_by_item[item_code] || 0;
 				let issued = 0;
@@ -1358,6 +1453,11 @@ function recalculate_consumption_for_material_consumption(frm) {
 			});
 
 			rows.forEach((row) => {
+				// CRITICAL: Skip PRIME items - they don't use BOM-based calculations
+				if (is_PRIME_item(row)) {
+					return; // Skip this row - PRIME items don't use consumption calculation
+				}
+
 				// CRITICAL: If user has manually changed consumption, NEVER overwrite it
 				// Check both the row object and the persisted value
 				const row_user_changed =
@@ -1415,6 +1515,8 @@ function recalculate_consumption_for_material_consumption(frm) {
 			// Use setTimeout to ensure all set_value callbacks have completed
 			setTimeout(function () {
 				calculate_hopper_closing_qty(frm);
+				// Also recalculate PRIME item closing_stock
+				recalculate_PRIME_items_closing_stock(frm);
 			}, 300);
 		},
 	});
@@ -1436,6 +1538,11 @@ function recalculate_issued_for_single_row(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
 	if (!row || !row.item_code) {
 		return;
+	}
+
+	// CRITICAL: Skip PRIME items - they don't use BOM-based calculations
+	if (is_PRIME_item(row)) {
+		return; // Skip this row - PRIME items don't use issued calculation
 	}
 
 	const bom = frm.doc.bom;
@@ -1479,12 +1586,10 @@ function recalculate_issued_for_single_row(frm, cdt, cdn) {
 			// Update issued for this row only
 			frappe.model.set_value(cdt, cdn, "issued", issued || 0);
 
-			// Recalculate closing_stock for this row if it's a raw material
-			if (is_raw_material(row)) {
-				setTimeout(function () {
-					calculate_closing_stock_for_row(frm, cdt, cdn);
-				}, 100);
-			}
+			// Recalculate closing_stock for this row (handles both raw materials and PRIME items)
+			setTimeout(function () {
+				calculate_closing_stock_for_row(frm, cdt, cdn);
+			}, 100);
 		},
 	});
 }
@@ -1513,6 +1618,11 @@ function recalculate_consumption_for_single_row(frm, cdt, cdn) {
 	// Never recalculate for submitted/cancelled docs
 	if (frm.doc.docstatus === 1) {
 		return;
+	}
+
+	// CRITICAL: Skip PRIME items - they don't use BOM-based calculations
+	if (is_PRIME_item(row)) {
+		return; // Skip this row - PRIME items don't use consumption calculation
 	}
 
 	// CRITICAL: If user has manually changed consumption, NEVER overwrite it
@@ -1590,12 +1700,10 @@ function recalculate_consumption_for_single_row(frm, cdt, cdn) {
 				}, 200);
 			});
 
-			// Recalculate closing_stock for this row if it's a raw material
-			if (is_raw_material(row)) {
-				setTimeout(function () {
-					calculate_closing_stock_for_row(frm, cdt, cdn);
-				}, 100);
-			}
+			// Recalculate closing_stock for this row (handles both raw materials and PRIME items)
+			setTimeout(function () {
+				calculate_closing_stock_for_row(frm, cdt, cdn);
+			}, 100);
 
 			// Recalculate hopper closing qty after consumption is updated
 			setTimeout(function () {
@@ -1808,8 +1916,35 @@ function is_raw_material(row) {
 }
 
 /**
+ * Check if a row represents a PRIME item.
+ * A row is considered a PRIME item if item_code starts with "PRIME" (case-insensitive).
+ *
+ * @param {Object} row - The child table row object
+ * @returns {boolean} - True if the row is a PRIME item, false otherwise
+ */
+function is_PRIME_item(row) {
+	if (!row) {
+		return false;
+	}
+	// Check item_code - this is the PRIMARY identifier for PRIME items
+	// A row is a PRIME item if item_code starts with "PRIME" (case-insensitive)
+	if (row.item_code) {
+		const item_code = String(row.item_code).trim();
+		const is_PRIME = item_code.toLowerCase().startsWith("prime");
+		if (is_PRIME) {
+			console.log("✓ PRIME item detected via item_code:", item_code);
+		}
+		return is_PRIME;
+	}
+	return false;
+}
+
+/**
  * Calculate closing_stock for a specific row when user manually enters values.
  * Formula: closing_stock = opp_in_plant + issued - consumption
+ *
+ * SPECIAL CASE: For PRIME items, uses Hopper & Tray formula instead:
+ * closing_stock = (hopper_add_or_used + SUM(consumption of all RAW MATERIAL rows) + mip_used) - (net_weight + mip_generate + process_loss)
  *
  * This function:
  * - Only calculates for the current row being edited
@@ -1829,8 +1964,33 @@ function calculate_closing_stock_for_row(frm, cdt, cdn) {
 
 	const row = locals[cdt][cdn];
 	if (!row) {
+		console.log("⚠️ calculate_closing_stock_for_row: Row not found");
 		return;
 	}
+
+	console.log("🧮 calculate_closing_stock_for_row called for:", row.item_name || row.item_code);
+
+	// SPECIAL CASE: PRIME items use Hopper & Tray formula
+	// Check if item_name exists, if not, wait a bit for it to be fetched
+	if (!row.item_name && row.item_code) {
+		console.log("⏳ Waiting for item_name to be fetched...");
+		// Item name might not be set yet, wait for it
+		setTimeout(function () {
+			const updated_row = locals[cdt][cdn];
+			if (updated_row) {
+				calculate_closing_stock_for_row(frm, cdt, cdn);
+			}
+		}, 200);
+		return;
+	}
+
+	if (is_PRIME_item(row)) {
+		console.log("🎯 PRIME item detected, using Hopper & Tray formula");
+		calculate_PRIME_item_closing_stock(frm, cdt, cdn);
+		return;
+	}
+
+	console.log("📊 Normal item, using standard formula");
 
 	// Get values from the current row, defaulting to 0 if undefined, null, or empty
 	const opp_in_plant = flt(row.opp_in_plant) || 0;
@@ -1865,6 +2025,8 @@ function calculate_closing_stock_for_row(frm, cdt, cdn) {
  * Only applies to rows where item_type === "BOM Item".
  * Formula: closing_stock = opp_in_plant + issued - consumption
  *
+ * SPECIAL CASE: PRIME items use Hopper & Tray formula instead.
+ *
  * @param {Object} frm - The form object
  */
 function recalculate_closing_stock_for_raw_materials(frm) {
@@ -1889,8 +2051,143 @@ function recalculate_closing_stock_for_raw_materials(frm) {
 		}
 	});
 
+	// Also recalculate closing_stock for PRIME items using Hopper & Tray formula
+	rows.forEach((row) => {
+		if (is_PRIME_item(row)) {
+			calculate_PRIME_item_closing_stock(frm, row.doctype, row.name);
+		}
+	});
+
 	// Refresh the field to show updated values
 	frm.refresh_field("material_consumption");
+}
+
+/**
+ * Recalculate closing_stock for all PRIME items in the material_consumption table.
+ * This is called when fields affecting the Hopper & Tray formula change.
+ *
+ * @param {Object} frm - The form object
+ */
+function recalculate_PRIME_items_closing_stock(frm) {
+	// Skip calculation if document is submitted
+	if (frm.doc.docstatus === 1) {
+		return;
+	}
+
+	const rows = frm.doc.material_consumption || [];
+	if (!rows.length) {
+		return;
+	}
+
+	// Recalculate closing_stock for each PRIME item
+	rows.forEach(function (row) {
+		if (is_PRIME_item(row)) {
+			calculate_PRIME_item_closing_stock(frm, row.doctype, row.name);
+		}
+	});
+}
+
+/**
+ * Calculate closing_stock for a PRIME item using Hopper & Tray formula.
+ * Formula: closing_stock = (hopper_add_or_used + SUM(consumption of all RAW MATERIAL rows) + mip_used) - (net_weight + mip_generate + process_loss_weight)
+ *
+ * This is the same formula used for Hopper & Tray closing qty, but applied to PRIME item's closing_stock field.
+ *
+ * @param {Object} frm - The form object
+ * @param {string} cdt - Child doctype name
+ * @param {string} cdn - Child document name
+ */
+function calculate_PRIME_item_closing_stock(frm, cdt, cdn) {
+	// Skip calculation if document is submitted
+	if (frm.doc.docstatus === 1) {
+		return;
+	}
+
+	const row = locals[cdt][cdn];
+	if (!row || !is_PRIME_item(row)) {
+		console.log("⚠️ calculate_PRIME_item_closing_stock: Not a PRIME item or row not found");
+		return;
+	}
+
+	console.log("🔢 Calculating PRIME item closing_stock for:", row.item_name || row.item_code);
+
+	// Get values from Hopper & Tray section, defaulting to 0 if undefined or null
+	const hopper_add_or_used = flt(frm.doc.add_or_used) || 0;
+
+	// Sum consumption for raw material rows (those with source_warehouse filled)
+	// Exclude PRIME items from this sum
+	const material_consumption = frm.doc.material_consumption || [];
+	let raw_material_consumption_sum = 0;
+
+	material_consumption.forEach(function (consumption_row) {
+		// Only sum consumption for raw material rows (identified by source_warehouse not empty)
+		// Exclude PRIME items from the sum
+		if (
+			consumption_row.source_warehouse &&
+			consumption_row.source_warehouse.trim() !== "" &&
+			!is_PRIME_item(consumption_row)
+		) {
+			const consumption = flt(consumption_row.consumption) || 0;
+			raw_material_consumption_sum += consumption;
+		}
+	});
+
+	// Get values from MIP section, defaulting to 0 if undefined or null
+	const mip_used = flt(frm.doc.mip_used) || 0;
+	const mip_generate = flt(frm.doc.mip_generate) || 0;
+	const process_loss_weight = flt(frm.doc.process_loss_weight) || 0;
+
+	// Get value from main section, defaulting to 0 if undefined or null
+	const net_weight = flt(frm.doc.net_weight) || 0;
+
+	// Calculate closing_stock using Hopper & Tray formula:
+	// (hopper_add_or_used + SUM(raw material consumption) + mip_used) - (net_weight + mip_generate + process_loss_weight)
+	const additions = hopper_add_or_used + raw_material_consumption_sum + mip_used;
+	const subtractions = net_weight + mip_generate + process_loss_weight;
+	const closing_stock = additions - subtractions;
+
+	console.log("📐 Formula breakdown:");
+	console.log(
+		"  Additions: add_or_used(" +
+			hopper_add_or_used +
+			") + raw_mat_consumption(" +
+			raw_material_consumption_sum +
+			") + mip_used(" +
+			mip_used +
+			") = " +
+			additions
+	);
+	console.log(
+		"  Subtractions: net_weight(" +
+			net_weight +
+			") + mip_generate(" +
+			mip_generate +
+			") + process_loss(" +
+			process_loss_weight +
+			") = " +
+			subtractions
+	);
+	console.log(
+		"  Final closing_stock = " + additions + " - " + subtractions + " = " + closing_stock
+	);
+
+	// Update the closing_stock field for this PRIME item row
+	frappe.model.set_value(cdt, cdn, "closing_stock", closing_stock, function () {
+		console.log("✅ PRIME item closing_stock updated successfully:", closing_stock);
+		// Refresh only the closing_stock field for this specific row to ensure UI updates immediately
+		setTimeout(function () {
+			if (
+				frm.fields_dict.material_consumption &&
+				frm.fields_dict.material_consumption.grid
+			) {
+				// Refresh the grid row to show updated closing_stock
+				const grid_row = frm.fields_dict.material_consumption.grid.get_row(cdn);
+				if (grid_row) {
+					grid_row.refresh_field("closing_stock");
+				}
+			}
+		}, 50);
+	});
 }
 
 /**
@@ -1922,7 +2219,8 @@ function calculate_hopper_closing_qty(frm) {
 
 	material_consumption.forEach(function (row) {
 		// Only sum consumption for raw material rows (identified by source_warehouse not empty)
-		if (row.source_warehouse && row.source_warehouse.trim() !== "") {
+		// Exclude PRIME items from the sum (PRIME items use their own formula)
+		if (row.source_warehouse && row.source_warehouse.trim() !== "" && !is_PRIME_item(row)) {
 			const consumption = flt(row.consumption) || 0;
 			raw_material_consumption_sum += consumption;
 		}
@@ -2020,10 +2318,10 @@ function fill_opening_stock_for_items(frm) {
 		return;
 	}
 
-	// Collect unique item codes (only for BOM items, not main/scrap items)
+	// Collect unique item codes (only for BOM items, not main/scrap items, and not PRIME items)
 	const item_codes = [];
 	material_consumption.forEach(function (row) {
-		if (row.item_code && row.item_type === "BOM Item") {
+		if (row.item_code && row.item_type === "BOM Item" && !is_PRIME_item(row)) {
 			item_codes.push(row.item_code);
 		}
 	});
@@ -2045,11 +2343,12 @@ function fill_opening_stock_for_items(frm) {
 			if (r.message && typeof r.message === "object") {
 				const opening_stock_map = r.message;
 
-				// Update opp_in_plant for each row
+				// Update opp_in_plant for each row (exclude PRIME items - they don't use opening stock)
 				material_consumption.forEach(function (row) {
 					if (
 						row.item_code &&
 						row.item_type === "BOM Item" &&
+						!is_PRIME_item(row) &&
 						opening_stock_map[row.item_code] !== undefined
 					) {
 						// Only set if value exists in the map
