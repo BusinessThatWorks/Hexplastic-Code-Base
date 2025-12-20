@@ -441,6 +441,14 @@ def create_hopper_stock_entry(doc: ProductionLogBook) -> None:
     # Get valuation rate for the hopper item from warehouse
     valuation_rate = _get_item_valuation_rate(hopper_item, target_warehouse)
 
+    # Log the fetched rate for debugging
+    frappe.logger().info(
+        f"Hopper Stock Entry - Item: {hopper_item}, "
+        f"Warehouse: {target_warehouse}, "
+        f"Valuation Rate: {valuation_rate}, "
+        f"Qty: {closing_qty}"
+    )
+
     # Create Stock Entry
     stock_entry = frappe.new_doc("Stock Entry")
     stock_entry.stock_entry_type = "Material Receipt"
@@ -474,6 +482,40 @@ def create_hopper_stock_entry(doc: ProductionLogBook) -> None:
     # Insert and submit
     try:
         stock_entry.insert(ignore_permissions=True)
+
+        # Recalculate rate if it's still 0
+        # This ensures ERPNext's rate calculation is triggered
+        for item in stock_entry.items:
+            if flt(item.basic_rate) == 0:
+                # Try to get rate using get_incoming_rate for this specific item
+                try:
+                    from erpnext.stock.utils import get_incoming_rate
+
+                    calculated_rate = get_incoming_rate(
+                        {
+                            "item_code": item.item_code,
+                            "warehouse": item.t_warehouse,
+                            "posting_date": stock_entry.posting_date,
+                            "posting_time": stock_entry.posting_time,
+                            "qty": item.qty,
+                            "serial_no": None,
+                            "batch_no": None,
+                            "voucher_type": "Stock Entry",
+                            "voucher_no": stock_entry.name,
+                            "company": stock_entry.company
+                            or frappe.defaults.get_user_default("Company"),
+                        }
+                    )
+                    if flt(calculated_rate) > 0:
+                        item.basic_rate = flt(calculated_rate)
+                        item.amount = flt(calculated_rate) * flt(item.qty)
+                except Exception:
+                    pass
+
+        # Save again if rate was updated
+        stock_entry.save(ignore_permissions=True)
+
+        # Submit the Stock Entry
         stock_entry.submit()
 
         # Optionally, store reference in Production Log Book
@@ -501,43 +543,142 @@ def create_hopper_stock_entry(doc: ProductionLogBook) -> None:
 def _get_item_valuation_rate(item_code: str, warehouse: str) -> float:
     """Get the valuation rate (average rate) for an item in a warehouse.
 
-    This fetches the latest valuation rate from Stock Ledger Entry.
-    If no rate is found, returns 0.
+    This fetches the valuation rate using multiple methods to ensure a value is found.
+
+    Priority:
+    1. Use get_incoming_rate (ERPNext's built-in method)
+    2. Get latest valuation rate from Stock Ledger Entry
+    3. Get valuation_rate from Item master
+    4. Get standard_rate from Item master
+    5. Get last_purchase_rate from Item master
 
     Args:
         item_code: Item Code
         warehouse: Warehouse name
 
     Returns:
-        Valuation rate as float
+        Valuation rate as float (should always return a value > 0)
     """
     try:
-        # Get latest valuation rate from Stock Ledger Entry
+        # Method 1: Use ERPNext's get_incoming_rate method
+        # This is the most reliable way to get valuation rate
+        from erpnext.stock.utils import get_incoming_rate
+
+        incoming_rate = get_incoming_rate(
+            {
+                "item_code": item_code,
+                "warehouse": warehouse,
+                "posting_date": frappe.utils.today(),
+                "posting_time": frappe.utils.nowtime(),
+                "qty": 1,
+                "serial_no": None,
+                "batch_no": None,
+                "voucher_type": "Stock Entry",
+                "voucher_no": None,
+                "company": frappe.defaults.get_user_default("Company"),
+            }
+        )
+
+        if flt(incoming_rate) > 0:
+            frappe.logger().info(
+                f"Rate fetched via get_incoming_rate for {item_code}: {incoming_rate}"
+            )
+            return flt(incoming_rate)
+
+    except Exception as e:
+        frappe.log_error(
+            title=f"get_incoming_rate failed for {item_code}",
+            message=f"Error: {str(e)}",
+        )
+
+    try:
+        # Method 2: Get latest valuation rate from Stock Ledger Entry
         sle = frappe.get_all(
             "Stock Ledger Entry",
             filters={
                 "item_code": item_code,
                 "warehouse": warehouse,
+                "valuation_rate": [">", 0],
             },
             fields=["valuation_rate"],
             order_by="posting_date desc, posting_time desc, creation desc",
             limit_page_length=1,
         )
 
-        if sle and sle[0].get("valuation_rate"):
+        if sle and flt(sle[0].get("valuation_rate")) > 0:
+            frappe.logger().info(
+                f"Rate fetched from SLE for {item_code}: {sle[0].valuation_rate}"
+            )
             return flt(sle[0].valuation_rate)
 
-        # If no Stock Ledger Entry found, try to get standard rate from Item master
-        item_doc = frappe.get_cached_doc("Item", item_code)
-        if item_doc and item_doc.valuation_rate:
-            return flt(item_doc.valuation_rate)
+    except Exception:
+        pass
 
-        # Fallback to 0
-        return 0.0
+    try:
+        # Method 3: Try any warehouse for this item (not just target warehouse)
+        sle_any = frappe.get_all(
+            "Stock Ledger Entry",
+            filters={
+                "item_code": item_code,
+                "valuation_rate": [">", 0],
+            },
+            fields=["valuation_rate"],
+            order_by="posting_date desc, posting_time desc, creation desc",
+            limit_page_length=1,
+        )
+
+        if sle_any and flt(sle_any[0].get("valuation_rate")) > 0:
+            return flt(sle_any[0].valuation_rate)
 
     except Exception:
-        # If any error occurs, return 0
-        return 0.0
+        pass
+
+    try:
+        # Method 4: Get from Item master - valuation_rate field
+        item_doc = frappe.get_cached_doc("Item", item_code)
+
+        if item_doc:
+            # Try valuation_rate
+            if flt(item_doc.valuation_rate) > 0:
+                return flt(item_doc.valuation_rate)
+
+            # Try standard_rate
+            if flt(item_doc.standard_rate) > 0:
+                return flt(item_doc.standard_rate)
+
+            # Try last_purchase_rate
+            if flt(item_doc.last_purchase_rate) > 0:
+                return flt(item_doc.last_purchase_rate)
+
+    except Exception:
+        pass
+
+    try:
+        # Method 5: Get from latest Purchase Receipt
+        pr_item = frappe.get_all(
+            "Purchase Receipt Item",
+            filters={
+                "item_code": item_code,
+                "rate": [">", 0],
+                "docstatus": 1,
+            },
+            fields=["rate"],
+            order_by="creation desc",
+            limit_page_length=1,
+        )
+
+        if pr_item and flt(pr_item[0].get("rate")) > 0:
+            return flt(pr_item[0].rate)
+
+    except Exception:
+        pass
+
+    # Last resort: return 0 (but this should rarely happen)
+    frappe.log_error(
+        title=f"No valuation rate found for {item_code}",
+        message=f"Item: {item_code}, Warehouse: {warehouse}. Using rate 0.",
+    )
+    return 0.0
 
 
 def on_production_log_book_submit(doc, method) -> None:
