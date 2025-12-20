@@ -15,8 +15,12 @@ class ProductionLogBook(Document):
     """
 
     def on_submit(self) -> None:
-        """Create and submit a Stock Entry when Production Log Book is submitted."""
+        """Create and submit Stock Entries when Production Log Book is submitted."""
+        # Create Manufacture Stock Entry from Material Consumption
         create_stock_entry_for_production_log_book(self)
+
+        # Create Material Receipt Stock Entry for Hopper & Tray closing qty
+        create_hopper_stock_entry(self)
 
 
 def create_stock_entry_for_production_log_book(doc: ProductionLogBook) -> None:
@@ -382,6 +386,158 @@ def _make_stock_entry_item(
     # Only set allow_zero_valuation_rate if we can't determine the rate
     # This will be handled by ERPNext's rate calculation
     return item_dict
+
+
+def create_hopper_stock_entry(doc: ProductionLogBook) -> None:
+    """Create and submit a Material Receipt Stock Entry for Hopper & Tray closing qty.
+
+    This Stock Entry records the closing quantity of Hopper & Tray as a Material Receipt.
+    It is separate from the Manufacture Stock Entry.
+
+    Rules:
+    - Only create if closing_qty > 0
+    - Stock Entry Type: Material Receipt
+    - Item: hopper_and_tray_item
+    - Qty: closing_qty
+    - Target Warehouse: Production - HEX (default warehouse for hopper items)
+    - Rate: 0 (hopper items have no cost)
+    - Posting Date/Time: Same as Production Log Book
+    """
+
+    # Get closing qty
+    closing_qty = flt(getattr(doc, "closing_qty", 0))
+
+    # Only create if closing_qty > 0
+    if closing_qty <= 0:
+        return
+
+    # Get hopper item code
+    hopper_item = getattr(doc, "hopper_and_tray_item", None)
+    if not hopper_item:
+        frappe.msgprint(
+            "Hopper & Tray Item is not set. Skipping Hopper Stock Entry creation.",
+            alert=True,
+        )
+        return
+
+    # Check if Hopper Stock Entry already exists for this Production Log Book
+    # This prevents duplicate creation if on_submit is called multiple times
+    existing_entry = frappe.db.exists(
+        "Stock Entry",
+        {
+            "stock_entry_type": "Material Receipt",
+            "custom_production_log_book": doc.name,
+            "docstatus": ["in", [0, 1]],  # Draft or Submitted
+        },
+    )
+
+    if existing_entry:
+        # Already created, skip
+        return
+
+    # Default warehouse for hopper items (can be customized)
+    target_warehouse = "Production - HEX"
+
+    # Get valuation rate for the hopper item from warehouse
+    valuation_rate = _get_item_valuation_rate(hopper_item, target_warehouse)
+
+    # Create Stock Entry
+    stock_entry = frappe.new_doc("Stock Entry")
+    stock_entry.stock_entry_type = "Material Receipt"
+
+    # Link back to Production Log Book (custom field may be needed)
+    # This helps prevent duplicates and track the source
+    if frappe.db.has_column("Stock Entry", "custom_production_log_book"):
+        stock_entry.custom_production_log_book = doc.name
+
+    # Set posting date & time to match Production Log Book
+    stock_entry.posting_date = doc.production_date
+    if getattr(doc, "production_time", None):
+        stock_entry.posting_time = doc.production_time
+    stock_entry.set_posting_time = 1
+
+    # Add item row with valuation rate
+    item_dict = {
+        "item_code": hopper_item,
+        "qty": closing_qty,
+        "t_warehouse": target_warehouse,
+        "basic_rate": valuation_rate,
+        "amount": flt(valuation_rate) * flt(closing_qty),
+    }
+
+    # Only allow zero valuation rate if no rate found
+    if flt(valuation_rate) == 0:
+        item_dict["allow_zero_valuation_rate"] = 1
+
+    stock_entry.append("items", item_dict)
+
+    # Insert and submit
+    try:
+        stock_entry.insert(ignore_permissions=True)
+        stock_entry.submit()
+
+        # Optionally, store reference in Production Log Book
+        # This would require a custom field like "hopper_stock_entry_no"
+        if frappe.db.has_column("Production Log Book", "hopper_stock_entry_no"):
+            frappe.db.set_value(
+                "Production Log Book",
+                doc.name,
+                "hopper_stock_entry_no",
+                stock_entry.name,
+            )
+    except Exception as e:
+        # Log error but don't fail the entire submission
+        frappe.log_error(
+            title=f"Hopper Stock Entry Creation Failed for {doc.name}",
+            message=frappe.get_traceback(),
+        )
+        frappe.msgprint(
+            f"Warning: Could not create Hopper Stock Entry. Error: {str(e)}",
+            alert=True,
+            indicator="orange",
+        )
+
+
+def _get_item_valuation_rate(item_code: str, warehouse: str) -> float:
+    """Get the valuation rate (average rate) for an item in a warehouse.
+
+    This fetches the latest valuation rate from Stock Ledger Entry.
+    If no rate is found, returns 0.
+
+    Args:
+        item_code: Item Code
+        warehouse: Warehouse name
+
+    Returns:
+        Valuation rate as float
+    """
+    try:
+        # Get latest valuation rate from Stock Ledger Entry
+        sle = frappe.get_all(
+            "Stock Ledger Entry",
+            filters={
+                "item_code": item_code,
+                "warehouse": warehouse,
+            },
+            fields=["valuation_rate"],
+            order_by="posting_date desc, posting_time desc, creation desc",
+            limit_page_length=1,
+        )
+
+        if sle and sle[0].get("valuation_rate"):
+            return flt(sle[0].valuation_rate)
+
+        # If no Stock Ledger Entry found, try to get standard rate from Item master
+        item_doc = frappe.get_cached_doc("Item", item_code)
+        if item_doc and item_doc.valuation_rate:
+            return flt(item_doc.valuation_rate)
+
+        # Fallback to 0
+        return 0.0
+
+    except Exception:
+        # If any error occurs, return 0
+        return 0.0
 
 
 def on_production_log_book_submit(doc, method) -> None:
