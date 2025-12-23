@@ -27,8 +27,10 @@ def create_stock_entry_for_production_log_book(doc: ProductionLogBook) -> None:
     """Create and submit a Stock Entry for the given Production Log Book.
 
     Parent field mapping:
-    - shift_type   -> shift_type
-    - machine_used -> machine_used
+    - shift_type      -> custom_shift_type
+    - machine_used    -> custom_machine_used
+    - operator_name   -> custom_operator_name
+    - supervisor_name -> custom_supervisor_name
 
     Child (Material Consumption Table -> Stock Entry Items):
     - RAW MATERIAL rows: when source_warehouse is set
@@ -47,17 +49,24 @@ def create_stock_entry_for_production_log_book(doc: ProductionLogBook) -> None:
             * rate        = calculated from source items (same as finished goods)
     """
 
+    # Skip Manufacture Stock Entry if Material Consumption is empty
+    # This allows Hopper Stock Entry to still be created
     if not getattr(doc, "material_consumption", None):
-        frappe.throw(
-            "Material Consumption table cannot be empty to create Stock Entry."
+        frappe.msgprint(
+            "Material Consumption table is empty. Skipping Manufacture Stock Entry creation.",
+            alert=True,
+            indicator="orange",
         )
+        return
 
     stock_entry = frappe.new_doc("Stock Entry")
     stock_entry.stock_entry_type = "Manufacture"
 
     # Parent field mapping
-    stock_entry.shift_type = doc.shift_type
-    stock_entry.machine_used = doc.machine_used
+    stock_entry.custom_shift_type = doc.shift_type
+    stock_entry.custom_machine_used = doc.machine_used
+    stock_entry.custom_operator_name = doc.operator_name
+    stock_entry.custom_supervisor_name = doc.supervisor_name
 
     # Set posting_date & posting_time to match Production Log Book
     # This ensures the Stock Entry is posted on the same date & time as production
@@ -77,9 +86,12 @@ def create_stock_entry_for_production_log_book(doc: ProductionLogBook) -> None:
         _add_items_from_material_row(stock_entry, row)
 
     if not stock_entry.items:
-        frappe.throw(
-            "No valid Stock Entry Items could be created from Material Consumption table."
+        frappe.msgprint(
+            "No valid Stock Entry Items could be created from Material Consumption table. Skipping Manufacture Stock Entry.",
+            alert=True,
+            indicator="orange",
         )
+        return
 
     # Insert the Stock Entry
     stock_entry.insert(ignore_permissions=True)
@@ -132,25 +144,24 @@ def _add_items_from_material_row(stock_entry, row) -> None:
                 "Consumption cannot be negative when Source Warehouse is set."
             )
 
-        # Skip creating Stock Entry item if consumption is 0 (but don't throw error)
-        if qty == 0:
-            return
-
-        stock_entry.append(
-            "items",
-            _make_stock_entry_item(
-                item_code=row.item_code,
-                qty=qty,
-                s_warehouse=row.source_warehouse,
-                t_warehouse=None,
-                stock_uom=getattr(row, "stock_uom", None),
-                is_finished_item=0,
-                is_scrap_item=0,
-            ),
-        )
+        # Only append if qty > 0 (skip zero consumption but continue processing target warehouse)
+        if qty > 0:
+            stock_entry.append(
+                "items",
+                _make_stock_entry_item(
+                    item_code=row.item_code,
+                    qty=qty,
+                    s_warehouse=row.source_warehouse,
+                    t_warehouse=None,
+                    stock_uom=getattr(row, "stock_uom", None),
+                    is_finished_item=0,
+                    is_scrap_item=0,
+                ),
+            )
 
     # MAIN / SCRAP: target warehouse (note: fieldname is `target_warhouse` in the child table)
     target_warehouse = getattr(row, "target_warhouse", None)
+
     if target_warehouse:
         # Use flt() to preserve decimal values
         qty = flt(row.in_qty or 0)
@@ -162,15 +173,13 @@ def _add_items_from_material_row(stock_entry, row) -> None:
                 "In Qty cannot be negative when Target Warehouse is set."
             )
 
-        # Skip creating Stock Entry item if in_qty is 0 (but don't throw error)
-        if qty == 0:
-            return
-
         # Determine if this is a finished good or scrap based on item_type
         item_type = (row.item_type or "").strip()
         is_finished_item = 1 if item_type == "Main Item" else 0
         is_scrap_item = 1 if item_type == "Scrap Item" else 0
 
+        # Add item regardless of quantity (even if 0) for debugging
+        # Note: ERPNext may reject 0 qty items during validation
         stock_entry.append(
             "items",
             _make_stock_entry_item(
