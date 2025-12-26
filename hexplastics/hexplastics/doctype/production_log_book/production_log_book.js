@@ -54,6 +54,59 @@ frappe.ui.form.on("Production Log Book", {
 				});
 			};
 		}
+
+		// CRITICAL: Intercept set_value to prevent dirtying form after save
+		if (!frm._set_value_hooked) {
+			frm._set_value_hooked = true;
+			const original_set_value = frm.set_value;
+
+			frm.set_value = function (fieldname, value) {
+				// If we just saved, block set_value calls to calculated fields
+				if (frm._just_saved || frm._is_saving) {
+					const calculated_fields = ["closing_qty", "closing_qty_mip", "net_weight"];
+					if (calculated_fields.includes(fieldname)) {
+						console.log("🚫 set_value BLOCKED for", fieldname, "during save");
+						// Set value directly without triggering dirty flag
+						frm.doc[fieldname] = value;
+						frm.refresh_field(fieldname);
+						return;
+					}
+				}
+				return original_set_value.call(this, fieldname, value);
+			};
+		}
+	},
+
+	// Before save handler - set flag to track save state
+	before_save: function (frm) {
+		// Set flag to indicate we're in the middle of saving
+		frm._is_saving = true;
+		console.log("🔵 BEFORE SAVE - Setting _is_saving flag");
+	},
+
+	// After save handler - set flag to prevent refresh from dirtying the form
+	after_save: function (frm) {
+		console.log("🟢 AFTER SAVE - Document saved successfully");
+		// Clear the saving flag
+		frm._is_saving = false;
+		// Set flag to indicate we just saved - prevents refresh from running calculations
+		frm._just_saved = true;
+
+		// Store the current document hash to detect if it changes
+		frm._saved_doc_hash = JSON.stringify(frm.doc);
+
+		// CRITICAL: Mark form as not dirty immediately after save
+		frm.is_dirty = function () {
+			return false;
+		};
+
+		// Clear the flag after a longer delay to ensure all refresh events complete
+		setTimeout(function () {
+			frm._just_saved = false;
+			// Restore original is_dirty function
+			delete frm.is_dirty;
+			console.log("🟡 SAVE FLAG CLEARED - Normal operations resumed");
+		}, 1500);
 	},
 
 	bom: function (frm) {
@@ -232,6 +285,15 @@ frappe.ui.form.on("Production Log Book", {
 
 	// On form refresh, re-run calculation for safety (e.g., when loading an existing *draft* doc)
 	refresh: function (frm) {
+		console.log(
+			"🔄 REFRESH EVENT - docstatus:",
+			frm.doc.docstatus,
+			"is_new:",
+			frm.is_new(),
+			"_just_saved:",
+			frm._just_saved
+		);
+
 		// Check if document was just submitted (docstatus changed from 0 to 1)
 		if (frm.doc.docstatus === 1 && frm._previous_docstatus === 0) {
 			// Document was just submitted, reload to get stock_entry_no from server
@@ -243,38 +305,54 @@ frappe.ui.form.on("Production Log Book", {
 		// Store current docstatus for next refresh
 		frm._previous_docstatus = frm.doc.docstatus;
 
-		// Never recalculate for submitted/cancelled docs to avoid changing values after submission
-		if (frm.doc.docstatus === 0) {
-			// Assign warehouses for all rows on form refresh (only for rows that haven't been user-modified)
-			assign_warehouses_for_all_rows(frm);
-
-			// CRITICAL: Do NOT run auto-calculation on refresh after save
-			// Auto-calculation should only run when specific fields change (BOM, manufactured_qty, etc.)
-			// This prevents overwriting user edits after save/refresh
-			// Only recalculate derived fields that don't depend on user input:
-
-			// Recalculate closing_stock for raw materials on form refresh (this is a calculated field)
-			// This also handles PRIME items (recalculate_closing_stock_for_raw_materials includes PRIME items)
-			recalculate_closing_stock_for_raw_materials(frm);
-
-			// Recalculate Hopper & Tray closing quantity (this is a calculated field)
-			calculate_hopper_closing_qty(frm);
-
-			// Recalculate MIP closing quantity (this is a calculated field)
-			calculate_mip_closing_qty(frm);
-
-			// Recalculate net_weight (this is a calculated field)
-			calculate_net_weight(frm);
-		}
-
-		// Make closing quantity fields read-only
+		// Make closing quantity fields read-only (always do this, doesn't dirty form)
 		make_closing_qty_fields_readonly(frm);
 		// Make net_weight read-only
 		make_net_weight_readonly(frm);
+
+		// CRITICAL: Skip all auto-calculations if we just saved
+		// This prevents the form from becoming dirty immediately after save
+		if (frm._just_saved) {
+			console.log("⚠️ REFRESH BLOCKED - Just saved, skipping all calculations");
+			return;
+		}
+
+		// CRITICAL: Skip all auto-calculations for existing documents (already saved)
+		// Calculations should ONLY run for NEW documents or when specific fields change
+		if (!frm.is_new() && frm.doc.docstatus === 0) {
+			console.log(
+				"⚠️ REFRESH BLOCKED - Existing document, calculations only run on field changes"
+			);
+			return;
+		}
+
+		// Never recalculate for submitted/cancelled docs to avoid changing values after submission
+		if (frm.doc.docstatus === 0) {
+			// Only run calculations for NEW documents (not yet saved)
+			// For existing documents, calculations should only run when specific fields change
+			if (frm.is_new()) {
+				console.log("✅ REFRESH CALCULATIONS - Running for new document");
+				// Assign warehouses for all rows on form refresh (only for rows that haven't been user-modified)
+				assign_warehouses_for_all_rows(frm);
+
+				// Recalculate closing_stock for raw materials on form refresh (this is a calculated field)
+				recalculate_closing_stock_for_raw_materials(frm);
+
+				// Recalculate Hopper & Tray closing quantity (this is a calculated field)
+				calculate_hopper_closing_qty(frm);
+
+				// Recalculate MIP closing quantity (this is a calculated field)
+				calculate_mip_closing_qty(frm);
+
+				// Recalculate net_weight (this is a calculated field)
+				calculate_net_weight(frm);
+			}
+		}
 	},
 
 	// When opening_qty_in_hopper_and_tray changes, recalculate closing qty
 	opening_qty_in_hopper_and_tray: function (frm) {
+		if (frm.doc.docstatus !== 0) return;
 		calculate_hopper_closing_qty(frm);
 		// Also recalculate PRIME item closing_stock
 		recalculate_PRIME_items_closing_stock(frm);
@@ -282,6 +360,7 @@ frappe.ui.form.on("Production Log Book", {
 
 	// When add_or_used changes, recalculate closing qty
 	add_or_used: function (frm) {
+		if (frm.doc.docstatus !== 0) return;
 		calculate_hopper_closing_qty(frm);
 		// Also recalculate PRIME item closing_stock
 		recalculate_PRIME_items_closing_stock(frm);
@@ -289,6 +368,7 @@ frappe.ui.form.on("Production Log Book", {
 
 	// When net_weight changes, recalculate hopper closing qty
 	net_weight: function (frm) {
+		if (frm.doc.docstatus !== 0) return;
 		calculate_hopper_closing_qty(frm);
 		// Also recalculate PRIME item closing_stock
 		recalculate_PRIME_items_closing_stock(frm);
@@ -296,6 +376,7 @@ frappe.ui.form.on("Production Log Book", {
 
 	// When mip_used changes, recalculate hopper closing qty
 	mip_used: function (frm) {
+		if (frm.doc.docstatus !== 0) return;
 		calculate_hopper_closing_qty(frm);
 		// Also recalculate MIP closing qty
 		calculate_mip_closing_qty(frm);
@@ -305,6 +386,7 @@ frappe.ui.form.on("Production Log Book", {
 
 	// When mip_generate changes, recalculate hopper closing qty
 	mip_generate: function (frm) {
+		if (frm.doc.docstatus !== 0) return;
 		calculate_hopper_closing_qty(frm);
 		// Also recalculate MIP closing qty
 		calculate_mip_closing_qty(frm);
@@ -314,6 +396,7 @@ frappe.ui.form.on("Production Log Book", {
 
 	// When process_loss_weight changes, recalculate hopper closing qty
 	process_loss_weight: function (frm) {
+		if (frm.doc.docstatus !== 0) return;
 		calculate_hopper_closing_qty(frm);
 		// Also recalculate PRIME item closing_stock
 		recalculate_PRIME_items_closing_stock(frm);
@@ -321,16 +404,19 @@ frappe.ui.form.on("Production Log Book", {
 
 	// When opening_qty_mip changes, recalculate closing qty
 	opening_qty_mip: function (frm) {
+		if (frm.doc.docstatus !== 0) return;
 		calculate_mip_closing_qty(frm);
 	},
 
 	// When gross_weight changes, recalculate net_weight
 	gross_weight: function (frm) {
+		if (frm.doc.docstatus !== 0) return;
 		calculate_net_weight(frm);
 	},
 
 	// When weight_of_fabric_packing changes, recalculate net_weight
 	weight_of_fabric_packing: function (frm) {
+		if (frm.doc.docstatus !== 0) return;
 		calculate_net_weight(frm);
 	},
 
@@ -340,8 +426,15 @@ frappe.ui.form.on("Production Log Book", {
 		make_closing_qty_fields_readonly(frm);
 		// Make net_weight read-only
 		make_net_weight_readonly(frm);
-		// Only recalculate closing quantities for draft docs
-		if (frm.doc.docstatus === 0) {
+
+		// CRITICAL: Skip calculations if we just saved to prevent form becoming dirty
+		if (frm._just_saved) {
+			return;
+		}
+
+		// Only recalculate closing quantities for NEW draft docs
+		// Existing docs should only recalculate when specific fields change
+		if (frm.doc.docstatus === 0 && frm.is_new()) {
 			calculate_hopper_closing_qty(frm);
 			calculate_mip_closing_qty(frm);
 			calculate_net_weight(frm);
@@ -603,7 +696,7 @@ frappe.ui.form.on("Production Log Book Table", {
 	// When opp_in_plant changes, recalculate closing_stock for the current row
 	opp_in_plant: function (frm, cdt, cdn) {
 		// Skip calculation if document is submitted
-		if (frm.doc.docstatus === 1) {
+		if (frm.doc.docstatus !== 0) {
 			return;
 		}
 		// Calculate closing_stock for the specific row
@@ -613,7 +706,7 @@ frappe.ui.form.on("Production Log Book Table", {
 	// When issued changes, recalculate closing_stock for the current row
 	issued: function (frm, cdt, cdn) {
 		// Skip calculation if document is submitted
-		if (frm.doc.docstatus === 1) {
+		if (frm.doc.docstatus !== 0) {
 			return;
 		}
 		// Calculate closing_stock for the specific row
@@ -623,7 +716,7 @@ frappe.ui.form.on("Production Log Book Table", {
 	// When consumption changes (auto-calculated or manual), recalculate closing_stock for the current row
 	consumption: function (frm, cdt, cdn) {
 		// Skip calculation if document is submitted
-		if (frm.doc.docstatus === 1) {
+		if (frm.doc.docstatus !== 0) {
 			return;
 		}
 
@@ -768,9 +861,18 @@ frappe.ui.form.on("Production Log Book Table", {
 
 	// When child table is refreshed, ensure warehouses are assigned (only for new rows)
 	material_consumption_refresh: function (frm) {
+		// CRITICAL: Skip if we just saved to prevent form becoming dirty
+		if (frm._just_saved) {
+			return;
+		}
+
 		// Only assign warehouses for new rows (not user-modified ones) after table refresh
 		if (frm.doc.docstatus === 0) {
 			setTimeout(function () {
+				// Double-check the flag in case it was set during timeout
+				if (frm._just_saved) {
+					return;
+				}
 				assign_warehouses_for_all_rows(frm);
 				// Recalculate hopper closing qty after table refresh (in case rows were added/removed)
 				calculate_hopper_closing_qty(frm);
@@ -937,7 +1039,12 @@ function assign_warehouses(frm, cdt, cdn) {
  */
 function assign_warehouses_for_all_rows(frm) {
 	// Don't modify submitted documents
-	if (frm.doc.docstatus === 1) {
+	if (frm.doc.docstatus !== 0) {
+		return;
+	}
+
+	// Skip if we just saved to prevent dirtying the form
+	if (frm._just_saved) {
 		return;
 	}
 
@@ -951,6 +1058,10 @@ function assign_warehouses_for_all_rows(frm) {
 		if (row && row.item_type) {
 			// Use setTimeout to ensure row is fully initialized
 			setTimeout(function () {
+				// Double-check the flag in case it was set during timeout
+				if (frm._just_saved) {
+					return;
+				}
 				assign_warehouses(frm, row.doctype, row.name);
 			}, 50);
 		}
@@ -1958,7 +2069,12 @@ function is_PRIME_item(row) {
  */
 function calculate_closing_stock_for_row(frm, cdt, cdn) {
 	// Skip calculation if document is submitted
-	if (frm.doc.docstatus === 1) {
+	if (frm.doc.docstatus !== 0) {
+		return;
+	}
+
+	// CRITICAL: Skip if we're in the middle of saving or just saved
+	if (frm._is_saving || frm._just_saved) {
 		return;
 	}
 
@@ -2000,24 +2116,17 @@ function calculate_closing_stock_for_row(frm, cdt, cdn) {
 	// Calculate closing_stock: opp_in_plant + issued - consumption
 	const closing_stock = opp_in_plant + issued - consumption;
 
-	// Update the closing_stock field for this row only
-	// This will immediately update the UI without affecting other rows
-	frappe.model.set_value(cdt, cdn, "closing_stock", closing_stock, function () {
-		// Refresh only the closing_stock field for this specific row to ensure UI updates immediately
-		// Use setTimeout to ensure the value is set before refreshing
-		setTimeout(function () {
-			if (
-				frm.fields_dict.material_consumption &&
-				frm.fields_dict.material_consumption.grid
-			) {
-				// Refresh the grid row to show updated closing_stock
-				const grid_row = frm.fields_dict.material_consumption.grid.get_row(cdn);
-				if (grid_row) {
-					grid_row.refresh_field("closing_stock");
-				}
-			}
-		}, 50);
-	});
+	// CRITICAL: Update value without using frappe.model.set_value to avoid dirtying the form
+	// closing_stock is a calculated field, so we can set it directly
+	row.closing_stock = closing_stock;
+
+	// Refresh the grid row to show updated closing_stock
+	if (frm.fields_dict.material_consumption && frm.fields_dict.material_consumption.grid) {
+		const grid_row = frm.fields_dict.material_consumption.grid.get_row(cdn);
+		if (grid_row) {
+			grid_row.refresh_field("closing_stock");
+		}
+	}
 }
 
 /**
@@ -2030,6 +2139,16 @@ function calculate_closing_stock_for_row(frm, cdt, cdn) {
  * @param {Object} frm - The form object
  */
 function recalculate_closing_stock_for_raw_materials(frm) {
+	// Skip if document is not in draft state
+	if (frm.doc.docstatus !== 0) {
+		return;
+	}
+
+	// CRITICAL: Skip if we're in the middle of saving or just saved
+	if (frm._is_saving || frm._just_saved) {
+		return;
+	}
+
 	const rows = frm.doc.material_consumption || [];
 	if (!rows.length) {
 		return;
@@ -2046,8 +2165,9 @@ function recalculate_closing_stock_for_raw_materials(frm) {
 			// Calculate closing_stock: opening_in_plant + issued - consumption
 			const closing_stock = opp_in_plant + issued - consumption;
 
-			// Update the closing_stock field
-			frappe.model.set_value(row.doctype, row.name, "closing_stock", closing_stock);
+			// CRITICAL: Update value directly to avoid dirtying the form
+			// closing_stock is a calculated field
+			row.closing_stock = closing_stock;
 		}
 	});
 
@@ -2070,7 +2190,12 @@ function recalculate_closing_stock_for_raw_materials(frm) {
  */
 function recalculate_PRIME_items_closing_stock(frm) {
 	// Skip calculation if document is submitted
-	if (frm.doc.docstatus === 1) {
+	if (frm.doc.docstatus !== 0) {
+		return;
+	}
+
+	// Skip if we just saved to prevent dirtying the form
+	if (frm._just_saved) {
 		return;
 	}
 
@@ -2099,7 +2224,12 @@ function recalculate_PRIME_items_closing_stock(frm) {
  */
 function calculate_PRIME_item_closing_stock(frm, cdt, cdn) {
 	// Skip calculation if document is submitted
-	if (frm.doc.docstatus === 1) {
+	if (frm.doc.docstatus !== 0) {
+		return;
+	}
+
+	// CRITICAL: Skip if we're in the middle of saving or just saved
+	if (frm._is_saving || frm._just_saved) {
 		return;
 	}
 
@@ -2171,23 +2301,18 @@ function calculate_PRIME_item_closing_stock(frm, cdt, cdn) {
 		"  Final closing_stock = " + additions + " - " + subtractions + " = " + closing_stock
 	);
 
-	// Update the closing_stock field for this PRIME item row
-	frappe.model.set_value(cdt, cdn, "closing_stock", closing_stock, function () {
-		console.log("✅ PRIME item closing_stock updated successfully:", closing_stock);
-		// Refresh only the closing_stock field for this specific row to ensure UI updates immediately
-		setTimeout(function () {
-			if (
-				frm.fields_dict.material_consumption &&
-				frm.fields_dict.material_consumption.grid
-			) {
-				// Refresh the grid row to show updated closing_stock
-				const grid_row = frm.fields_dict.material_consumption.grid.get_row(cdn);
-				if (grid_row) {
-					grid_row.refresh_field("closing_stock");
-				}
-			}
-		}, 50);
-	});
+	// CRITICAL: Update value directly to avoid dirtying the form
+	// closing_stock is a calculated field
+	row.closing_stock = closing_stock;
+	console.log("✅ PRIME item closing_stock updated successfully:", closing_stock);
+
+	// Refresh the grid row to show updated closing_stock
+	if (frm.fields_dict.material_consumption && frm.fields_dict.material_consumption.grid) {
+		const grid_row = frm.fields_dict.material_consumption.grid.get_row(cdn);
+		if (grid_row) {
+			grid_row.refresh_field("closing_stock");
+		}
+	}
 }
 
 /**
@@ -2206,9 +2331,17 @@ function calculate_PRIME_item_closing_stock(frm, cdt, cdn) {
  */
 function calculate_hopper_closing_qty(frm) {
 	// Skip calculation for submitted documents to avoid dirtying the document
-	if (frm.doc.docstatus === 1) {
+	if (frm.doc.docstatus !== 0) {
 		return;
 	}
+
+	// CRITICAL: Skip if we're in the middle of saving or just saved
+	if (frm._is_saving || frm._just_saved) {
+		console.log("🚫 calculate_hopper_closing_qty BLOCKED - Save in progress");
+		return;
+	}
+
+	console.log("⚙️ calculate_hopper_closing_qty RUNNING");
 
 	// Get values from Hopper & Tray section, defaulting to 0 if undefined or null
 	const hopper_add_or_used = flt(frm.doc.add_or_used) || 0;
@@ -2240,8 +2373,9 @@ function calculate_hopper_closing_qty(frm) {
 	const subtractions = net_weight + mip_generate + process_loss_weight;
 	const hopper_closing_qty = additions - subtractions;
 
-	// Update the closing_qty field
-	frm.set_value("closing_qty", hopper_closing_qty);
+	// CRITICAL: Update value without using set_value to avoid dirtying the form
+	// This field is read-only and calculated, so we don't need to trigger dirty flag
+	frm.doc.closing_qty = hopper_closing_qty;
 	frm.refresh_field("closing_qty");
 }
 
@@ -2253,9 +2387,17 @@ function calculate_hopper_closing_qty(frm) {
  */
 function calculate_mip_closing_qty(frm) {
 	// Skip calculation for submitted documents
-	if (frm.doc.docstatus === 1) {
+	if (frm.doc.docstatus !== 0) {
 		return;
 	}
+
+	// CRITICAL: Skip if we're in the middle of saving or just saved
+	if (frm._is_saving || frm._just_saved) {
+		console.log("🚫 calculate_mip_closing_qty BLOCKED - Save in progress");
+		return;
+	}
+
+	console.log("⚙️ calculate_mip_closing_qty RUNNING");
 
 	// Get values, defaulting to 0 if undefined or null
 	const opening_qty = flt(frm.doc.opening_qty_mip) || 0;
@@ -2265,8 +2407,9 @@ function calculate_mip_closing_qty(frm) {
 	// Calculate closing_qty_mip: opening_qty + mip_generate - mip_used
 	const closing_qty_mip = opening_qty + mip_generate - mip_used;
 
-	// Update the closing_qty_mip field
-	frm.set_value("closing_qty_mip", closing_qty_mip);
+	// CRITICAL: Update value without using set_value to avoid dirtying the form
+	// This field is read-only and calculated, so we don't need to trigger dirty flag
+	frm.doc.closing_qty_mip = closing_qty_mip;
 	frm.refresh_field("closing_qty_mip");
 }
 
@@ -2278,9 +2421,17 @@ function calculate_mip_closing_qty(frm) {
  */
 function calculate_net_weight(frm) {
 	// Skip calculation for submitted documents
-	if (frm.doc.docstatus === 1) {
+	if (frm.doc.docstatus !== 0) {
 		return;
 	}
+
+	// CRITICAL: Skip if we're in the middle of saving or just saved
+	if (frm._is_saving || frm._just_saved) {
+		console.log("🚫 calculate_net_weight BLOCKED - Save in progress");
+		return;
+	}
+
+	console.log("⚙️ calculate_net_weight RUNNING");
 
 	// Get values, defaulting to 0 if undefined or null
 	const gross_weight = flt(frm.doc.gross_weight) || 0;
@@ -2289,8 +2440,9 @@ function calculate_net_weight(frm) {
 	// Calculate net_weight: gross_weight - weight_of_fabric_packing
 	const net_weight = gross_weight - weight_of_fabric_packing;
 
-	// Update the net_weight field
-	frm.set_value("net_weight", net_weight);
+	// CRITICAL: Update value without using set_value to avoid dirtying the form
+	// This field is read-only and calculated, so we don't need to trigger dirty flag
+	frm.doc.net_weight = net_weight;
 	frm.refresh_field("net_weight");
 }
 
