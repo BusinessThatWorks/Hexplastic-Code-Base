@@ -295,15 +295,7 @@ frappe.ui.form.on("Production Log Book", {
 		);
 
 		// Check if document was just submitted (docstatus changed from 0 to 1)
-		if (frm.doc.docstatus === 1 && frm._previous_docstatus === 0) {
-			// Document was just submitted, reload to get stock_entry_no from server
-			// This will refresh the form with latest data without making it dirty
-			setTimeout(function () {
-				frm.reload_doc();
-			}, 300);
-		}
-		// Store current docstatus for next refresh
-		frm._previous_docstatus = frm.doc.docstatus;
+
 
 		// Make closing quantity fields read-only (always do this, doesn't dirty form)
 		make_closing_qty_fields_readonly(frm);
