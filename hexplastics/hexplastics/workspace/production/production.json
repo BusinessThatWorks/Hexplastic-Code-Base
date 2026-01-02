@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"IEVS-1zM9F\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"9YJbpEEnE_\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Log Book\",\"col\":4}},{\"id\":\"-GF3KEtFfV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Rejection Data\",\"col\":4}}]",
+ "content": "[{\"id\":\"IEVS-1zM9F\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Dashboards</b></span>\",\"col\":12}},{\"id\":\"DASH-PLB01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Log Book Dashboard\",\"col\":4}},{\"id\":\"IEVS-2zM9G\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"9YJbpEEnE_\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Log Book\",\"col\":4}},{\"id\":\"-GF3KEtFfV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Rejection Data\",\"col\":4}}]",
  "creation": "2025-12-29 15:14:09.405148",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,8 +13,8 @@
  "is_hidden": 0,
  "label": "Production",
  "links": [],
- "modified": "2025-12-29 15:20:55.756282",
- "modified_by": "ritika@clapgrow.com",
+ "modified": "2025-12-30 10:00:00.000000",
+ "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Production",
  "number_cards": [],
@@ -25,6 +25,15 @@
  "roles": [],
  "sequence_id": 20.0,
  "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "icon": "dashboard",
+   "label": "Production Log Book Dashboard",
+   "link_to": "production-log-dashb",
+   "stats_filter": "[]",
+   "type": "Page"
+  },
   {
    "color": "Grey",
    "doc_view": "List",

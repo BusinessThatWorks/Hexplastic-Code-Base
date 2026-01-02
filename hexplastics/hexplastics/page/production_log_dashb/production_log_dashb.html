@@ -1,0 +1,252 @@
+<div class="production-log-dashboard">
+	<!-- Title (separate from filter box) -->
+	<h1 class="dashboard-title">Production Log Book Dashboard</h1>
+
+	<!-- Filter Section (light grey box) -->
+	<div class="filter-section">
+		<div class="filter-row">
+			<div class="filter-group">
+				<label class="filter-label">From Date <span class="required">*</span></label>
+				<input type="date" class="filter-input" id="from-date" />
+			</div>
+			<div class="filter-group">
+				<label class="filter-label">To Date <span class="required">*</span></label>
+				<input type="date" class="filter-input" id="to-date" />
+			</div>
+			<div class="filter-group">
+				<label class="filter-label">Shift</label>
+				<select class="filter-input filter-select" id="shift-filter">
+					<option value="All">All</option>
+					<option value="Day">Day</option>
+					<option value="Night">Night</option>
+				</select>
+			</div>
+			<div class="filter-group filter-group-wide">
+				<label class="filter-label">Manufacturing Item</label>
+				<div class="awesomplete-wrapper" id="item-filter-wrapper">
+					<input
+						type="text"
+						class="filter-input"
+						id="manufacturing-item"
+						placeholder="Select Item..."
+						autocomplete="off"
+					/>
+				</div>
+			</div>
+			<div class="filter-group filter-group-btn">
+				<button class="btn btn-primary refresh-btn" id="refresh-btn">Refresh</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Tabs Section -->
+	<div class="tabs-section">
+		<div class="tabs-container">
+			<button class="tab-btn active" data-tab="overview">
+				<svg
+					class="tab-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<circle cx="12" cy="12" r="10"></circle>
+					<line x1="12" y1="8" x2="12" y2="12"></line>
+					<line x1="12" y1="16" x2="12.01" y2="16"></line>
+				</svg>
+				Overview
+			</button>
+			<button class="tab-btn" data-tab="log-book">
+				<svg
+					class="tab-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+					<polyline points="14 2 14 8 20 8"></polyline>
+					<line x1="16" y1="13" x2="8" y2="13"></line>
+					<line x1="16" y1="17" x2="8" y2="17"></line>
+				</svg>
+				Log Book
+			</button>
+			<button class="tab-btn" data-tab="process-loss">
+				<svg
+					class="tab-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+				</svg>
+				Process Loss Entries
+			</button>
+		</div>
+	</div>
+
+	<!-- Tab Content -->
+	<div class="tab-content">
+		<!-- Overview Tab -->
+		<div class="tab-pane active" id="overview-tab">
+			<div class="kpi-cards-grid">
+				<div class="kpi-card kpi-card-green">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-manufactured-qty">0</div>
+						<div class="kpi-title">Total Manufactured Qty</div>
+						<div class="kpi-subtitle">Units produced in period</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-orange">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-net-weight">0</div>
+						<div class="kpi-title">Total Net Weight</div>
+						<div class="kpi-subtitle">Net weight in kg</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-purple">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-process-loss">0</div>
+						<div class="kpi-title">Total Process Loss</div>
+						<div class="kpi-subtitle">Process loss weight</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-teal">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-mip-used">0</div>
+						<div class="kpi-title">Total MIP Used</div>
+						<div class="kpi-subtitle">Material in progress used</div>
+					</div>
+				</div>
+			</div>
+		</div>
+        
+		<!-- Log Book Tab -->
+		<div class="tab-pane" id="log-book-tab">
+			<div class="kpi-cards-grid">
+				<div class="kpi-card kpi-card-green">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-costing">0</div>
+						<div class="kpi-title">Total Costing</div>
+						<div class="kpi-subtitle">Overall production costing</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-orange">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-prime-used">0</div>
+						<div class="kpi-title">Total Prime Used</div>
+						<div class="kpi-subtitle">Prime material consumption</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-purple">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="lb-gross-weight">0</div>
+						<div class="kpi-title">Gross Weight</div>
+						<div class="kpi-subtitle">Total gross weight in kg</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-teal">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="lb-net-weight">0</div>
+						<div class="kpi-title">Net Weight</div>
+						<div class="kpi-subtitle">Total net weight in kg</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Log Book Entries Section -->
+			<div class="entries-section">
+				<div class="section-header">
+					<h3>Log Book Entries</h3>
+				</div>
+				<div class="entries-table-container">
+					<div class="table-loading" id="entries-loading">
+						<div class="loading-spinner"></div>
+						<span>Loading entries...</span>
+					</div>
+					<table class="entries-table" id="entries-table">
+						<thead>
+							<tr>
+								<th>Production Log Book ID</th>
+								<th>Date</th>
+								<th>Shift</th>
+								<th>Manufacturing Qty</th>
+								<th>Net Weight</th>
+								<th>Total Consumption</th>
+								<th>Prime Used</th>
+								<th>MIP Used</th>
+								<th>Per Piece Rate</th>
+								<th>Process Loss</th>
+							</tr>
+						</thead>
+						<tbody id="entries-tbody">
+							<!-- Dynamic rows will be inserted here -->
+						</tbody>
+					</table>
+					<div class="no-data-message" id="no-entries-message" style="display: none">
+						<svg
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							class="no-data-icon"
+						>
+							<path
+								d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+							></path>
+							<polyline points="13 2 13 9 20 9"></polyline>
+						</svg>
+						<p>No entries found for the selected filters</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Process Loss Entries Tab -->
+		<div class="tab-pane" id="process-loss-tab">
+			<div class="process-loss-container">
+				<div class="process-loss-chart-section">
+					<div class="section-header">
+						<h3>Process Loss Comparison (Day vs Night)</h3>
+					</div>
+					<div class="chart-container" id="process-loss-chart">
+						<!-- Chart will be rendered here -->
+					</div>
+				</div>
+				<div class="process-loss-table-section">
+					<div class="section-header">
+						<h3>Process Loss Details</h3>
+					</div>
+					<table class="entries-table process-loss-table">
+						<thead>
+							<tr>
+								<th>Date</th>
+								<th>Shift Type</th>
+								<th class="text-center">Weight (kg)</th>
+							</tr>
+						</thead>
+						<tbody id="process-loss-tbody">
+							<!-- Dynamic rows will be inserted here -->
+						</tbody>
+					</table>
+					<div
+						class="no-data-message"
+						id="no-process-loss-message"
+						style="display: none"
+					>
+						<p>No process loss data available</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
