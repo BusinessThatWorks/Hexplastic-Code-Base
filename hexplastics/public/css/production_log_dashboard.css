@@ -658,26 +658,49 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     }
 }
 
-/* ===== Scrollbar Styles - Hidden ===== */
-.entries-table-container::-webkit-scrollbar,
+/* ===== Scrollbar Styles ===== */
+/* Hide scrollbar for autocomplete dropdown only */
 .autocomplete-dropdown::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
 }
 
-.entries-table-container,
 .autocomplete-dropdown {
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
 }
 
-/* Hide all scrollbars globally for dashboard */
-.production-log-dashboard * {
+/* Hide scrollbar for tabs container */
+.tabs-container::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+
+.tabs-container {
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
 }
 
-.production-log-dashboard *::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
+/* Show styled scrollbar for table container */
+.entries-table-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.entries-table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.entries-table-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.entries-table-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.entries-table-container {
+    scrollbar-width: thin; /* Firefox - shows thin scrollbar */
+    scrollbar-color: #c1c1c1 #f1f1f1; /* Firefox - thumb and track colors */
 }
 
 /* ===== Print Styles ===== */
