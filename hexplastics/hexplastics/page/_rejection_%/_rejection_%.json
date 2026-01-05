@@ -1,0 +1,25 @@
+{
+ "content": null,
+ "creation": "2026-01-02 14:04:58.642774",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-01-02 14:04:58.642774",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "-rejection-%",
+ "owner": "Administrator",
+ "page_name": "-rejection-%",
+ "roles": [
+  {
+   "role": "Administrator"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 1
+}

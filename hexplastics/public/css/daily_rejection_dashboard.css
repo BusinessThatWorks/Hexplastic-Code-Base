@@ -1,0 +1,546 @@
+/* Daily Rejection Dashboard Styles */
+/* Enhanced with Tabs, KPI Cards, and Table */
+
+/* ===== Base & Container Styles ===== */
+.daily-rejection-dashboard {
+    background: #f4f5f6;
+    min-height: calc(100vh - 60px);
+    padding: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    box-sizing: border-box;
+}
+
+/* Override Frappe's default page container constraints */
+.daily-rejection-dashboard .page-container,
+.daily-rejection-dashboard .layout-main,
+.daily-rejection-dashboard .page-content,
+.daily-rejection-dashboard .layout-container,
+.daily-rejection-dashboard .page-wrapper,
+.daily-rejection-dashboard .page-body,
+.daily-rejection-dashboard .form-container {
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
+/* Specific override for this page */
+body[data-page-route*="daily-rejection-dashboard"] .page-container,
+body[data-page-route*="daily-rejection-dashboard"] .layout-main,
+body[data-page-route*="daily-rejection-dashboard"] .page-content,
+body[data-page-route*="daily-rejection-dashboard"] .layout-container,
+body[data-page-route*="daily-rejection-dashboard"] .page-wrapper,
+body[data-page-route*="daily-rejection-dashboard"] .page-body,
+body[data-page-route*="daily-rejection-dashboard"] .form-container,
+body[data-page-route*="daily-rejection-dashboard"] .form-layout,
+body[data-page-route*="daily-rejection-dashboard"] .page-form,
+body[data-page-route*="daily-rejection-dashboard"] .page-content-wrapper {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+/* Remove any centering and ensure full width with proper spacing */
+body[data-page-route*="daily-rejection-dashboard"] .page-container,
+body[data-page-route*="daily-rejection-dashboard"] .layout-main {
+    margin: 0 !important;
+    float: none !important;
+    padding: 0 !important;
+}
+
+/* Ensure consistent spacing - remove any parent margins */
+body[data-page-route*="daily-rejection-dashboard"] .page-body,
+body[data-page-route*="daily-rejection-dashboard"] .page-content-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* ===== Title Styles ===== */
+.dashboard-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1f272e;
+    margin: 0;
+    margin-top: 24px;
+    margin-bottom: 20px;
+    padding: 0 28px;
+    letter-spacing: -0.3px;
+    line-height: 1.3;
+}
+
+/* ===== Filter Section Styles (Light Grey Box) ===== */
+.filter-section {
+    background: #f0f1f2;
+    padding: 24px 28px;
+    border-radius: 8px;
+    margin: 0 28px 20px 28px;
+    width: calc(100% - 56px);
+    max-width: calc(100% - 56px);
+    box-sizing: border-box;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    width: 100%;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    min-width: 180px;
+}
+
+.filter-group-wide {
+    flex: 1 1 auto;
+    min-width: 220px;
+    max-width: 350px;
+}
+
+.filter-group-btn {
+    flex: 0 0 auto;
+    align-self: flex-end;
+    margin-left: 0;
+}
+
+.filter-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6c7680;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-label .required {
+    color: #e24c4c;
+}
+
+.filter-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #d1d8dd;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1f272e;
+    background: #fff;
+    transition: all 0.15s ease;
+    height: 40px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.filter-input[type="date"] {
+    cursor: pointer;
+}
+
+.filter-input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.15s ease;
+}
+
+.filter-input[type="date"]:hover::-webkit-calendar-picker-indicator {
+    opacity: 1;
+}
+
+.filter-input:focus {
+    outline: none;
+    border-color: #5e64ff;
+    box-shadow: 0 0 0 3px rgba(94, 100, 255, 0.1), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.filter-input:hover {
+    border-color: #b8c0c8;
+}
+
+.filter-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236c7680' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+}
+
+/* ===== Tab Navigation ===== */
+.tab-navigation {
+    display: flex;
+    gap: 8px;
+    padding: 0 28px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e8e8e8;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6c7680;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    position: relative;
+}
+
+.tab-btn:hover {
+    color: #1f272e;
+    background: rgba(94, 100, 255, 0.05);
+}
+
+.tab-btn.active {
+    color: #5e64ff;
+    border-bottom-color: #5e64ff;
+}
+
+/* ===== Tab Content ===== */
+.tab-content-container {
+    padding: 0 28px 24px 28px;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ===== KPI Cards ===== */
+.kpi-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.kpi-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.2s ease;
+}
+
+.kpi-card:hover {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.kpi-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.kpi-icon-blue {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+}
+
+.kpi-icon-red {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: #fff;
+}
+
+.kpi-icon-orange {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    color: #fff;
+}
+
+.kpi-content {
+    flex: 1;
+}
+
+.kpi-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6c7680;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1f272e;
+    line-height: 1.2;
+}
+
+.kpi-loading {
+    width: 80px;
+    height: 28px;
+    background: linear-gradient(90deg, #f0f1f2 25%, #e8e8e8 50%, #f0f1f2 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 4px;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ===== Chart Section Styles ===== */
+.chart-section {
+    margin-bottom: 20px;
+}
+
+.chart-container-wrapper {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.section-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.section-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1f272e;
+}
+
+.chart-container {
+    padding: 20px;
+    min-height: 400px;
+}
+
+.loading-spinner-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 48px;
+    color: #6c7680;
+    font-size: 14px;
+}
+
+.loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid #e8e8e8;
+    border-top-color: #5e64ff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.no-chart-data {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 360px;
+    color: #8d99a6;
+    font-size: 14px;
+}
+
+/* ===== Table Section Styles ===== */
+.table-section {
+    margin-top: 20px;
+}
+
+.table-container-wrapper {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.rejection-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.rejection-table thead {
+    background: #f8f9fa;
+}
+
+.rejection-table th {
+    padding: 14px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: #1f272e;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e8e8e8;
+}
+
+.rejection-table tbody tr {
+    border-bottom: 1px solid #e8e8e8;
+    transition: background 0.15s ease;
+}
+
+.rejection-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.rejection-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.rejection-table td {
+    padding: 14px 16px;
+    color: #1f272e;
+}
+
+.rejection-table td a {
+    color: #5e64ff;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.rejection-table td a:hover {
+    text-decoration: underline;
+}
+
+.rejection-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #fee;
+    color: #e24c4c;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+/* ===== No Data Message ===== */
+.no-data-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 24px;
+    color: #8d99a6;
+    text-align: center;
+}
+
+.no-data-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+    stroke: #d1d8dd;
+}
+
+.no-data-message p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* ===== Responsive Styles ===== */
+@media (max-width: 1024px) {
+    .kpi-cards-container {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-title,
+    .filter-section,
+    .tab-navigation,
+    .tab-content-container {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .filter-section {
+        width: calc(100% - 32px);
+        max-width: calc(100% - 32px);
+        margin: 0 16px 20px 16px;
+    }
+
+    .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-group,
+    .filter-group-wide {
+        min-width: 100%;
+        max-width: 100%;
+    }
+
+    .kpi-cards-container {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-container {
+        min-height: 300px;
+        padding: 16px;
+    }
+
+    .rejection-table {
+        font-size: 13px;
+    }
+
+    .rejection-table th,
+    .rejection-table td {
+        padding: 10px 12px;
+    }
+
+    .tab-btn {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+}
+
+/* ===== Print Styles ===== */
+@media print {
+    .filter-section,
+    .tab-navigation {
+        display: none;
+    }
+
+    .daily-rejection-dashboard {
+        background: #fff;
+    }
+
+    .chart-container-wrapper,
+    .table-container-wrapper,
+    .kpi-card {
+        box-shadow: none;
+        border: 1px solid #e8e8e8;
+    }
+
+    .tab-content {
+        display: block !important;
+    }
+}
+
