@@ -1,0 +1,391 @@
+<div class="sales-summary-dashboard">
+	<!-- Title -->
+	<h1 class="dashboard-title">Sales Summary Dashboard</h1>
+
+	<!-- Global Filter Section -->
+	<div class="filter-section">
+		<div class="filter-row">
+			<div class="filter-group">
+				<label class="filter-label">From Date <span class="required">*</span></label>
+				<input type="date" class="filter-input" id="from-date" />
+			</div>
+			<div class="filter-group">
+				<label class="filter-label">To Date <span class="required">*</span></label>
+				<input type="date" class="filter-input" id="to-date" />
+			</div>
+			<div class="filter-group filter-group-wide">
+				<label class="filter-label">Customer</label>
+				<div class="awesomplete-wrapper" id="customer-filter-wrapper">
+					<input
+						type="text"
+						class="filter-input"
+						id="customer-filter"
+						placeholder=""
+						autocomplete="off"
+					/>
+				</div>
+			</div>
+			<div class="filter-group filter-group-btn">
+				<button class="btn btn-primary refresh-btn" id="refresh-btn">Refresh</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Tabs Section -->
+	<div class="tabs-section">
+		<div class="tabs-container">
+			<button class="tab-btn active" data-tab="overview">
+				<svg
+					class="tab-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<circle cx="12" cy="12" r="10"></circle>
+					<line x1="12" y1="8" x2="12" y2="12"></line>
+					<line x1="12" y1="16" x2="12.01" y2="16"></line>
+				</svg>
+				Overview
+			</button>
+			<button class="tab-btn" data-tab="sales-order">
+				<svg
+					class="tab-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+					<line x1="3" y1="9" x2="21" y2="9"></line>
+					<line x1="9" y1="21" x2="9" y2="9"></line>
+				</svg>
+				Sales Order
+			</button>
+			<button class="tab-btn" data-tab="sales-invoice">
+				<svg
+					class="tab-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+					<polyline points="14 2 14 8 20 8"></polyline>
+					<line x1="16" y1="13" x2="8" y2="13"></line>
+					<line x1="16" y1="17" x2="8" y2="17"></line>
+				</svg>
+				Sales Invoice
+			</button>
+		</div>
+	</div>
+
+	<!-- Tab Content -->
+	<div class="tab-content">
+		<!-- Overview Tab -->
+		<div class="tab-pane active" id="overview-tab">
+			<div class="kpi-cards-grid">
+				<div class="kpi-card kpi-card-blue">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-sales-orders">0</div>
+						<div class="kpi-title">Total Sales Orders</div>
+						<div class="kpi-subtitle">Total sales orders in the period</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-green">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-sales-invoices">0</div>
+						<div class="kpi-title">Total Sales Invoices</div>
+						<div class="kpi-subtitle">Total sales invoices in the period</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-orange">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-order-value">₹0</div>
+						<div class="kpi-title">Total Order Value</div>
+						<div class="kpi-subtitle">Total value of sales orders</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-purple">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-invoice-value">₹0</div>
+						<div class="kpi-title">Total Invoice Value</div>
+						<div class="kpi-subtitle">Total value of sales invoices</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Sales Overview Section -->
+			<div class="overview-section">
+				<div class="section-header">
+					<h3>Sales Overview</h3>
+				</div>
+				<div class="overview-content" id="sales-overview-content">
+					<p class="overview-text">This dashboard provides a comprehensive view of sales performance, including order and invoice metrics for the selected period. Use the filters above to analyze sales data by date range and customer.</p>
+				</div>
+			</div>
+		</div>
+
+		<!-- Sales Order Tab -->
+		<div class="tab-pane" id="sales-order-tab">
+			<!-- Tab-level Filters -->
+			<div class="tab-filter-section">
+				<div class="tab-filter-row">
+					<div class="tab-filter-group">
+						<label class="filter-label">Status</label>
+						<select class="filter-input filter-select" id="so-status-filter">
+							<option value="">All</option>
+							<option value="Draft">Draft</option>
+							<option value="To Deliver and Bill">To Deliver and Bill</option>
+							<option value="To Bill">To Bill</option>
+							<option value="To Deliver">To Deliver</option>
+							<option value="Completed">Completed</option>
+							<option value="Cancelled">Cancelled</option>
+							<option value="Closed">Closed</option>
+						</select>
+					</div>
+					<div class="tab-filter-group">
+						<label class="filter-label">ID</label>
+						<input
+							type="text"
+							class="filter-input"
+							id="so-id-filter"
+							placeholder=""
+							autocomplete="off"
+						/>
+					</div>
+					<div class="tab-filter-group">
+						<label class="filter-label">Item</label>
+						<div class="awesomplete-wrapper" id="so-item-filter-wrapper">
+							<input
+								type="text"
+								class="filter-input"
+								id="so-item-filter"
+								placeholder=""
+								autocomplete="off"
+							/>
+						</div>
+					</div>
+					<div class="tab-filter-group tab-filter-btn">
+						<button class="btn btn-primary refresh-btn" id="so-refresh-btn">Refresh</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- KPI Cards -->
+			<div class="kpi-cards-grid">
+				<div class="kpi-card kpi-card-blue">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="draft-sales-orders">0</div>
+						<div class="kpi-title">Draft Sales Orders</div>
+						<div class="kpi-subtitle">Sales orders with Draft status</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-teal">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="to-deliver-bill-orders">0</div>
+						<div class="kpi-title">To Deliver and Bill Sales Orders</div>
+						<div class="kpi-subtitle">Sales orders with To Deliver and Bill status</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-green">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="completed-sales-orders">0</div>
+						<div class="kpi-title">Completed Sales Orders</div>
+						<div class="kpi-subtitle">Sales orders with Completed status</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-orange">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="so-total-value">₹0</div>
+						<div class="kpi-title">Total Order Value</div>
+						<div class="kpi-subtitle">Sum of grand total for selected date range</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Sales Order Details Table -->
+			<div class="entries-section">
+				<div class="section-header">
+					<h3>Sales Order Details</h3>
+				</div>
+				<div class="entries-table-container">
+					<div class="table-loading" id="so-loading">
+						<div class="loading-spinner"></div>
+						<span>Loading sales orders...</span>
+					</div>
+					<table class="entries-table" id="so-table">
+						<thead>
+							<tr>
+								<th>Sales Order</th>
+								<th>Date</th>
+								<th>Status</th>
+								<th>Customer</th>
+								<th class="text-right">Grand Total</th>
+							</tr>
+						</thead>
+						<tbody id="so-tbody">
+							<!-- Dynamic rows will be inserted here -->
+						</tbody>
+					</table>
+					<div class="no-data-message" id="no-so-message" style="display: none">
+						<svg
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							class="no-data-icon"
+						>
+							<path
+								d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+							></path>
+							<polyline points="13 2 13 9 20 9"></polyline>
+						</svg>
+						<p>No sales orders found for the selected filters</p>
+					</div>
+				</div>
+				<div class="section-subheader">
+					<h4>Sales Orders</h4>
+				</div>
+			</div>
+		</div>
+
+		<!-- Sales Invoice Tab -->
+		<div class="tab-pane" id="sales-invoice-tab">
+			<!-- Tab-level Filters -->
+			<div class="tab-filter-section">
+				<div class="tab-filter-row">
+					<div class="tab-filter-group">
+						<label class="filter-label">Status</label>
+						<select class="filter-input filter-select" id="si-status-filter">
+							<option value="">All</option>
+							<option value="Draft">Draft</option>
+							<option value="Unpaid">Unpaid</option>
+							<option value="Overdue">Overdue</option>
+							<option value="Paid">Paid</option>
+							<option value="Partly Paid">Partly Paid</option>
+							<option value="Return">Return</option>
+							<option value="Credit Note Issued">Credit Note Issued</option>
+							<option value="Cancelled">Cancelled</option>
+						</select>
+					</div>
+					<div class="tab-filter-group">
+						<label class="filter-label">ID</label>
+						<input
+							type="text"
+							class="filter-input"
+							id="si-id-filter"
+							placeholder=""
+							autocomplete="off"
+						/>
+					</div>
+					<div class="tab-filter-group">
+						<label class="filter-label">Item</label>
+						<div class="awesomplete-wrapper" id="si-item-filter-wrapper">
+							<input
+								type="text"
+								class="filter-input"
+								id="si-item-filter"
+								placeholder=""
+								autocomplete="off"
+							/>
+						</div>
+					</div>
+					<div class="tab-filter-group tab-filter-btn">
+						<button class="btn btn-primary refresh-btn" id="si-refresh-btn">Refresh</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- KPI Cards -->
+			<div class="kpi-cards-grid">
+				<div class="kpi-card kpi-card-orange">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="unpaid-sales-invoices">0</div>
+						<div class="kpi-title">Unpaid Sales Invoices</div>
+						<div class="kpi-subtitle">Sales invoices with Unpaid status</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-blue">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="draft-sales-invoices">0</div>
+						<div class="kpi-title">Draft Sales Invoices</div>
+						<div class="kpi-subtitle">Sales invoices with Draft status</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-red">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="overdue-sales-invoices">0</div>
+						<div class="kpi-title">Overdue Sales Invoices</div>
+						<div class="kpi-subtitle">Sales invoices with Overdue status</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-purple">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="si-total-value">₹0</div>
+						<div class="kpi-title">Total Invoice Value</div>
+						<div class="kpi-subtitle">Sum of grand total for selected date range</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Sales Invoice Details Table -->
+			<div class="entries-section">
+				<div class="section-header">
+					<h3>Sales Invoice Details</h3>
+				</div>
+				<div class="entries-table-container">
+					<div class="table-loading" id="si-loading">
+						<div class="loading-spinner"></div>
+						<span>Loading sales invoices...</span>
+					</div>
+					<table class="entries-table" id="si-table">
+						<thead>
+							<tr>
+								<th>Sales Invoice</th>
+								<th>Date</th>
+								<th>Due Date</th>
+								<th>Status</th>
+								<th>Customer</th>
+								<th class="text-right">Grand Total</th>
+							</tr>
+						</thead>
+						<tbody id="si-tbody">
+							<!-- Dynamic rows will be inserted here -->
+						</tbody>
+					</table>
+					<div class="no-data-message" id="no-si-message" style="display: none">
+						<svg
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							class="no-data-icon"
+						>
+							<path
+								d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+							></path>
+							<polyline points="13 2 13 9 20 9"></polyline>
+						</svg>
+						<p>No sales invoices found for the selected filters</p>
+					</div>
+				</div>
+				<div class="section-subheader">
+					<h4>Sales Invoices</h4>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

@@ -1,0 +1,38 @@
+{
+ "content": null,
+ "creation": "2026-01-05 10:00:00",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-01-05 11:25:17.466290",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "sales-summary-dashboard",
+ "owner": "Administrator",
+ "page_name": "sales-summary-dashboard",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Sales User"
+  },
+  {
+   "role": "Sales Manager"
+  },
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Administrator"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 1,
+ "title": "Sales Summary Dashboard"
+}
