@@ -346,6 +346,22 @@ class ProductionLogDashboard {
 		return num.toFixed(decimals);
 	}
 
+	format_currency(value, decimals = 2) {
+		if (value === null || value === undefined) return "₹ 0";
+
+		const num = parseFloat(value);
+		if (isNaN(num)) return "₹ 0";
+
+		// Format with Indian number system (commas)
+		const formatted = num.toLocaleString("en-IN", {
+			minimumFractionDigits: decimals,
+			maximumFractionDigits: decimals,
+		});
+
+		// Prefix with ₹ symbol
+		return `₹ ${formatted}`;
+	}
+
 	update_overview(data) {
 		if (!data) return;
 
@@ -367,14 +383,16 @@ class ProductionLogDashboard {
 	update_log_book(data) {
 		if (!data) return;
 
-		const setValue = (id, value) => {
+		const setValue = (id, value, isCurrency = false) => {
 			const el = document.getElementById(id);
 			if (el) {
-				el.textContent = this.format_number(value);
+				el.textContent = isCurrency
+					? this.format_currency(value)
+					: this.format_number(value);
 			}
 		};
 
-		setValue("total-costing", data.total_costing);
+		setValue("total-costing", data.total_costing, true);
 		setValue("total-prime-used", data.total_prime_used);
 		setValue("total-rm-consumption", data.total_rm_consumption);
 		setValue("lb-gross-weight", data.gross_weight);
