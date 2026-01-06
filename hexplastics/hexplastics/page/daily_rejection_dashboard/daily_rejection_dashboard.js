@@ -121,9 +121,13 @@ class RejectionDashboard {
 			});
 
 			// Auto-refresh on filter changes
-			this.wrapper.on("change", "#period-filter, #shift-filter, #date-from-filter, #date-to-filter", function () {
-				self.refresh_data();
-			});
+			this.wrapper.on(
+				"change",
+				"#period-filter, #shift-filter, #date-from-filter, #date-to-filter",
+				function () {
+					self.refresh_data();
+				}
+			);
 		}, 200);
 	}
 
@@ -146,14 +150,14 @@ class RejectionDashboard {
 	get_filters() {
 		const date_from = document.getElementById("date-from-filter")?.value || "";
 		const date_to = document.getElementById("date-to-filter")?.value || "";
-		
+
 		// If both dates are provided, use Custom period
 		// Otherwise use the selected period
 		let period = document.getElementById("period-filter")?.value || "Weekly";
 		if (date_from && date_to) {
 			period = "Custom";
 		}
-		
+
 		const filters = {
 			period: period,
 			shift: document.getElementById("shift-filter")?.value || "All",
@@ -177,7 +181,7 @@ class RejectionDashboard {
 				// Don't refresh if custom dates are not both selected
 				return;
 			}
-			
+
 			// Validate date range
 			if (new Date(filters.date_from) > new Date(filters.date_to)) {
 				frappe.msgprint(__("'From Date' cannot be later than 'To Date'"));
@@ -324,6 +328,9 @@ class RejectionDashboard {
 		const labels = data.labels;
 		const values = data.values;
 
+		// Store values for label rendering
+		this.chart_values = values;
+
 		// Create chart using Frappe Charts
 		try {
 			this.chart = new frappe.Chart(chartContainer, {
@@ -354,11 +361,293 @@ class RejectionDashboard {
 					yAxisMode: "tick",
 					xIsSeries: 0,
 				},
+				// Disable animations to ensure stable positions
+				animate: 0,
 			});
+
+			// Add custom data point labels after chart renders
+			// Add labels at different intervals to catch when chart is ready
+			const addLabels = () => {
+				this.add_data_point_labels(chartContainer, values);
+			};
+
+			// Multiple attempts at different timings
+			setTimeout(addLabels.bind(this), 100);
+			setTimeout(addLabels.bind(this), 250);
+			setTimeout(addLabels.bind(this), 500);
+			setTimeout(addLabels.bind(this), 1000);
+			setTimeout(addLabels.bind(this), 2000);
 		} catch (e) {
 			console.error("Error rendering chart:", e);
 			chartContainer.innerHTML = '<div class="no-chart-data">Error rendering chart</div>';
 		}
+	}
+
+	add_chartjs_labels(chartInstance, values) {
+		// Try to use Chart.js datalabels plugin if available
+		if (chartInstance && chartInstance.data && chartInstance.data.datasets) {
+			const dataset = chartInstance.data.datasets[0];
+			if (dataset && dataset.data) {
+				// Chart.js might have datalabels plugin
+				if (chartInstance.options && chartInstance.options.plugins) {
+					if (!chartInstance.options.plugins.datalabels) {
+						chartInstance.options.plugins.datalabels = {};
+					}
+					chartInstance.options.plugins.datalabels.display = (context) => {
+						const value = context.parsed
+							? context.parsed.y
+							: context.dataset.data[context.dataIndex];
+						return value !== 0 && value !== null && !isNaN(value);
+					};
+					chartInstance.options.plugins.datalabels.formatter = (value) => {
+						const numValue =
+							typeof value === "object" && value.y !== undefined ? value.y : value;
+						return numValue !== 0 ? this.format_number(numValue, 2) : "";
+					};
+					chartInstance.options.plugins.datalabels.color = "#e24c4c";
+					chartInstance.options.plugins.datalabels.font = {
+						size: 11,
+						weight: "500",
+					};
+					chartInstance.options.plugins.datalabels.anchor = "end";
+					chartInstance.options.plugins.datalabels.align = "top";
+					chartInstance.options.plugins.datalabels.offset = 5;
+					chartInstance.update();
+					return true;
+				}
+
+				// Alternative: Try dataset-level datalabels config
+				if (dataset.datalabels || chartInstance.options.plugins) {
+					const datalabelsConfig = {
+						display: (context) => {
+							const value = context.parsed
+								? context.parsed.y
+								: context.dataset.data[context.dataIndex];
+							return value !== 0 && value !== null && !isNaN(value);
+						},
+						formatter: (value) => {
+							const numValue =
+								typeof value === "object" && value.y !== undefined
+									? value.y
+									: value;
+							return numValue !== 0 ? this.format_number(numValue, 2) : "";
+						},
+						color: "#e24c4c",
+						font: {
+							size: 11,
+							weight: "500",
+						},
+						anchor: "end",
+						align: "top",
+						offset: 5,
+					};
+
+					if (dataset.datalabels !== undefined) {
+						Object.assign(dataset.datalabels, datalabelsConfig);
+					} else {
+						dataset.datalabels = datalabelsConfig;
+					}
+
+					chartInstance.update();
+					return true;
+				}
+			}
+
+			// Try to get pixel positions from Chart.js metadata
+			if (chartInstance.getDatasetMeta && chartInstance.scales && this.chart_container) {
+				try {
+					const meta = chartInstance.getDatasetMeta(0);
+					if (meta && meta.data && meta.data.length === values.length) {
+						const points = meta.data
+							.map((point, index) => {
+								return {
+									x: point.x,
+									y: point.y,
+									value: parseFloat(values[index]),
+								};
+							})
+							.filter((p) => p.value !== 0);
+
+						if (points.length > 0) {
+							const svg = this.chart_container.querySelector("svg");
+							if (svg) {
+								points.forEach((point) => {
+									const label = document.createElementNS(
+										"http://www.w3.org/2000/svg",
+										"text"
+									);
+									label.setAttribute("class", "custom-data-label");
+									label.setAttribute("x", point.x);
+									label.setAttribute("y", point.y - 8); // 8px above the point
+									label.setAttribute("text-anchor", "middle");
+									label.setAttribute("font-size", "10");
+									label.setAttribute(
+										"font-family",
+										"Calibri, Arial, sans-serif"
+									);
+									label.setAttribute("fill", "#c0392b"); // Dark red to match line
+									label.setAttribute("pointer-events", "none");
+									label.textContent = this.format_number(point.value, 2);
+									svg.appendChild(label);
+								});
+								return true;
+							}
+						}
+					}
+				} catch (e) {
+					// Silently fail if metadata access doesn't work
+				}
+			}
+		}
+		return false;
+	}
+
+	add_data_point_labels(container, values) {
+		// Remove any existing custom labels
+		container.querySelectorAll(".custom-data-label").forEach((el) => el.remove());
+
+		// Find SVG element
+		const svg = container.querySelector("svg");
+		if (!svg) {
+			return false;
+		}
+
+		let points = [];
+
+		// Method 1: Find circles (data points in Frappe Charts)
+		const allCircles = Array.from(svg.querySelectorAll("circle"));
+		const dataPointCircles = allCircles.filter((circle) => {
+			const r = parseFloat(circle.getAttribute("r")) || 0;
+			const cx = parseFloat(circle.getAttribute("cx")) || 0;
+			const cy = parseFloat(circle.getAttribute("cy")) || 0;
+			return r > 0 && r <= 10 && cx > 0 && cy > 0;
+		});
+
+		if (dataPointCircles.length > 0) {
+			const sortedCircles = dataPointCircles.sort((a, b) => {
+				const ax = parseFloat(a.getAttribute("cx")) || 0;
+				const bx = parseFloat(b.getAttribute("cx")) || 0;
+				return ax - bx;
+			});
+
+			const circlesToUse = sortedCircles.slice(0, values.length);
+			points = circlesToUse.map((circle) => ({
+				x: parseFloat(circle.getAttribute("cx")) || 0,
+				y: parseFloat(circle.getAttribute("cy")) || 0,
+			}));
+		}
+
+		// Method 2: Parse the line path to get exact coordinates
+		if (points.length === 0) {
+			const paths = svg.querySelectorAll("path");
+
+			for (const path of paths) {
+				const d = path.getAttribute("d") || "";
+
+				// Skip paths that are likely fill areas (region fill) - they have complex paths
+				// Line paths typically have simple M...L... structure
+				if (!d.includes("M") || !d.includes("L")) continue;
+
+				// Try multiple regex patterns to match different path formats
+				const coords = [];
+
+				// Pattern 1: M x,y L x,y (comma separated)
+				// Pattern 2: M x y L x y (space separated)
+				// Pattern 3: M x,y L x,y with decimals
+				const patterns = [
+					/([ML])\s*([\d.]+)\s*,\s*([\d.]+)/g, // M x,y or L x,y
+					/([ML])\s*([\d.]+)\s+([\d.]+)/g, // M x y or L x y
+				];
+
+				for (const regex of patterns) {
+					let match;
+					regex.lastIndex = 0; // Reset regex
+
+					while ((match = regex.exec(d)) !== null) {
+						const x = parseFloat(match[2]);
+						const y = parseFloat(match[3]);
+						if (!isNaN(x) && !isNaN(y) && x > 0 && y > 0) {
+							// Avoid duplicates
+							const isDup = coords.some(
+								(c) => Math.abs(c.x - x) < 1 && Math.abs(c.y - y) < 1
+							);
+							if (!isDup) {
+								coords.push({ x, y });
+							}
+						}
+					}
+
+					if (coords.length > 0) break;
+				}
+
+				// Check if we found enough coordinates
+				const nonZeroValues = values.filter((v) => parseFloat(v) !== 0).length;
+				if (coords.length >= nonZeroValues) {
+					points = coords.slice(0, values.length);
+					break;
+				}
+			}
+		}
+
+		// Method 3: Look for polyline elements
+		if (points.length === 0) {
+			const polylines = svg.querySelectorAll("polyline");
+			for (const polyline of polylines) {
+				const pointsAttr = polyline.getAttribute("points");
+				if (pointsAttr) {
+					const coords = [];
+					const pairs = pointsAttr.trim().split(/\s+/);
+					for (const pair of pairs) {
+						const [x, y] = pair.split(",").map(parseFloat);
+						if (!isNaN(x) && !isNaN(y)) {
+							coords.push({ x, y });
+						}
+					}
+					if (coords.length >= values.length) {
+						points = coords.slice(0, values.length);
+						break;
+					}
+				}
+			}
+		}
+
+		if (
+			points.length === 0 ||
+			points.length < values.filter((v) => parseFloat(v) !== 0).length
+		) {
+			return false;
+		}
+
+		// Add labels at each point position
+		let labelsAdded = 0;
+
+		points.forEach((point, index) => {
+			if (index < values.length) {
+				const value = parseFloat(values[index]);
+
+				// Only show label if value is not 0
+				if (!isNaN(value) && value !== 0) {
+					const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+					label.setAttribute("class", "custom-data-label");
+
+					// Position label just above the data point
+					label.setAttribute("x", point.x);
+					label.setAttribute("y", point.y - 8); // 8px above the point
+					label.setAttribute("text-anchor", "middle");
+					label.setAttribute("font-size", "10");
+					label.setAttribute("font-family", "Calibri, Arial, sans-serif");
+					label.setAttribute("fill", "#c0392b");
+					label.setAttribute("pointer-events", "none");
+
+					label.textContent = this.format_number(value, 2);
+
+					svg.appendChild(label);
+					labelsAdded++;
+				}
+			}
+		});
+
+		return labelsAdded > 0;
 	}
 
 	render_table(data) {
@@ -418,4 +707,3 @@ class RejectionDashboard {
 		tableContainer.innerHTML = tableHTML;
 	}
 }
-
