@@ -8,12 +8,12 @@ import calendar
 
 
 @frappe.whitelist()
-def get_overview_metrics(period="Weekly", shift="All", date_from=None, date_to=None):
+def get_overview_metrics(period="", shift="All", date_from=None, date_to=None):
     """
     Get overview KPI metrics: Total Box Checked, Total Rejection, Rejection %.
     
     Args:
-        period: "Weekly", "Monthly", "Yearly", or "Custom"
+        period: "", "Weekly", "Monthly", "Yearly", or "Custom"
         shift: "Day", "Night", or "All"
         date_from: Start date for custom range
         date_to: End date for custom range
@@ -26,6 +26,14 @@ def get_overview_metrics(period="Weekly", shift="All", date_from=None, date_to=N
         }
     """
     try:
+        # If period is blank and no dates provided, return empty data
+        if not period and not date_from and not date_to:
+            return {
+                "total_box_checked": 0,
+                "total_rejection": 0,
+                "rejection_percentage": 0.0
+            }
+        
         # Get filtered records based on period and shift
         records = get_filtered_records(period, shift, date_from, date_to)
         
@@ -74,12 +82,12 @@ def get_overview_metrics(period="Weekly", shift="All", date_from=None, date_to=N
 
 
 @frappe.whitelist()
-def get_rejection_graph_data(period="Weekly", shift="All", date_from=None, date_to=None):
+def get_rejection_graph_data(period="", shift="All", date_from=None, date_to=None):
     """
     Get rejection percentage trend data for graph.
     
     Args:
-        period: "Weekly", "Monthly", "Yearly", or "Custom"
+        period: "", "Weekly", "Monthly", "Yearly", or "Custom"
         shift: "Day", "Night", or "All"
         date_from: Start date for custom range
         date_to: End date for custom range
@@ -91,6 +99,10 @@ def get_rejection_graph_data(period="Weekly", shift="All", date_from=None, date_
         }
     """
     try:
+        # If period is blank and no dates provided, return empty data
+        if not period and not date_from and not date_to:
+            return {"labels": [], "values": []}
+        
         if period == "Weekly":
             return get_weekly_data(shift, date_from, date_to)
         elif period == "Monthly":
@@ -110,12 +122,12 @@ def get_rejection_graph_data(period="Weekly", shift="All", date_from=None, date_
 
 
 @frappe.whitelist()
-def get_rejection_table_data(period="Weekly", shift="All", date_from=None, date_to=None):
+def get_rejection_table_data(period="", shift="All", date_from=None, date_to=None):
     """
     Get detailed rejection table data.
     
     Args:
-        period: "Weekly", "Monthly", "Yearly", or "Custom"
+        period: "", "Weekly", "Monthly", "Yearly", or "Custom"
         shift: "Day", "Night", or "All"
         date_from: Start date for custom range
         date_to: End date for custom range
@@ -124,6 +136,10 @@ def get_rejection_table_data(period="Weekly", shift="All", date_from=None, date_
         list: List of records with detailed rejection information
     """
     try:
+        # If period is blank and no dates provided, return empty data
+        if not period and not date_from and not date_to:
+            return []
+        
         records = get_filtered_records(period, shift, date_from, date_to)
         
         if not records:
@@ -198,7 +214,7 @@ def get_filtered_records(period, shift, date_from=None, date_to=None):
     Get filtered Daily Rejection Data records based on period and shift.
     
     Args:
-        period: "Weekly", "Monthly", "Yearly", or "Custom"
+        period: "", "Weekly", "Monthly", "Yearly", or "Custom"
         shift: "Day", "Night", or "All"
         date_from: Start date for custom range
         date_to: End date for custom range
@@ -206,6 +222,10 @@ def get_filtered_records(period, shift, date_from=None, date_to=None):
     Returns:
         list: Filtered records
     """
+    # If period is blank and no dates provided, return empty list
+    if not period and not date_from and not date_to:
+        return []
+    
     # Build base query
     query = """
         SELECT 
@@ -226,17 +246,17 @@ def get_filtered_records(period, shift, date_from=None, date_to=None):
     today = getdate()
     
     if period == "Weekly":
-        # Current week (last 7 days)
-        start_date = today - timedelta(days=6)
+        # Weekly: last 7 days (Today - 7 days to Today)
+        start_date = today - timedelta(days=7)
         conditions.append(f"rejection_date >= '{start_date}'")
         conditions.append(f"rejection_date <= '{today}'")
     elif period == "Monthly":
-        # Current financial year (April to March)
+        # Monthly: Current financial year (April to March) - ignore date fields
         fy_start, fy_end = get_current_financial_year()
         conditions.append(f"rejection_date >= '{fy_start}'")
         conditions.append(f"rejection_date <= '{fy_end}'")
     elif period == "Yearly":
-        # Get all records - we'll filter by year in get_yearly_data
+        # Yearly: First rejection year to current year (max 10 years) - ignore date fields
         # No date filter here, we need to find the first year with data
         pass
     elif period == "Custom":
@@ -256,12 +276,13 @@ def get_filtered_records(period, shift, date_from=None, date_to=None):
 
 def get_weekly_data(shift="All", date_from=None, date_to=None):
     """
-    Get rejection percentage data for current week (7 days - daily breakdown).
+    Get rejection percentage data for last 7 days (daily breakdown).
+    Weekly means last 7 days (not calendar week).
     
     Args:
         shift: "Day", "Night", or "All"
-        date_from: Not used for Weekly (kept for consistency)
-        date_to: Not used for Weekly (kept for consistency)
+        date_from: Used for Custom date filtering when dates are provided
+        date_to: Used for Custom date filtering when dates are provided
     
     Returns:
         dict: {

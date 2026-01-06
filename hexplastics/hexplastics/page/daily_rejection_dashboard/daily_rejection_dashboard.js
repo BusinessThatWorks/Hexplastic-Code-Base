@@ -120,15 +120,62 @@ class RejectionDashboard {
 				self.switch_tab(tab);
 			});
 
-			// Auto-refresh on filter changes
+			// Period filter change handler with special logic
+			this.wrapper.on("change", "#period-filter", function () {
+				self.handle_period_change();
+			});
+
+			// Auto-refresh on other filter changes (shift, dates)
 			this.wrapper.on(
 				"change",
-				"#period-filter, #shift-filter, #date-from-filter, #date-to-filter",
+				"#shift-filter, #date-from-filter, #date-to-filter",
 				function () {
 					self.refresh_data();
 				}
 			);
 		}, 200);
+	}
+
+	handle_period_change() {
+		const periodFilter = document.getElementById("period-filter");
+		const dateFromFilter = document.getElementById("date-from-filter");
+		const dateToFilter = document.getElementById("date-to-filter");
+
+		if (!periodFilter) return;
+
+		const period = periodFilter.value;
+
+		if (period === "") {
+			// Blank (default): No auto date logic, do not auto-refresh
+			// User must manually set dates or leave them empty
+			return;
+		} else if (period === "Weekly") {
+			// Weekly: Auto-set From Date = Today - 7 days, To Date = Today
+			const today = new Date();
+			const sevenDaysAgo = new Date();
+			sevenDaysAgo.setDate(today.getDate() - 7);
+
+			// Format dates as YYYY-MM-DD for input fields
+			const formatDate = (d) => {
+				const year = d.getFullYear();
+				const month = String(d.getMonth() + 1).padStart(2, "0");
+				const day = String(d.getDate()).padStart(2, "0");
+				return `${year}-${month}-${day}`;
+			};
+
+			if (dateFromFilter) dateFromFilter.value = formatDate(sevenDaysAgo);
+			if (dateToFilter) dateToFilter.value = formatDate(today);
+
+			// Auto refresh dashboard
+			this.refresh_data();
+		} else if (period === "Monthly" || period === "Yearly") {
+			// Monthly/Yearly: Clear date fields, backend handles logic
+			if (dateFromFilter) dateFromFilter.value = "";
+			if (dateToFilter) dateToFilter.value = "";
+
+			// Auto refresh dashboard
+			this.refresh_data();
+		}
 	}
 
 	switch_tab(tab) {
@@ -151,9 +198,10 @@ class RejectionDashboard {
 		const date_from = document.getElementById("date-from-filter")?.value || "";
 		const date_to = document.getElementById("date-to-filter")?.value || "";
 
-		// If both dates are provided, use Custom period
-		// Otherwise use the selected period
-		let period = document.getElementById("period-filter")?.value || "Weekly";
+		// Get selected period (can be blank)
+		let period = document.getElementById("period-filter")?.value || "";
+
+		// If both dates are provided, use Custom period (overrides selected period)
 		if (date_from && date_to) {
 			period = "Custom";
 		}
@@ -174,6 +222,11 @@ class RejectionDashboard {
 
 	refresh_data() {
 		const filters = this.get_filters();
+
+		// If period is blank and no custom dates, don't refresh
+		if (filters.period === "" && !filters.date_from && !filters.date_to) {
+			return;
+		}
 
 		// If using custom date range, validate
 		if (filters.period === "Custom") {
