@@ -80,6 +80,7 @@ class ProductionLogDashboard {
 		this.bind_events();
 		this.load_filter_options();
 		this.refresh_data();
+		this.setup_table_scroll_indicators();
 	}
 
 	load_html() {
@@ -425,6 +426,11 @@ class ProductionLogDashboard {
         `
 			)
 			.join("");
+
+		// Update scroll indicators after table update
+		setTimeout(() => {
+			this.update_scroll_indicators();
+		}, 100);
 	}
 
 	format_date(dateStr) {
@@ -535,5 +541,60 @@ class ProductionLogDashboard {
 			console.error("Error rendering chart:", e);
 			chartContainer.innerHTML = '<div class="no-chart-data">Error rendering chart</div>';
 		}
+	}
+
+	setup_table_scroll_indicators() {
+		const self = this;
+		const container = this.wrapper.find(".entries-table-container");
+
+		if (container.length === 0) {
+			// Retry after a delay if container not found
+			setTimeout(() => self.setup_table_scroll_indicators(), 500);
+			return;
+		}
+
+		// Update indicators on scroll
+		container.on("scroll", function () {
+			self.update_scroll_indicators();
+		});
+
+		// Update on resize
+		$(window).on("resize", function () {
+			self.update_scroll_indicators();
+		});
+
+		// Initial update
+		setTimeout(() => {
+			self.update_scroll_indicators();
+		}, 300);
+	}
+
+	update_scroll_indicators() {
+		const container = this.wrapper.find(".entries-table-container");
+		if (container.length === 0) return;
+
+		const element = container[0];
+		const scrollTop = element.scrollTop;
+		const scrollHeight = element.scrollHeight;
+		const clientHeight = element.clientHeight;
+		const scrollLeft = element.scrollLeft;
+		const scrollWidth = element.scrollWidth;
+		const clientWidth = element.clientWidth;
+
+		// Vertical scroll indicators
+		if (scrollTop > 5) {
+			container.addClass("scrollable-top");
+		} else {
+			container.removeClass("scrollable-top");
+		}
+
+		if (scrollTop < scrollHeight - clientHeight - 5) {
+			container.addClass("scrollable-bottom");
+		} else {
+			container.removeClass("scrollable-bottom");
+		}
+
+		// Horizontal scroll indicators (optional - can add if needed)
+		// For now, we'll just ensure smooth scrolling
 	}
 }
