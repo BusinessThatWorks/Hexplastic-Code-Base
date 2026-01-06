@@ -393,7 +393,7 @@ class ProductionLogDashboard {
 		};
 
 		// Total Costing - Commented out for now
-		// setValue("total-costing", data.total_costing, true);
+		setValue("total-costing", data.total_costing, true);
 		setValue("total-prime-used", data.total_prime_used);
 		setValue("total-rm-consumption", data.total_rm_consumption);
 		setValue("lb-gross-weight", data.gross_weight);
