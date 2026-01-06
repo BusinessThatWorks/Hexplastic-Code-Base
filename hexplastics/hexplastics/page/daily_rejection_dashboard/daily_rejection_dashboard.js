@@ -309,14 +309,7 @@ class RejectionDashboard {
 
 		if (!chartContainer) return;
 
-		if (!data || !data.labels || data.labels.length === 0) {
-			chartContainer.innerHTML = "";
-			if (noDataMsg) {
-				noDataMsg.style.display = "flex";
-			}
-			return;
-		}
-
+		// Hide the no data message - we'll show empty chart instead
 		if (noDataMsg) {
 			noDataMsg.style.display = "none";
 		}
@@ -324,9 +317,16 @@ class RejectionDashboard {
 		// Clear previous chart
 		chartContainer.innerHTML = "";
 
-		// Prepare chart data
-		const labels = data.labels;
-		const values = data.values;
+		// If no data, show an empty chart with default labels
+		let labels, values;
+		if (!data || !data.labels || data.labels.length === 0) {
+			// Create empty chart with placeholder labels
+			labels = ["No Data"];
+			values = [0];
+		} else {
+			labels = data.labels;
+			values = data.values;
+		}
 
 		// Store values for label rendering
 		this.chart_values = values;
@@ -366,17 +366,21 @@ class RejectionDashboard {
 			});
 
 			// Add custom data point labels after chart renders
-			// Add labels at different intervals to catch when chart is ready
-			const addLabels = () => {
-				this.add_data_point_labels(chartContainer, values);
-			};
+			// Only add labels if there's real data (not just placeholder)
+			const hasRealData = values.some((v) => parseFloat(v) !== 0);
 
-			// Multiple attempts at different timings
-			setTimeout(addLabels.bind(this), 100);
-			setTimeout(addLabels.bind(this), 250);
-			setTimeout(addLabels.bind(this), 500);
-			setTimeout(addLabels.bind(this), 1000);
-			setTimeout(addLabels.bind(this), 2000);
+			if (hasRealData) {
+				const addLabels = () => {
+					this.add_data_point_labels(chartContainer, values);
+				};
+
+				// Multiple attempts at different timings
+				setTimeout(addLabels.bind(this), 100);
+				setTimeout(addLabels.bind(this), 250);
+				setTimeout(addLabels.bind(this), 500);
+				setTimeout(addLabels.bind(this), 1000);
+				setTimeout(addLabels.bind(this), 2000);
+			}
 		} catch (e) {
 			console.error("Error rendering chart:", e);
 			chartContainer.innerHTML = '<div class="no-chart-data">Error rendering chart</div>';
