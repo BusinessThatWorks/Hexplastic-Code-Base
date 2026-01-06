@@ -78,6 +78,7 @@ def get_empty_log_book():
     return {
         "total_costing": 0,
         "total_prime_used": 0,
+        "total_rm_consumption": 0,
         "gross_weight": 0,
         "net_weight": 0
     }
@@ -148,6 +149,7 @@ def get_log_book_data(filters=None):
         dict: {
             total_costing: float,
             total_prime_used: float,
+            total_rm_consumption: float,
             gross_weight: float,
             net_weight: float
         }
@@ -191,9 +193,27 @@ def get_log_book_data(filters=None):
             item_filter=get_item_filter_sql(filters, "pl")
         ), as_dict=True)
         
+        # Calculate total RM consumption (only Raw Materials - item_type = 'BOM Item')
+        rm_consumption_data = frappe.db.sql("""
+            SELECT 
+                COALESCE(SUM(plt.consumption), 0) as total_rm_consumption
+            FROM `tabProduction Log Book Table` plt
+            INNER JOIN `tabProduction Log Book` pl ON plt.parent = pl.name
+            WHERE pl.docstatus = 1
+                AND plt.item_type = 'BOM Item'
+                {date_filter}
+                {shift_filter}
+                {item_filter}
+        """.format(
+            date_filter=get_date_filter_sql(filters, "pl"),
+            shift_filter=get_shift_filter_sql(filters, "pl"),
+            item_filter=get_item_filter_sql(filters, "pl")
+        ), as_dict=True)
+        
         gross_weight = flt(data[0].get("gross_weight", 0), 2) if data else 0
         net_weight = flt(data[0].get("net_weight", 0), 2) if data else 0
         total_consumption = flt(consumption_data[0].get("total_consumption", 0), 2) if consumption_data else 0
+        total_rm_consumption = flt(rm_consumption_data[0].get("total_rm_consumption", 0), 2) if rm_consumption_data else 0
         
         # Calculate costing (simplified - can be enhanced based on requirements)
         # For now, using net_weight as a proxy for costing
@@ -202,6 +222,7 @@ def get_log_book_data(filters=None):
         return {
             "total_costing": total_costing,
             "total_prime_used": total_consumption,
+            "total_rm_consumption": total_rm_consumption,
             "gross_weight": gross_weight,
             "net_weight": net_weight
         }

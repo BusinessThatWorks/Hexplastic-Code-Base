@@ -375,6 +375,7 @@ class ProductionLogDashboard {
 
 		setValue("total-costing", data.total_costing);
 		setValue("total-prime-used", data.total_prime_used);
+		setValue("total-rm-consumption", data.total_rm_consumption);
 		setValue("lb-gross-weight", data.gross_weight);
 		setValue("lb-net-weight", data.net_weight);
 	}
