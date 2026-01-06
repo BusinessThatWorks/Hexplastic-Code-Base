@@ -146,8 +146,14 @@ class RejectionDashboard {
 		const period = periodFilter.value;
 
 		if (period === "") {
-			// Blank (default): No auto date logic, do not auto-refresh
-			// User must manually set dates or leave them empty
+			// Blank (default): Reset dashboard to clean slate
+			// 1. Clear date fields
+			if (dateFromFilter) dateFromFilter.value = "";
+			if (dateToFilter) dateToFilter.value = "";
+
+			// 2. Reset dashboard to default empty state
+			this.reset_dashboard_to_default();
+
 			return;
 		} else if (period === "Weekly") {
 			// Weekly: Auto-set From Date = Today - 7 days, To Date = Today
@@ -176,6 +182,45 @@ class RejectionDashboard {
 			// Auto refresh dashboard
 			this.refresh_data();
 		}
+	}
+
+	reset_dashboard_to_default() {
+		// Reset KPI cards to default empty state (show "-" like initial state)
+		$("#kpi-total-box").text("-");
+		$("#kpi-total-rejection").text("-");
+		$("#kpi-rejection-pct").text("-");
+
+		// Reset chart to empty state
+		const chartContainer = document.getElementById("rejection-chart");
+		const noDataMsg = document.getElementById("no-chart-data-message");
+
+		if (chartContainer) {
+			chartContainer.innerHTML = "";
+
+			// Destroy existing chart instance to clear all state
+			if (this.chart) {
+				this.chart = null;
+			}
+		}
+
+		if (noDataMsg) {
+			noDataMsg.style.display = "flex";
+		}
+
+		// Clear the table
+		const tableContainer = document.getElementById("rejection-table");
+		const noTableDataMsg = document.getElementById("no-table-data-message");
+
+		if (tableContainer) {
+			tableContainer.innerHTML = "";
+		}
+
+		if (noTableDataMsg) {
+			noTableDataMsg.style.display = "flex";
+		}
+
+		// Clear any stored chart values
+		this.chart_values = null;
 	}
 
 	switch_tab(tab) {
