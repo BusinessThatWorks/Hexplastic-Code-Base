@@ -504,7 +504,7 @@ class RejectionDashboard {
 					chartInstance.options.plugins.datalabels.formatter = (value) => {
 						const numValue =
 							typeof value === "object" && value.y !== undefined ? value.y : value;
-						return numValue !== 0 ? this.format_number(numValue, 2) : "";
+						return numValue !== 0 ? this.format_number(numValue, 2) + "%" : "";
 					};
 					chartInstance.options.plugins.datalabels.color = "#e24c4c";
 					chartInstance.options.plugins.datalabels.font = {
@@ -532,7 +532,7 @@ class RejectionDashboard {
 								typeof value === "object" && value.y !== undefined
 									? value.y
 									: value;
-							return numValue !== 0 ? this.format_number(numValue, 2) : "";
+							return numValue !== 0 ? this.format_number(numValue, 2) + "%" : "";
 						},
 						color: "#e24c4c",
 						font: {
@@ -589,7 +589,7 @@ class RejectionDashboard {
 									);
 									label.setAttribute("fill", "#c0392b"); // Dark red to match line
 									label.setAttribute("pointer-events", "none");
-									label.textContent = this.format_number(point.value, 2);
+									label.textContent = this.format_number(point.value, 2) + "%";
 									svg.appendChild(label);
 								});
 								return true;
@@ -741,7 +741,7 @@ class RejectionDashboard {
 					label.setAttribute("fill", "#c0392b");
 					label.setAttribute("pointer-events", "none");
 
-					label.textContent = this.format_number(value, 2);
+					label.textContent = this.format_number(value, 2) + "%";
 
 					svg.appendChild(label);
 					labelsAdded++;
