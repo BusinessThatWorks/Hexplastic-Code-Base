@@ -439,7 +439,7 @@ class ProductionLogDashboard {
                 <td class="text-right">${this.format_number(entry.total_consumption)}</td>
                 <td class="text-right">${this.format_number(entry.prime_used)}</td>
                 <td class="text-right">${this.format_number(entry.mip_used)}</td>
-                <td class="text-right">${this.format_number(entry.per_piece_rate, 4)}</td>
+                <!-- <td class="text-right">${this.format_number(entry.per_piece_rate, 4)}</td> -->
                 <td class="text-right">${this.format_number(entry.process_loss_weight)}</td>
             </tr>
         `
