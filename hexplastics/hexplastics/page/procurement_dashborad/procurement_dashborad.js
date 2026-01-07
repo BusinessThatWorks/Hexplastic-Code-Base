@@ -186,6 +186,7 @@ class ProcurementDashboard {
 
 			// Material Request tab filter changes
 			this.wrapper.on("change", "#mr-status-filter", function () {
+				self.update_mr_cards_visibility();
 				self.refresh_material_requests();
 			});
 
@@ -757,6 +758,25 @@ class ProcurementDashboard {
 
 		setEl("partially-received-mr", this.format_number(metrics.partially_received_count));
 		setEl("pending-mr", this.format_number(metrics.pending_count));
+		setEl("ordered-mr", this.format_number(metrics.ordered_count));
+	}
+
+	update_mr_cards_visibility() {
+		const selectedStatus = document.getElementById("mr-status-filter")?.value || "";
+		const cardsContainer = document.getElementById("mr-kpi-cards");
+		
+		if (!cardsContainer) return;
+
+		const cards = cardsContainer.querySelectorAll(".kpi-card[data-status]");
+		
+		cards.forEach(card => {
+			const cardStatus = card.getAttribute("data-status");
+			if (selectedStatus === "" || cardStatus === selectedStatus) {
+				card.style.display = "";
+			} else {
+				card.style.display = "none";
+			}
+		});
 	}
 
 	update_material_request_table(material_requests) {

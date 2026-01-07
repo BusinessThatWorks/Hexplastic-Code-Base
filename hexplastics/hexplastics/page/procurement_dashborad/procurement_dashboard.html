@@ -188,11 +188,9 @@
 						<label class="filter-label">Workflow Status</label>
 						<select class="filter-input filter-select" id="mr-status-filter">
 							<option value="">All</option>
-							<option value="Pending">Pending</option>
-							<option value="Not Started">Not Started</option>
+							<option value="Ordered">Ordered</option>
 							<option value="Partially Received">Partially Received</option>
-							<option value="Received">Received</option>
-							<option value="Cancelled">Cancelled</option>
+							<option value="Pending">Pending</option>
 						</select>
 					</div>
 					<div class="tab-filter-group">
@@ -226,8 +224,12 @@
 			</div>
 
 			<!-- KPI Cards -->
-			<div class="kpi-cards-grid">
-				<div class="kpi-card kpi-card-orange">
+			<div class="kpi-cards-grid" id="mr-kpi-cards">
+				<div
+					class="kpi-card kpi-card-orange"
+					id="mr-card-partially-received"
+					data-status="Partially Received"
+				>
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="partially-received-mr">0</div>
@@ -237,12 +239,22 @@
 						</div>
 					</div>
 				</div>
-				<div class="kpi-card kpi-card-blue">
+				<div class="kpi-card kpi-card-blue" id="mr-card-pending" data-status="Pending">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="pending-mr">0</div>
 						<div class="kpi-title">Pending Material Requests</div>
 						<div class="kpi-subtitle">Material requests with Pending status</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-green" id="mr-card-ordered" data-status="Ordered">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="ordered-mr">0</div>
+						<div class="kpi-title">Ordered Material Requests</div>
+						<div class="kpi-subtitle">
+							Material requests converted to Purchase Orders
+						</div>
 					</div>
 				</div>
 			</div>

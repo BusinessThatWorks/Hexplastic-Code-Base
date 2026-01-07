@@ -183,6 +183,26 @@ def get_material_request_data(
             as_dict=True,
         )
 
+        # Ordered Material Requests
+        ordered_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as count
+            FROM `tabMaterial Request`
+            WHERE docstatus = 1
+                AND status = 'Ordered'
+                {date_filter}
+                {supplier_filter}
+                {id_filter}
+                {item_filter}
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
         # Get Material Requests list for table
         material_requests = frappe.db.sql(
             """
@@ -217,6 +237,7 @@ def get_material_request_data(
                     else 0
                 ),
                 "pending_count": pending_data[0].get("count", 0) if pending_data else 0,
+                "ordered_count": ordered_data[0].get("count", 0) if ordered_data else 0,
             },
             "material_requests": material_requests,
         }
@@ -227,7 +248,7 @@ def get_material_request_data(
             title=_("Error fetching material request data"),
         )
         return {
-            "metrics": {"partially_received_count": 0, "pending_count": 0},
+            "metrics": {"partially_received_count": 0, "pending_count": 0, "ordered_count": 0},
             "material_requests": [],
         }
 
