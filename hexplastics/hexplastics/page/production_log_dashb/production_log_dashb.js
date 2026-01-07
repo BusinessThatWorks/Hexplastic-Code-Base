@@ -69,6 +69,7 @@ class ProductionLogDashboard {
 		this.chart = null;
 		this.manufacturing_items = [];
 		this.debounce_timer = null;
+		this.initial_load = true; // Flag to track initial page load
 
 		this.init();
 	}
@@ -76,16 +77,30 @@ class ProductionLogDashboard {
 	init() {
 		this.load_html();
 		this.setup_styles();
-		this.set_default_dates();
 		this.bind_events();
 		this.load_filter_options();
-		this.refresh_data();
+		// Note: Default dates are set and data is fetched in load_html() callback
+		// to ensure HTML is loaded first
 		this.setup_table_scroll_indicators();
 	}
 
 	load_html() {
+		const self = this;
 		frappe.require("/assets/hexplastics/css/production_log_dashboard.css", () => {
 			this.wrapper.html(frappe.render_template("production_log_dashb"));
+			// After HTML is loaded, set default dates and fetch data
+			setTimeout(() => {
+				self.set_default_dates();
+				// Ensure dates are set before fetching data
+				// Use a small delay to ensure DOM is fully ready
+				setTimeout(() => {
+					self.refresh_data();
+					// Mark initial load as complete after first data fetch
+					setTimeout(() => {
+						self.initial_load = false;
+					}, 100);
+				}, 50);
+			}, 100);
 		});
 	}
 
@@ -111,21 +126,23 @@ class ProductionLogDashboard {
 	}
 
 	set_default_dates() {
-		// Set default date range (current month)
+		// Set default date range: From Date = Today - 7 days, To Date = Today
 		const today = new Date();
-		const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+		const fromDate = new Date(today);
+		fromDate.setDate(today.getDate() - 7);
 
 		const formatDate = (date) => {
 			return date.toISOString().split("T")[0];
 		};
 
-		setTimeout(() => {
-			const fromDateInput = document.getElementById("from-date");
-			const toDateInput = document.getElementById("to-date");
+		const fromDateInput = document.getElementById("from-date");
+		const toDateInput = document.getElementById("to-date");
 
-			if (fromDateInput) fromDateInput.value = formatDate(firstDay);
-			if (toDateInput) toDateInput.value = formatDate(today);
-		}, 100);
+		if (fromDateInput && toDateInput) {
+			// Set values without triggering change events (we'll fetch data explicitly)
+			fromDateInput.value = formatDate(fromDate);
+			toDateInput.value = formatDate(today);
+		}
 	}
 
 	bind_events() {
@@ -152,14 +169,18 @@ class ProductionLogDashboard {
 			});
 
 			// Auto-refresh on filter changes
-			// From Date change
+			// From Date change (skip on initial load to avoid double fetch)
 			this.wrapper.on("change", "#from-date", function () {
-				self.refresh_data();
+				if (!self.initial_load) {
+					self.refresh_data();
+				}
 			});
 
-			// To Date change
+			// To Date change (skip on initial load to avoid double fetch)
 			this.wrapper.on("change", "#to-date", function () {
-				self.refresh_data();
+				if (!self.initial_load) {
+					self.refresh_data();
+				}
 			});
 
 			// Shift filter change
@@ -374,7 +395,7 @@ class ProductionLogDashboard {
 			}
 		};
 
-		setValue("total-manufactured-qty", data.total_manufactured_qty, true);
+		setValue("total-standard-weight", data.total_standard_weight);
 		setValue("total-net-weight", data.total_net_weight);
 		setValue("total-process-loss", data.total_process_loss);
 		setValue("total-mip-used", data.total_mip_used);

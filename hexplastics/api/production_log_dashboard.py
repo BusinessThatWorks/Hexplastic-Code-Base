@@ -70,7 +70,7 @@ def build_filters(from_date, to_date, shift, manufacturing_item):
 def get_empty_overview():
     """Return empty overview data structure."""
     return {
-        "total_manufactured_qty": 0,
+        "total_standard_weight": 0,
         "total_net_weight": 0,
         "total_process_loss": 0,
         "total_mip_used": 0,
@@ -95,7 +95,7 @@ def get_overview_data(filters=None):
 
     Returns:
         dict: {
-            total_manufactured_qty: int,
+            total_standard_weight: float,
             total_net_weight: float,
             total_process_loss: float,
             total_mip_used: float
@@ -109,29 +109,31 @@ def get_overview_data(filters=None):
             filters = {"docstatus": 1}
 
         # Get aggregated data from Production Log Book
+        # Calculate total_standard_weight = SUM(manufactured_qty × item.weight_per_unit)
         data = frappe.db.sql(
             """
             SELECT 
-                COALESCE(SUM(manufactured_qty), 0) as total_manufactured_qty,
-                COALESCE(SUM(net_weight), 0) as total_net_weight,
-                COALESCE(SUM(process_loss_weight), 0) as total_process_loss,
-                COALESCE(SUM(mip_used), 0) as total_mip_used
-            FROM `tabProduction Log Book`
-            WHERE docstatus = 1
+                COALESCE(SUM(pl.manufactured_qty * COALESCE(i.weight_per_unit, 0)), 0) as total_standard_weight,
+                COALESCE(SUM(pl.net_weight), 0) as total_net_weight,
+                COALESCE(SUM(pl.process_loss_weight), 0) as total_process_loss,
+                COALESCE(SUM(pl.mip_used), 0) as total_mip_used
+            FROM `tabProduction Log Book` pl
+            LEFT JOIN `tabItem` i ON pl.manufacturing_item = i.name
+            WHERE pl.docstatus = 1
                 {date_filter}
                 {shift_filter}
                 {item_filter}
         """.format(
-                date_filter=get_date_filter_sql(filters),
-                shift_filter=get_shift_filter_sql(filters),
-                item_filter=get_item_filter_sql(filters),
+                date_filter=get_date_filter_sql(filters, "pl"),
+                shift_filter=get_shift_filter_sql(filters, "pl"),
+                item_filter=get_item_filter_sql(filters, "pl"),
             ),
             as_dict=True,
         )
 
         if data and len(data) > 0:
             return {
-                "total_manufactured_qty": flt(data[0].get("total_manufactured_qty", 0)),
+                "total_standard_weight": flt(data[0].get("total_standard_weight", 0), 2),
                 "total_net_weight": flt(data[0].get("total_net_weight", 0), 2),
                 "total_process_loss": flt(data[0].get("total_process_loss", 0), 2),
                 "total_mip_used": flt(data[0].get("total_mip_used", 0), 2),
