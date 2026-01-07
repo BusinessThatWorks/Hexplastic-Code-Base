@@ -175,6 +175,7 @@ class SalesSummaryDashboard {
 
 			// Sales Order tab filter changes
 			this.wrapper.on("change", "#so-status-filter", function () {
+				self.update_so_cards_visibility();
 				self.refresh_sales_orders();
 			});
 
@@ -349,6 +350,7 @@ class SalesSummaryDashboard {
 
 		// Refresh data for the selected tab
 		if (tabId === "sales-order") {
+			this.update_so_cards_visibility();
 			this.refresh_sales_orders();
 		} else if (tabId === "sales-invoice") {
 			this.update_si_cards_visibility();
@@ -606,6 +608,25 @@ class SalesSummaryDashboard {
 		setEl("overdue-sales-invoices", this.format_number(metrics.overdue_count || 0));
 		setEl("paid-sales-invoices", this.format_number(metrics.paid_count || 0));
 		setEl("si-total-value", this.format_currency(metrics.total_value || 0));
+	}
+
+	update_so_cards_visibility() {
+		const selectedStatus = document.getElementById("so-status-filter")?.value || "";
+		const cardsContainer = document.getElementById("so-kpi-cards");
+		
+		if (!cardsContainer) return;
+
+		const cards = cardsContainer.querySelectorAll(".kpi-card[data-status]");
+		
+		cards.forEach(card => {
+			const cardStatus = card.getAttribute("data-status");
+			// Show card if no filter is selected, or if the card matches the selected status
+			if (selectedStatus === "" || cardStatus === selectedStatus) {
+				card.style.display = "";
+			} else {
+				card.style.display = "none";
+			}
+		});
 	}
 
 	update_si_cards_visibility() {
