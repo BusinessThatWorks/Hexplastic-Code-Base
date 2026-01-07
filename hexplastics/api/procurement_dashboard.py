@@ -1,0 +1,798 @@
+"""API endpoints for Procurement Tracker Dashboard."""
+
+import frappe
+from frappe import _
+from frappe.utils import flt, getdate
+
+
+@frappe.whitelist()
+def get_overview_metrics(from_date=None, to_date=None, supplier=None):
+    """
+    Get overview tab metrics for Procurement Tracker Dashboard.
+
+    Args:
+        from_date: Start date filter
+        to_date: End date filter
+        supplier: Supplier filter
+
+    Returns:
+        dict: {
+            total_material_requests: int,
+            total_purchase_orders: int,
+            total_purchase_receipts: int,
+            total_purchase_invoices: int
+        }
+    """
+    try:
+        # Build date filters
+        mr_date_filter = get_date_filter_sql(from_date, to_date, "transaction_date")
+        po_date_filter = get_date_filter_sql(from_date, to_date, "transaction_date")
+        pr_date_filter = get_date_filter_sql(from_date, to_date, "posting_date")
+        pi_date_filter = get_date_filter_sql(from_date, to_date, "posting_date")
+        supplier_filter = get_supplier_filter_sql(supplier)
+
+        # Get Material Request count (submitted)
+        mr_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as total_count
+            FROM `tabMaterial Request`
+            WHERE docstatus = 1
+                {date_filter}
+                {supplier_filter}
+        """.format(
+                date_filter=mr_date_filter, supplier_filter=supplier_filter
+            ),
+            as_dict=True,
+        )
+
+        # Get Purchase Order count (submitted)
+        po_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as total_count
+            FROM `tabPurchase Order`
+            WHERE docstatus = 1
+                {date_filter}
+                {supplier_filter}
+        """.format(
+                date_filter=po_date_filter, supplier_filter=supplier_filter
+            ),
+            as_dict=True,
+        )
+
+        # Get Purchase Receipt count (submitted)
+        pr_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as total_count
+            FROM `tabPurchase Receipt`
+            WHERE docstatus = 1
+                {date_filter}
+                {supplier_filter}
+        """.format(
+                date_filter=pr_date_filter, supplier_filter=supplier_filter
+            ),
+            as_dict=True,
+        )
+
+        # Get Purchase Invoice count (submitted)
+        pi_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as total_count
+            FROM `tabPurchase Invoice`
+            WHERE docstatus = 1
+                {date_filter}
+                {supplier_filter}
+        """.format(
+                date_filter=pi_date_filter, supplier_filter=supplier_filter
+            ),
+            as_dict=True,
+        )
+
+        return {
+            "total_material_requests": (
+                mr_data[0].get("total_count", 0) if mr_data else 0
+            ),
+            "total_purchase_orders": po_data[0].get("total_count", 0) if po_data else 0,
+            "total_purchase_receipts": (
+                pr_data[0].get("total_count", 0) if pr_data else 0
+            ),
+            "total_purchase_invoices": (
+                pi_data[0].get("total_count", 0) if pi_data else 0
+            ),
+        }
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(), title=_("Error fetching overview metrics")
+        )
+        return {
+            "total_material_requests": 0,
+            "total_purchase_orders": 0,
+            "total_purchase_receipts": 0,
+            "total_purchase_invoices": 0,
+        }
+
+
+@frappe.whitelist()
+def get_material_request_data(
+    from_date=None, to_date=None, supplier=None, status=None, mr_id=None, item=None
+):
+    """
+    Get Material Request tab data.
+
+    Args:
+        from_date: Start date filter
+        to_date: End date filter
+        supplier: Supplier filter
+        status: Workflow Status filter
+        mr_id: Material Request ID filter
+        item: Item Code filter
+
+    Returns:
+        dict: {
+            metrics: {
+                partially_received_count: int,
+                pending_count: int
+            },
+            material_requests: list of material requests
+        }
+    """
+    try:
+        date_filter = get_date_filter_sql(from_date, to_date, "transaction_date")
+        supplier_filter = get_supplier_filter_sql(supplier)
+        status_filter = get_status_filter_sql(status)
+        id_filter = get_id_filter_sql(mr_id, "name")
+        item_filter = get_item_filter_sql(item, "Material Request")
+
+        # Partially Received Material Requests
+        partially_received_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as count
+            FROM `tabMaterial Request`
+            WHERE docstatus = 1
+                AND status = 'Partially Received'
+                {date_filter}
+                {supplier_filter}
+                {id_filter}
+                {item_filter}
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
+        # Pending Material Requests
+        pending_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as count
+            FROM `tabMaterial Request`
+            WHERE docstatus = 1
+                AND status IN ('Pending', 'Not Started')
+                {date_filter}
+                {supplier_filter}
+                {id_filter}
+                {item_filter}
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
+        # Get Material Requests list for table
+        material_requests = frappe.db.sql(
+            """
+            SELECT 
+                name,
+                transaction_date,
+                status
+            FROM `tabMaterial Request`
+            WHERE docstatus = 1
+                {date_filter}
+                {supplier_filter}
+                {status_filter}
+                {id_filter}
+                {item_filter}
+            ORDER BY transaction_date DESC, creation DESC
+            LIMIT 100
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                status_filter=status_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
+        return {
+            "metrics": {
+                "partially_received_count": (
+                    partially_received_data[0].get("count", 0)
+                    if partially_received_data
+                    else 0
+                ),
+                "pending_count": pending_data[0].get("count", 0) if pending_data else 0,
+            },
+            "material_requests": material_requests,
+        }
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching material request data"),
+        )
+        return {
+            "metrics": {"partially_received_count": 0, "pending_count": 0},
+            "material_requests": [],
+        }
+
+
+@frappe.whitelist()
+def get_purchase_order_data(
+    from_date=None, to_date=None, supplier=None, status=None, po_id=None, item=None
+):
+    """
+    Get Purchase Order tab data.
+
+    Args:
+        from_date: Start date filter
+        to_date: End date filter
+        supplier: Supplier filter
+        status: Workflow Status filter
+        po_id: Purchase Order ID filter
+        item: Item Code filter
+
+    Returns:
+        dict: {
+            metrics: {
+                approved_count: int
+            },
+            purchase_orders: list of purchase orders
+        }
+    """
+    try:
+        date_filter = get_date_filter_sql(from_date, to_date, "transaction_date")
+        supplier_filter = get_supplier_filter_sql(supplier)
+        status_filter = get_status_filter_sql(status)
+        id_filter = get_id_filter_sql(po_id, "name")
+        item_filter = get_item_filter_sql(item, "Purchase Order")
+
+        # Approved Purchase Orders
+        approved_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as count
+            FROM `tabPurchase Order`
+            WHERE docstatus = 1
+                AND status = 'To Receive'
+                {date_filter}
+                {supplier_filter}
+                {id_filter}
+                {item_filter}
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
+        # Get Purchase Orders list for table
+        purchase_orders = frappe.db.sql(
+            """
+            SELECT 
+                name,
+                transaction_date,
+                status,
+                supplier,
+                grand_total
+            FROM `tabPurchase Order`
+            WHERE docstatus = 1
+                {date_filter}
+                {supplier_filter}
+                {status_filter}
+                {id_filter}
+                {item_filter}
+            ORDER BY transaction_date DESC, creation DESC
+            LIMIT 100
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                status_filter=status_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
+        return {
+            "metrics": {
+                "approved_count": (
+                    approved_data[0].get("count", 0) if approved_data else 0
+                )
+            },
+            "purchase_orders": purchase_orders,
+        }
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching purchase order data"),
+        )
+        return {"metrics": {"approved_count": 0}, "purchase_orders": []}
+
+
+@frappe.whitelist()
+def get_purchase_receipt_data(
+    from_date=None, to_date=None, supplier=None, status=None, pr_id=None, item=None
+):
+    """
+    Get Purchase Receipt tab data.
+
+    Args:
+        from_date: Start date filter
+        to_date: End date filter
+        supplier: Supplier filter
+        status: Workflow Status filter
+        pr_id: Purchase Receipt ID filter
+        item: Item Code filter
+
+    Returns:
+        dict: {
+            metrics: {
+                completed_count: int,
+                total_receipt_value: float
+            },
+            purchase_receipts: list of purchase receipts
+        }
+    """
+    try:
+        date_filter = get_date_filter_sql(from_date, to_date, "posting_date")
+        supplier_filter = get_supplier_filter_sql(supplier)
+        status_filter = get_status_filter_sql(status)
+        id_filter = get_id_filter_sql(pr_id, "name")
+        item_filter = get_item_filter_sql(item, "Purchase Receipt")
+
+        # Completed Purchase Receipts
+        completed_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as count
+            FROM `tabPurchase Receipt`
+            WHERE docstatus = 1
+                AND status = 'Completed'
+                {date_filter}
+                {supplier_filter}
+                {id_filter}
+                {item_filter}
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
+        # Total Receipt Value
+        total_value_data = frappe.db.sql(
+            """
+            SELECT COALESCE(SUM(grand_total), 0) as total_value
+            FROM `tabPurchase Receipt`
+            WHERE docstatus = 1
+                {date_filter}
+                {supplier_filter}
+                {status_filter}
+                {id_filter}
+                {item_filter}
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                status_filter=status_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
+        # Get Purchase Receipts list for table
+        purchase_receipts = frappe.db.sql(
+            """
+            SELECT 
+                name,
+                posting_date,
+                status,
+                supplier,
+                grand_total
+            FROM `tabPurchase Receipt`
+            WHERE docstatus = 1
+                {date_filter}
+                {supplier_filter}
+                {status_filter}
+                {id_filter}
+                {item_filter}
+            ORDER BY posting_date DESC, creation DESC
+            LIMIT 100
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                status_filter=status_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
+        return {
+            "metrics": {
+                "completed_count": (
+                    completed_data[0].get("count", 0) if completed_data else 0
+                ),
+                "total_receipt_value": (
+                    flt(total_value_data[0].get("total_value", 0), 2)
+                    if total_value_data
+                    else 0
+                ),
+            },
+            "purchase_receipts": purchase_receipts,
+        }
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching purchase receipt data"),
+        )
+        return {
+            "metrics": {"completed_count": 0, "total_receipt_value": 0},
+            "purchase_receipts": [],
+        }
+
+
+@frappe.whitelist()
+def get_purchase_invoice_data(
+    from_date=None, to_date=None, supplier=None, status=None, pi_id=None, item=None
+):
+    """
+    Get Purchase Invoice tab data.
+
+    Args:
+        from_date: Start date filter
+        to_date: End date filter
+        supplier: Supplier filter
+        status: Workflow Status filter
+        pi_id: Purchase Invoice ID filter
+        item: Item Code filter
+
+    Returns:
+        dict: {
+            metrics: {
+                overdue_count: int,
+                cancelled_count: int,
+                total_invoice_value: float
+            },
+            purchase_invoices: list of purchase invoices
+        }
+    """
+    try:
+        date_filter = get_date_filter_sql(from_date, to_date, "posting_date")
+        supplier_filter = get_supplier_filter_sql(supplier)
+        status_filter = get_status_filter_sql(status)
+        id_filter = get_id_filter_sql(pi_id, "name")
+        item_filter = get_item_filter_sql(item, "Purchase Invoice")
+
+        # Overdue Purchase Invoices
+        overdue_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as count
+            FROM `tabPurchase Invoice`
+            WHERE docstatus = 1
+                AND status = 'Overdue'
+                {date_filter}
+                {supplier_filter}
+                {id_filter}
+                {item_filter}
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
+        # Cancelled Purchase Invoices
+        cancelled_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as count
+            FROM `tabPurchase Invoice`
+            WHERE docstatus = 2
+                {date_filter}
+                {supplier_filter}
+                {id_filter}
+                {item_filter}
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
+        # Total Invoice Value
+        total_value_data = frappe.db.sql(
+            """
+            SELECT COALESCE(SUM(grand_total), 0) as total_value
+            FROM `tabPurchase Invoice`
+            WHERE docstatus IN (0, 1)
+                {date_filter}
+                {supplier_filter}
+                {status_filter}
+                {id_filter}
+                {item_filter}
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                status_filter=status_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
+        # Get Purchase Invoices list for table
+        purchase_invoices = frappe.db.sql(
+            """
+            SELECT 
+                name,
+                posting_date,
+                due_date,
+                status,
+                supplier,
+                grand_total
+            FROM `tabPurchase Invoice`
+            WHERE docstatus IN (0, 1)
+                {date_filter}
+                {supplier_filter}
+                {status_filter}
+                {id_filter}
+                {item_filter}
+            ORDER BY posting_date DESC, creation DESC
+            LIMIT 100
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                status_filter=status_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
+        return {
+            "metrics": {
+                "overdue_count": overdue_data[0].get("count", 0) if overdue_data else 0,
+                "cancelled_count": (
+                    cancelled_data[0].get("count", 0) if cancelled_data else 0
+                ),
+                "total_invoice_value": (
+                    flt(total_value_data[0].get("total_value", 0), 2)
+                    if total_value_data
+                    else 0
+                ),
+            },
+            "purchase_invoices": purchase_invoices,
+        }
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching purchase invoice data"),
+        )
+        return {
+            "metrics": {
+                "overdue_count": 0,
+                "cancelled_count": 0,
+                "total_invoice_value": 0,
+            },
+            "purchase_invoices": [],
+        }
+
+
+@frappe.whitelist()
+def get_item_wise_tracker_data(
+    from_date=None, to_date=None, supplier=None, po_no=None, item=None
+):
+    """
+    Get Item Wise Tracker tab data.
+
+    Args:
+        from_date: Start date filter
+        to_date: End date filter
+        supplier: Supplier filter
+        po_no: Purchase Order No filter
+        item: Item Code filter
+
+    Returns:
+        dict: {
+            metrics: {
+                tracked_items_count: int
+            },
+            items: list of tracked items with PO details
+        }
+    """
+    try:
+        date_filter = get_date_filter_sql(from_date, to_date, "transaction_date")
+        supplier_filter = get_supplier_filter_sql(supplier)
+
+        # Build PO filter
+        if po_no:
+            po_no_safe = frappe.db.escape(f"%{po_no}%")
+            po_filter = f" AND po.name LIKE {po_no_safe}"
+        else:
+            po_filter = ""
+
+        # Build item filter - need to filter on PO items
+        if item:
+            item_safe = frappe.db.escape(f"%{item}%")
+            item_filter = f" AND poi.item_code LIKE {item_safe}"
+        else:
+            item_filter = ""
+
+        # Get tracked items from Purchase Order Items
+        items_query = """
+            SELECT 
+                po.name as po_no,
+                poi.item_code as item_name,
+                po.schedule_date as due_date,
+                poi.qty,
+                poi.uom,
+                COALESCE(SUM(pr_item.received_qty), 0) as received_qty,
+                CASE 
+                    WHEN poi.qty > 0 THEN 
+                        ROUND((COALESCE(SUM(pr_item.received_qty), 0) / poi.qty) * 100, 2)
+                    ELSE 0 
+                END as received_percent
+            FROM `tabPurchase Order Item` poi
+            INNER JOIN `tabPurchase Order` po ON poi.parent = po.name
+            LEFT JOIN `tabPurchase Receipt Item` pr_item ON pr_item.purchase_order_item = poi.name
+            LEFT JOIN `tabPurchase Receipt` pr ON pr_item.parent = pr.name AND pr.docstatus = 1
+            WHERE po.docstatus = 1
+                {date_filter}
+                {supplier_filter}
+                {po_filter}
+                {item_filter}
+            GROUP BY poi.name, po.name, poi.item_code, po.schedule_date, poi.qty, poi.uom
+            ORDER BY po.name DESC, poi.idx
+            LIMIT 200
+        """.format(
+            date_filter=date_filter,
+            supplier_filter=supplier_filter,
+            po_filter=po_filter,
+            item_filter=item_filter,
+        )
+
+        items = frappe.db.sql(items_query, as_dict=True)
+
+        return {"metrics": {"tracked_items_count": len(items)}, "items": items}
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching item wise tracker data"),
+        )
+        return {"metrics": {"tracked_items_count": 0}, "items": []}
+
+
+@frappe.whitelist()
+def get_filter_options():
+    """
+    Get filter dropdown options.
+
+    Returns:
+        dict: {
+            suppliers: list of supplier names,
+            items: list of item codes
+        }
+    """
+    try:
+        # Get unique suppliers
+        suppliers = frappe.db.sql(
+            """
+            SELECT DISTINCT supplier_name as name
+            FROM `tabSupplier`
+            WHERE disabled = 0
+            ORDER BY supplier_name
+            LIMIT 200
+        """,
+            as_dict=True,
+        )
+
+        # Get unique items
+        items = frappe.db.sql(
+            """
+            SELECT DISTINCT item_code
+            FROM `tabItem`
+            WHERE disabled = 0
+                AND is_purchase_item = 1
+            ORDER BY item_code
+            LIMIT 200
+        """,
+            as_dict=True,
+        )
+
+        return {
+            "suppliers": [s.get("name") for s in suppliers if s.get("name")],
+            "items": [i.get("item_code") for i in items if i.get("item_code")],
+        }
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(), title=_("Error fetching filter options")
+        )
+        return {"suppliers": [], "items": []}
+
+
+def get_date_filter_sql(from_date, to_date, date_field):
+    """Generate SQL date filter clause."""
+    filters = []
+
+    if from_date:
+        from_date_safe = frappe.db.escape(str(getdate(from_date)))
+        filters.append(f" AND {date_field} >= {from_date_safe}")
+
+    if to_date:
+        to_date_safe = frappe.db.escape(str(getdate(to_date)))
+        filters.append(f" AND {date_field} <= {to_date_safe}")
+
+    return "".join(filters)
+
+
+def get_supplier_filter_sql(supplier):
+    """Generate SQL supplier filter clause."""
+    if not supplier:
+        return ""
+
+    supplier_safe = frappe.db.escape(supplier)
+    return f" AND supplier = {supplier_safe}"
+
+
+def get_status_filter_sql(status):
+    """Generate SQL status filter clause."""
+    if not status:
+        return ""
+
+    # Handle Draft status specially (docstatus = 0)
+    if status == "Draft":
+        return " AND docstatus = 0"
+
+    status_safe = frappe.db.escape(status)
+    return f" AND status = {status_safe}"
+
+
+def get_id_filter_sql(doc_id, field_name):
+    """Generate SQL ID filter clause."""
+    if not doc_id:
+        return ""
+
+    doc_id_safe = frappe.db.escape(f"%{doc_id}%")
+    return f" AND {field_name} LIKE {doc_id_safe}"
+
+
+def get_item_filter_sql(item, doctype):
+    """Generate SQL item filter clause using subquery."""
+    if not item:
+        return ""
+
+    child_table = f"tab{doctype} Item"
+    item_safe = frappe.db.escape(f"%{item}%")
+
+    return f""" AND name IN (
+        SELECT DISTINCT parent 
+        FROM `{child_table}` 
+        WHERE item_code LIKE {item_safe}
+    )"""

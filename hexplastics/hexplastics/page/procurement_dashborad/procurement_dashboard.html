@@ -1,0 +1,698 @@
+<div class="procurement-dashboard">
+	<!-- Title -->
+	<h1 class="dashboard-title">Procurement Tracker Dashboard</h1>
+
+	<!-- Global Filter Section -->
+	<div class="filter-section">
+		<div class="filter-row">
+			<div class="filter-group">
+				<label class="filter-label">From Date <span class="required">*</span></label>
+				<input type="date" class="filter-input" id="from-date" />
+			</div>
+			<div class="filter-group">
+				<label class="filter-label">To Date <span class="required">*</span></label>
+				<input type="date" class="filter-input" id="to-date" />
+			</div>
+			<div class="filter-group filter-group-wide">
+				<label class="filter-label">Supplier</label>
+				<div class="awesomplete-wrapper" id="supplier-filter-wrapper">
+					<input
+						type="text"
+						class="filter-input"
+						id="supplier-filter"
+						placeholder=""
+						autocomplete="off"
+					/>
+				</div>
+			</div>
+			<div class="filter-group filter-group-btn">
+				<button class="btn btn-primary refresh-btn" id="refresh-btn">Refresh</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Tabs Section -->
+	<div class="tabs-section">
+		<div class="tabs-container">
+			<button class="tab-btn active" data-tab="overview">
+				<svg
+					class="tab-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<circle cx="12" cy="12" r="10"></circle>
+					<line x1="12" y1="8" x2="12" y2="12"></line>
+					<line x1="12" y1="16" x2="12.01" y2="16"></line>
+				</svg>
+				Overview
+			</button>
+			<button class="tab-btn" data-tab="material-request">
+				<svg
+					class="tab-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+					<line x1="3" y1="9" x2="21" y2="9"></line>
+					<line x1="9" y1="21" x2="9" y2="9"></line>
+				</svg>
+				Material Request
+			</button>
+			<button class="tab-btn" data-tab="purchase-order">
+				<svg
+					class="tab-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+					<polyline points="14 2 14 8 20 8"></polyline>
+					<line x1="16" y1="13" x2="8" y2="13"></line>
+					<line x1="16" y1="17" x2="8" y2="17"></line>
+				</svg>
+				Purchase Order
+			</button>
+			<button class="tab-btn" data-tab="purchase-receipt">
+				<svg
+					class="tab-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+					<polyline points="14 2 14 8 20 8"></polyline>
+					<line x1="16" y1="13" x2="8" y2="13"></line>
+					<line x1="16" y1="17" x2="8" y2="17"></line>
+				</svg>
+				Purchase Receipt
+			</button>
+			<button class="tab-btn" data-tab="purchase-invoice">
+				<svg
+					class="tab-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+					<polyline points="14 2 14 8 20 8"></polyline>
+					<line x1="16" y1="13" x2="8" y2="13"></line>
+					<line x1="16" y1="17" x2="8" y2="17"></line>
+				</svg>
+				Purchase Invoice
+			</button>
+			<button class="tab-btn" data-tab="item-wise-tracker">
+				<svg
+					class="tab-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+					<line x1="3" y1="9" x2="21" y2="9"></line>
+					<line x1="9" y1="21" x2="9" y2="9"></line>
+				</svg>
+				Item Wise Tracker
+			</button>
+		</div>
+	</div>
+
+	<!-- Tab Content -->
+	<div class="tab-content">
+		<!-- Overview Tab -->
+		<div class="tab-pane active" id="overview-tab">
+			<div class="kpi-cards-grid">
+				<div class="kpi-card kpi-card-blue">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-material-requests">0</div>
+						<div class="kpi-title">Total Material Requests</div>
+						<div class="kpi-subtitle">Total material requests in the period</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-green">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-purchase-orders">0</div>
+						<div class="kpi-title">Total Purchase Orders</div>
+						<div class="kpi-subtitle">Total purchase orders in the period</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-orange">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-purchase-receipts">0</div>
+						<div class="kpi-title">Total Purchase Receipts</div>
+						<div class="kpi-subtitle">Total purchase receipts in the period</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-purple">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-purchase-invoices">0</div>
+						<div class="kpi-title">Total Purchase Invoices</div>
+						<div class="kpi-subtitle">Total purchase invoices in the period</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Procurement Overview Section -->
+			<div class="overview-section">
+				<div class="section-header">
+					<h3>Procurement Overview</h3>
+				</div>
+				<div class="overview-content" id="procurement-overview-content">
+					<p class="overview-text">This dashboard provides a comprehensive view of procurement performance, including material requests, purchase orders, receipts, and invoices for the selected period. Use the filters above to analyze procurement data by date range and supplier.</p>
+				</div>
+			</div>
+		</div>
+
+		<!-- Material Request Tab -->
+		<div class="tab-pane" id="material-request-tab">
+			<!-- Tab-level Filters -->
+			<div class="tab-filter-section">
+				<div class="tab-filter-row">
+					<div class="tab-filter-group">
+						<label class="filter-label">Workflow Status</label>
+						<select class="filter-input filter-select" id="mr-status-filter">
+							<option value="">All</option>
+							<option value="Pending">Pending</option>
+							<option value="Not Started">Not Started</option>
+							<option value="Partially Received">Partially Received</option>
+							<option value="Received">Received</option>
+							<option value="Cancelled">Cancelled</option>
+						</select>
+					</div>
+					<div class="tab-filter-group">
+						<label class="filter-label">ID</label>
+						<input
+							type="text"
+							class="filter-input"
+							id="mr-id-filter"
+							placeholder=""
+							autocomplete="off"
+						/>
+					</div>
+					<div class="tab-filter-group">
+						<label class="filter-label">Item</label>
+						<div class="awesomplete-wrapper" id="mr-item-filter-wrapper">
+							<input
+								type="text"
+								class="filter-input"
+								id="mr-item-filter"
+								placeholder=""
+								autocomplete="off"
+							/>
+						</div>
+					</div>
+					<div class="tab-filter-group tab-filter-btn">
+						<button class="btn btn-primary refresh-btn" id="mr-refresh-btn">Refresh</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- KPI Cards -->
+			<div class="kpi-cards-grid">
+				<div class="kpi-card kpi-card-orange">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="partially-received-mr">0</div>
+						<div class="kpi-title">Partially Received Material Requests</div>
+						<div class="kpi-subtitle">Material requests with Partially Received status</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-blue">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="pending-mr">0</div>
+						<div class="kpi-title">Pending Material Requests</div>
+						<div class="kpi-subtitle">Material requests with Pending status</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Material Request Details Table -->
+			<div class="entries-section">
+				<div class="section-header">
+					<h3>Material Request Details</h3>
+				</div>
+				<div class="entries-table-container">
+					<div class="table-loading" id="mr-loading">
+						<div class="loading-spinner"></div>
+						<span>Loading material requests...</span>
+					</div>
+					<table class="entries-table" id="mr-table">
+						<thead>
+							<tr>
+								<th>Material Request</th>
+								<th>Date</th>
+								<th>Status</th>
+							</tr>
+						</thead>
+						<tbody id="mr-tbody">
+							<!-- Dynamic rows will be inserted here -->
+						</tbody>
+					</table>
+					<div class="no-data-message" id="no-mr-message" style="display: none">
+						<svg
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							class="no-data-icon"
+						>
+							<path
+								d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+							></path>
+							<polyline points="13 2 13 9 20 9"></polyline>
+						</svg>
+						<p>No material requests found for the selected filters</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Purchase Order Tab -->
+		<div class="tab-pane" id="purchase-order-tab">
+			<!-- Tab-level Filters -->
+			<div class="tab-filter-section">
+				<div class="tab-filter-row">
+					<div class="tab-filter-group">
+						<label class="filter-label">Workflow Status</label>
+						<select class="filter-input filter-select" id="po-status-filter">
+							<option value="">All</option>
+							<option value="Draft">Draft</option>
+							<option value="To Receive">To Receive</option>
+							<option value="To Receive and Bill">To Receive and Bill</option>
+							<option value="To Bill">To Bill</option>
+							<option value="Completed">Completed</option>
+							<option value="Cancelled">Cancelled</option>
+							<option value="Closed">Closed</option>
+						</select>
+					</div>
+					<div class="tab-filter-group">
+						<label class="filter-label">ID</label>
+						<input
+							type="text"
+							class="filter-input"
+							id="po-id-filter"
+							placeholder=""
+							autocomplete="off"
+						/>
+					</div>
+					<div class="tab-filter-group">
+						<label class="filter-label">Item</label>
+						<div class="awesomplete-wrapper" id="po-item-filter-wrapper">
+							<input
+								type="text"
+								class="filter-input"
+								id="po-item-filter"
+								placeholder=""
+								autocomplete="off"
+							/>
+						</div>
+					</div>
+					<div class="tab-filter-group tab-filter-btn">
+						<button class="btn btn-primary refresh-btn" id="po-refresh-btn">Refresh</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- KPI Cards -->
+			<div class="kpi-cards-grid">
+				<div class="kpi-card kpi-card-green">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="approved-po">0</div>
+						<div class="kpi-title">Approved Purchase Orders</div>
+						<div class="kpi-subtitle">Purchase orders with To Receive status</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Purchase Order Details Table -->
+			<div class="entries-section">
+				<div class="section-header">
+					<h3>Purchase Order Details</h3>
+				</div>
+				<div class="entries-table-container">
+					<div class="table-loading" id="po-loading">
+						<div class="loading-spinner"></div>
+						<span>Loading purchase orders...</span>
+					</div>
+					<table class="entries-table" id="po-table">
+						<thead>
+							<tr>
+								<th>Purchase Order</th>
+								<th>Date</th>
+								<th>Status</th>
+								<th>Supplier</th>
+								<th class="text-right">Grand Total</th>
+							</tr>
+						</thead>
+						<tbody id="po-tbody">
+							<!-- Dynamic rows will be inserted here -->
+						</tbody>
+					</table>
+					<div class="no-data-message" id="no-po-message" style="display: none">
+						<svg
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							class="no-data-icon"
+						>
+							<path
+								d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+							></path>
+							<polyline points="13 2 13 9 20 9"></polyline>
+						</svg>
+						<p>No purchase orders found for the selected filters</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Purchase Receipt Tab -->
+		<div class="tab-pane" id="purchase-receipt-tab">
+			<!-- Tab-level Filters -->
+			<div class="tab-filter-section">
+				<div class="tab-filter-row">
+					<div class="tab-filter-group">
+						<label class="filter-label">Workflow Status</label>
+						<select class="filter-input filter-select" id="pr-status-filter">
+							<option value="">All</option>
+							<option value="Draft">Draft</option>
+							<option value="To Bill">To Bill</option>
+							<option value="Completed">Completed</option>
+							<option value="Cancelled">Cancelled</option>
+						</select>
+					</div>
+					<div class="tab-filter-group">
+						<label class="filter-label">ID</label>
+						<input
+							type="text"
+							class="filter-input"
+							id="pr-id-filter"
+							placeholder=""
+							autocomplete="off"
+						/>
+					</div>
+					<div class="tab-filter-group">
+						<label class="filter-label">Item</label>
+						<div class="awesomplete-wrapper" id="pr-item-filter-wrapper">
+							<input
+								type="text"
+								class="filter-input"
+								id="pr-item-filter"
+								placeholder=""
+								autocomplete="off"
+							/>
+						</div>
+					</div>
+					<div class="tab-filter-group tab-filter-btn">
+						<button class="btn btn-primary refresh-btn" id="pr-refresh-btn">Refresh</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- KPI Cards -->
+			<div class="kpi-cards-grid">
+				<div class="kpi-card kpi-card-green">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="completed-pr">0</div>
+						<div class="kpi-title">Completed Purchase Receipts</div>
+						<div class="kpi-subtitle">Purchase receipts with Completed status</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-purple">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-receipt-value">₹0</div>
+						<div class="kpi-title">Total Receipt Value</div>
+						<div class="kpi-subtitle">Sum of grand total for selected date range</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Purchase Receipt Details Table -->
+			<div class="entries-section">
+				<div class="section-header">
+					<h3>Purchase Receipt Details</h3>
+				</div>
+				<div class="entries-table-container">
+					<div class="table-loading" id="pr-loading">
+						<div class="loading-spinner"></div>
+						<span>Loading purchase receipts...</span>
+					</div>
+					<table class="entries-table" id="pr-table">
+						<thead>
+							<tr>
+								<th>Purchase Receipt</th>
+								<th>Date</th>
+								<th>Status</th>
+								<th>Supplier</th>
+								<th class="text-right">Grand Total</th>
+							</tr>
+						</thead>
+						<tbody id="pr-tbody">
+							<!-- Dynamic rows will be inserted here -->
+						</tbody>
+					</table>
+					<div class="no-data-message" id="no-pr-message" style="display: none">
+						<svg
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							class="no-data-icon"
+						>
+							<path
+								d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+							></path>
+							<polyline points="13 2 13 9 20 9"></polyline>
+						</svg>
+						<p>No purchase receipts found for the selected filters</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Purchase Invoice Tab -->
+		<div class="tab-pane" id="purchase-invoice-tab">
+			<!-- Tab-level Filters -->
+			<div class="tab-filter-section">
+				<div class="tab-filter-row">
+					<div class="tab-filter-group">
+						<label class="filter-label">Workflow Status</label>
+						<select class="filter-input filter-select" id="pi-status-filter">
+							<option value="">All</option>
+							<option value="Draft">Draft</option>
+							<option value="Unpaid">Unpaid</option>
+							<option value="Overdue">Overdue</option>
+							<option value="Paid">Paid</option>
+							<option value="Partly Paid">Partly Paid</option>
+							<option value="Return">Return</option>
+							<option value="Credit Note Issued">Credit Note Issued</option>
+							<option value="Cancelled">Cancelled</option>
+						</select>
+					</div>
+					<div class="tab-filter-group">
+						<label class="filter-label">ID</label>
+						<input
+							type="text"
+							class="filter-input"
+							id="pi-id-filter"
+							placeholder=""
+							autocomplete="off"
+						/>
+					</div>
+					<div class="tab-filter-group">
+						<label class="filter-label">Item</label>
+						<div class="awesomplete-wrapper" id="pi-item-filter-wrapper">
+							<input
+								type="text"
+								class="filter-input"
+								id="pi-item-filter"
+								placeholder=""
+								autocomplete="off"
+							/>
+						</div>
+					</div>
+					<div class="tab-filter-group tab-filter-btn">
+						<button class="btn btn-primary refresh-btn" id="pi-refresh-btn">Refresh</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- KPI Cards -->
+			<div class="kpi-cards-grid">
+				<div class="kpi-card kpi-card-red">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="overdue-pi">0</div>
+						<div class="kpi-title">Overdue Purchase Invoices</div>
+						<div class="kpi-subtitle">Purchase invoices with Overdue status</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-orange">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="cancelled-pi">0</div>
+						<div class="kpi-title">Cancelled Purchase Invoices</div>
+						<div class="kpi-subtitle">Purchase invoices with Cancelled status</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-purple">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-invoice-value">₹0</div>
+						<div class="kpi-title">Total Invoice Value</div>
+						<div class="kpi-subtitle">Sum of grand total for selected date range</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Purchase Invoice Details Table -->
+			<div class="entries-section">
+				<div class="section-header">
+					<h3>Purchase Invoice Details</h3>
+				</div>
+				<div class="entries-table-container">
+					<div class="table-loading" id="pi-loading">
+						<div class="loading-spinner"></div>
+						<span>Loading purchase invoices...</span>
+					</div>
+					<table class="entries-table" id="pi-table">
+						<thead>
+							<tr>
+								<th>Purchase Invoice</th>
+								<th>Date</th>
+								<th>Due Date</th>
+								<th>Status</th>
+								<th>Supplier</th>
+								<th class="text-right">Grand Total</th>
+							</tr>
+						</thead>
+						<tbody id="pi-tbody">
+							<!-- Dynamic rows will be inserted here -->
+						</tbody>
+					</table>
+					<div class="no-data-message" id="no-pi-message" style="display: none">
+						<svg
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							class="no-data-icon"
+						>
+							<path
+								d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+							></path>
+							<polyline points="13 2 13 9 20 9"></polyline>
+						</svg>
+						<p>No purchase invoices found for the selected filters</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Item Wise Tracker Tab -->
+		<div class="tab-pane" id="item-wise-tracker-tab">
+			<!-- Tab-level Filters -->
+			<div class="tab-filter-section">
+				<div class="tab-filter-row">
+					<div class="tab-filter-group">
+						<label class="filter-label">PO No</label>
+						<input
+							type="text"
+							class="filter-input"
+							id="tracker-po-filter"
+							placeholder=""
+							autocomplete="off"
+						/>
+					</div>
+					<div class="tab-filter-group">
+						<label class="filter-label">Item</label>
+						<div class="awesomplete-wrapper" id="tracker-item-filter-wrapper">
+							<input
+								type="text"
+								class="filter-input"
+								id="tracker-item-filter"
+								placeholder=""
+								autocomplete="off"
+							/>
+						</div>
+					</div>
+					<div class="tab-filter-group tab-filter-btn">
+						<button class="btn btn-primary refresh-btn" id="tracker-refresh-btn">Refresh</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- KPI Cards -->
+			<div class="kpi-cards-grid">
+				<div class="kpi-card kpi-card-blue">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="tracked-items">0</div>
+						<div class="kpi-title">Tracked Items</div>
+						<div class="kpi-subtitle">Total items being tracked</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Item Wise Tracker Table -->
+			<div class="entries-section">
+				<div class="section-header">
+					<h3>Item Wise Tracker</h3>
+				</div>
+				<div class="entries-table-container">
+					<div class="table-loading" id="tracker-loading">
+						<div class="loading-spinner"></div>
+						<span>Loading item tracker data...</span>
+					</div>
+					<table class="entries-table" id="tracker-table">
+						<thead>
+							<tr>
+								<th>PO No</th>
+								<th>Item Name</th>
+								<th>Due Date</th>
+								<th>Qty</th>
+								<th>UOM</th>
+								<th>Received Qty</th>
+								<th>Received %</th>
+							</tr>
+						</thead>
+						<tbody id="tracker-tbody">
+							<!-- Dynamic rows will be inserted here -->
+						</tbody>
+					</table>
+					<div class="no-data-message" id="no-tracker-message" style="display: none">
+						<svg
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							class="no-data-icon"
+						>
+							<path
+								d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+							></path>
+							<polyline points="13 2 13 9 20 9"></polyline>
+						</svg>
+						<p>No tracked items found for the selected filters</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
