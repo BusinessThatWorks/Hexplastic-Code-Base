@@ -639,11 +639,10 @@ def get_purchase_invoice_data(
     try:
         date_filter = get_date_filter_sql(from_date, to_date, "posting_date")
         supplier_filter = get_supplier_filter_sql(supplier)
-        status_filter = get_status_filter_sql(status)
         id_filter = get_id_filter_sql(pi_id, "name")
         item_filter = get_item_filter_sql(item, "Purchase Invoice")
 
-        # Overdue Purchase Invoices
+        # Overdue Purchase Invoices (exclude cancelled)
         overdue_data = frappe.db.sql(
             """
             SELECT COUNT(*) as count
@@ -682,21 +681,39 @@ def get_purchase_invoice_data(
             as_dict=True,
         )
 
-        # Total Invoice Value
+        # Build table query based on status filter
+        # When "Overdue" is selected: show overdue invoices and exclude cancelled
+        # When "Cancelled" is selected: show cancelled invoices and exclude overdue
+        # When "All" is selected: show all invoices
+        if status == "Overdue":
+            # Show overdue invoices, exclude cancelled (docstatus != 2)
+            table_condition = "docstatus IN (0, 1) AND status = 'Overdue'"
+            table_status_filter = ""
+        elif status == "Cancelled":
+            # Show cancelled invoices (docstatus = 2)
+            table_condition = "docstatus = 2"
+            table_status_filter = ""
+        else:
+            # Show all invoices (default behavior)
+            table_condition = "docstatus IN (0, 1)"
+            table_status_filter = ""
+
+        # Total Invoice Value (only count non-cancelled invoices)
         total_value_data = frappe.db.sql(
             """
             SELECT COALESCE(SUM(grand_total), 0) as total_value
             FROM `tabPurchase Invoice`
-            WHERE docstatus IN (0, 1)
+            WHERE {table_condition}
                 {date_filter}
                 {supplier_filter}
-                {status_filter}
+                {table_status_filter}
                 {id_filter}
                 {item_filter}
         """.format(
+                table_condition=table_condition,
                 date_filter=date_filter,
                 supplier_filter=supplier_filter,
-                status_filter=status_filter,
+                table_status_filter=table_status_filter,
                 id_filter=id_filter,
                 item_filter=item_filter,
             ),
@@ -714,18 +731,19 @@ def get_purchase_invoice_data(
                 supplier,
                 grand_total
             FROM `tabPurchase Invoice`
-            WHERE docstatus IN (0, 1)
+            WHERE {table_condition}
                 {date_filter}
                 {supplier_filter}
-                {status_filter}
+                {table_status_filter}
                 {id_filter}
                 {item_filter}
             ORDER BY posting_date DESC, creation DESC
             LIMIT 100
         """.format(
+                table_condition=table_condition,
                 date_filter=date_filter,
                 supplier_filter=supplier_filter,
-                status_filter=status_filter,
+                table_status_filter=table_status_filter,
                 id_filter=id_filter,
                 item_filter=item_filter,
             ),

@@ -523,13 +523,7 @@
 						<label class="filter-label">Workflow Status</label>
 						<select class="filter-input filter-select" id="pi-status-filter">
 							<option value="">All</option>
-							<option value="Draft">Draft</option>
-							<option value="Unpaid">Unpaid</option>
 							<option value="Overdue">Overdue</option>
-							<option value="Paid">Paid</option>
-							<option value="Partly Paid">Partly Paid</option>
-							<option value="Return">Return</option>
-							<option value="Credit Note Issued">Credit Note Issued</option>
 							<option value="Cancelled">Cancelled</option>
 						</select>
 					</div>
@@ -564,8 +558,8 @@
 			</div>
 
 			<!-- KPI Cards -->
-			<div class="kpi-cards-grid">
-				<div class="kpi-card kpi-card-red">
+			<div class="kpi-cards-grid" id="pi-kpi-cards">
+				<div class="kpi-card kpi-card-red" id="pi-card-overdue" data-status="Overdue">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="overdue-pi">0</div>
@@ -573,7 +567,7 @@
 						<div class="kpi-subtitle">Purchase invoices with Overdue status</div>
 					</div>
 				</div>
-				<div class="kpi-card kpi-card-orange">
+				<div class="kpi-card kpi-card-orange" id="pi-card-cancelled" data-status="Cancelled">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="cancelled-pi">0</div>

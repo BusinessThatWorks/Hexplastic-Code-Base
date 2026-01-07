@@ -242,6 +242,7 @@ class ProcurementDashboard {
 
 			// Purchase Invoice tab filter changes
 			this.wrapper.on("change", "#pi-status-filter", function () {
+				self.update_pi_cards_visibility();
 				self.refresh_purchase_invoices();
 			});
 
@@ -595,6 +596,7 @@ class ProcurementDashboard {
 		const filters = this.get_purchase_invoice_filters();
 
 		this.show_pi_loading();
+		this.update_pi_cards_visibility();
 
 		frappe.call({
 			method: "hexplastics.api.procurement_dashboard.get_purchase_invoice_data",
@@ -952,6 +954,30 @@ class ProcurementDashboard {
 		setEl("overdue-pi", this.format_number(metrics.overdue_count));
 		setEl("cancelled-pi", this.format_number(metrics.cancelled_count));
 		setEl("total-invoice-value", this.format_currency(metrics.total_invoice_value));
+	}
+
+	update_pi_cards_visibility() {
+		const selectedStatus = document.getElementById("pi-status-filter")?.value || "";
+		const cardsContainer = document.getElementById("pi-kpi-cards");
+		
+		if (!cardsContainer) return;
+
+		const overdueCard = document.getElementById("pi-card-overdue");
+		const cancelledCard = document.getElementById("pi-card-cancelled");
+		
+		if (selectedStatus === "") {
+			// Show all cards when "All" is selected
+			if (overdueCard) overdueCard.style.display = "";
+			if (cancelledCard) cancelledCard.style.display = "";
+		} else if (selectedStatus === "Overdue") {
+			// Show overdue card, hide cancelled card
+			if (overdueCard) overdueCard.style.display = "";
+			if (cancelledCard) cancelledCard.style.display = "none";
+		} else if (selectedStatus === "Cancelled") {
+			// Show cancelled card, hide overdue card
+			if (overdueCard) overdueCard.style.display = "none";
+			if (cancelledCard) cancelledCard.style.display = "";
+		}
 	}
 
 	update_purchase_invoice_table(purchase_invoices) {
