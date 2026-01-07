@@ -267,14 +267,10 @@
 						<label class="filter-label">Status</label>
 						<select class="filter-input filter-select" id="si-status-filter">
 							<option value="">All</option>
-							<option value="Draft">Draft</option>
 							<option value="Unpaid">Unpaid</option>
+							<option value="Draft">Draft</option>
 							<option value="Overdue">Overdue</option>
 							<option value="Paid">Paid</option>
-							<option value="Partly Paid">Partly Paid</option>
-							<option value="Return">Return</option>
-							<option value="Credit Note Issued">Credit Note Issued</option>
-							<option value="Cancelled">Cancelled</option>
 						</select>
 					</div>
 					<div class="tab-filter-group">
@@ -306,8 +302,8 @@
 			</div>
 
 			<!-- KPI Cards -->
-			<div class="kpi-cards-grid">
-				<div class="kpi-card kpi-card-orange">
+			<div class="kpi-cards-grid" id="si-kpi-cards">
+				<div class="kpi-card kpi-card-orange" id="si-card-unpaid" data-status="Unpaid">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="unpaid-sales-invoices">0</div>
@@ -315,7 +311,7 @@
 						<div class="kpi-subtitle">Sales invoices with Unpaid status</div>
 					</div>
 				</div>
-				<div class="kpi-card kpi-card-blue">
+				<div class="kpi-card kpi-card-blue" id="si-card-draft" data-status="Draft">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="draft-sales-invoices">0</div>
@@ -323,7 +319,7 @@
 						<div class="kpi-subtitle">Sales invoices with Draft status</div>
 					</div>
 				</div>
-				<div class="kpi-card kpi-card-red">
+				<div class="kpi-card kpi-card-red" id="si-card-overdue" data-status="Overdue">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="overdue-sales-invoices">0</div>
@@ -331,7 +327,7 @@
 						<div class="kpi-subtitle">Sales invoices with Overdue status</div>
 					</div>
 				</div>
-				<div class="kpi-card kpi-card-green">
+				<div class="kpi-card kpi-card-green" id="si-card-paid" data-status="Paid">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="paid-sales-invoices">0</div>

@@ -193,6 +193,7 @@ class SalesSummaryDashboard {
 
 			// Sales Invoice tab filter changes
 			this.wrapper.on("change", "#si-status-filter", function () {
+				self.update_si_cards_visibility();
 				self.refresh_sales_invoices();
 			});
 
@@ -350,6 +351,7 @@ class SalesSummaryDashboard {
 		if (tabId === "sales-order") {
 			this.refresh_sales_orders();
 		} else if (tabId === "sales-invoice") {
+			this.update_si_cards_visibility();
 			this.refresh_sales_invoices();
 		}
 	}
@@ -441,6 +443,7 @@ class SalesSummaryDashboard {
 		const filters = this.get_sales_invoice_filters();
 
 		this.show_si_loading();
+		this.update_si_cards_visibility();
 
 		frappe.call({
 			method: "hexplastics.api.sales_summary_dashboard.get_sales_invoice_data",
@@ -598,11 +601,29 @@ class SalesSummaryDashboard {
 			if (el) el.textContent = value;
 		};
 
-		setEl("unpaid-sales-invoices", this.format_number(metrics.unpaid_count));
-		setEl("draft-sales-invoices", this.format_number(metrics.draft_count));
-		setEl("overdue-sales-invoices", this.format_number(metrics.overdue_count));
-		setEl("paid-sales-invoices", this.format_number(metrics.paid_count));
-		setEl("si-total-value", this.format_currency(metrics.total_value));
+		setEl("unpaid-sales-invoices", this.format_number(metrics.unpaid_count || 0));
+		setEl("draft-sales-invoices", this.format_number(metrics.draft_count || 0));
+		setEl("overdue-sales-invoices", this.format_number(metrics.overdue_count || 0));
+		setEl("paid-sales-invoices", this.format_number(metrics.paid_count || 0));
+		setEl("si-total-value", this.format_currency(metrics.total_value || 0));
+	}
+
+	update_si_cards_visibility() {
+		const selectedStatus = document.getElementById("si-status-filter")?.value || "";
+		const cardsContainer = document.getElementById("si-kpi-cards");
+		
+		if (!cardsContainer) return;
+
+		const cards = cardsContainer.querySelectorAll(".kpi-card[data-status]");
+		
+		cards.forEach(card => {
+			const cardStatus = card.getAttribute("data-status");
+			if (selectedStatus === "" || cardStatus === selectedStatus) {
+				card.style.display = "";
+			} else {
+				card.style.display = "none";
+			}
+		});
 	}
 
 	update_sales_invoice_table(invoices) {
