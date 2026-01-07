@@ -601,6 +601,7 @@ class SalesSummaryDashboard {
 		setEl("unpaid-sales-invoices", this.format_number(metrics.unpaid_count));
 		setEl("draft-sales-invoices", this.format_number(metrics.draft_count));
 		setEl("overdue-sales-invoices", this.format_number(metrics.overdue_count));
+		setEl("paid-sales-invoices", this.format_number(metrics.paid_count));
 		setEl("si-total-value", this.format_currency(metrics.total_value));
 	}
 

@@ -247,6 +247,7 @@ def get_sales_invoice_data(from_date=None, to_date=None, customer=None, status=N
                 unpaid_count: int,
                 draft_count: int,
                 overdue_count: int,
+                paid_count: int,
                 total_value: float
             },
             invoices: list of sales invoices
@@ -309,6 +310,23 @@ def get_sales_invoice_data(from_date=None, to_date=None, customer=None, status=N
             item_filter=item_filter
         ), as_dict=True)
         
+        # Paid invoices count
+        paid_data = frappe.db.sql("""
+            SELECT COUNT(*) as count
+            FROM `tabSales Invoice`
+            WHERE docstatus = 1
+                AND status = 'Paid'
+                {date_filter}
+                {customer_filter}
+                {id_filter}
+                {item_filter}
+        """.format(
+            date_filter=date_filter,
+            customer_filter=customer_filter,
+            id_filter=id_filter,
+            item_filter=item_filter
+        ), as_dict=True)
+        
         # Total value for filtered invoices
         total_value_data = frappe.db.sql("""
             SELECT COALESCE(SUM(grand_total), 0) as total_value
@@ -358,6 +376,7 @@ def get_sales_invoice_data(from_date=None, to_date=None, customer=None, status=N
                 "unpaid_count": unpaid_data[0].get("count", 0) if unpaid_data else 0,
                 "draft_count": draft_data[0].get("count", 0) if draft_data else 0,
                 "overdue_count": overdue_data[0].get("count", 0) if overdue_data else 0,
+                "paid_count": paid_data[0].get("count", 0) if paid_data else 0,
                 "total_value": flt(total_value_data[0].get("total_value", 0), 2) if total_value_data else 0
             },
             "invoices": invoices
@@ -373,6 +392,7 @@ def get_sales_invoice_data(from_date=None, to_date=None, customer=None, status=N
                 "unpaid_count": 0,
                 "draft_count": 0,
                 "overdue_count": 0,
+                "paid_count": 0,
                 "total_value": 0
             },
             "invoices": []
