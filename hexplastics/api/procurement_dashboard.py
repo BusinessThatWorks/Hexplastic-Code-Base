@@ -258,24 +258,76 @@ def get_purchase_order_data(
     try:
         date_filter = get_date_filter_sql(from_date, to_date, "transaction_date")
         supplier_filter = get_supplier_filter_sql(supplier)
-        status_filter = get_status_filter_sql(status)
         id_filter = get_id_filter_sql(po_id, "name")
         item_filter = get_item_filter_sql(item, "Purchase Order")
+        
+        # Check if workflow_state field exists in Purchase Order
+        po_meta = frappe.get_meta("Purchase Order")
+        has_workflow_state = "workflow_state" in [f.fieldname for f in po_meta.fields]
+        
+        # Build status filter - check both workflow_state and status if workflow exists
+        if status:
+            if status == "Draft":
+                status_filter = " AND docstatus = 0"
+            else:
+                status_safe = frappe.db.escape(status)
+                if has_workflow_state:
+                    # Check both workflow_state and status fields
+                    status_filter = f" AND (workflow_state = {status_safe} OR status = {status_safe})"
+                else:
+                    status_filter = f" AND status = {status_safe}"
+        else:
+            status_filter = ""
+
+        # Build approval condition
+        # Approved Purchase Orders = all submitted documents (docstatus = 1) excluding cancelled
+        # If workflow is used: also check workflow_state = 'Approved' OR docstatus = 1
+        # This ensures we capture all approved/submitted POs regardless of workflow state
+        if has_workflow_state:
+            # If workflow field exists, include:
+            # 1. Documents explicitly approved via workflow (workflow_state = 'Approved')
+            # 2. All submitted documents (docstatus = 1) - this covers all submitted POs
+            # The OR with docstatus = 1 ensures we get all submitted documents
+            approval_condition = "(workflow_state = 'Approved' OR docstatus = 1)"
+        else:
+            # If workflow is not enabled, use docstatus = 1 for approved/submitted
+            approval_condition = "docstatus = 1"
+
+        # Build cancellation exclusion condition
+        # Exclude both docstatus = 2 (cancelled) and workflow_state = 'Cancelled'
+        if has_workflow_state:
+            cancellation_exclusion = "AND docstatus != 2 AND (workflow_state IS NULL OR workflow_state != 'Cancelled')"
+        else:
+            cancellation_exclusion = "AND docstatus != 2"
+
+        # Build status field selection
+        # Show workflow_state as status if workflow exists, otherwise use status field
+        if has_workflow_state:
+            status_field = "COALESCE(workflow_state, status) as status"
+        else:
+            status_field = "status"
 
         # Approved Purchase Orders
+        # Approval condition: workflow_state = 'Approved' OR docstatus = 1 (if workflow not used)
+        # Exclude cancelled: docstatus != 2 AND workflow_state != 'Cancelled'
+        # Apply status filter to update count when filtering by workflow status
         approved_data = frappe.db.sql(
             """
             SELECT COUNT(*) as count
             FROM `tabPurchase Order`
-            WHERE docstatus = 1
-                AND status = 'To Receive'
+            WHERE {approval_condition}
+                {cancellation_exclusion}
                 {date_filter}
                 {supplier_filter}
+                {status_filter}
                 {id_filter}
                 {item_filter}
         """.format(
+                approval_condition=approval_condition,
+                cancellation_exclusion=cancellation_exclusion,
                 date_filter=date_filter,
                 supplier_filter=supplier_filter,
+                status_filter=status_filter,
                 id_filter=id_filter,
                 item_filter=item_filter,
             ),
@@ -283,16 +335,20 @@ def get_purchase_order_data(
         )
 
         # Get Purchase Orders list for table
+        # Only show approved POs, exclude cancelled
+        # Apply the same approval logic as the count query
+        # Status column shows workflow_state if available, otherwise shows status field
         purchase_orders = frappe.db.sql(
             """
-            SELECT 
+            SELECT
                 name,
                 transaction_date,
-                status,
+                {status_field},
                 supplier,
                 grand_total
             FROM `tabPurchase Order`
-            WHERE docstatus = 1
+            WHERE {approval_condition}
+                {cancellation_exclusion}
                 {date_filter}
                 {supplier_filter}
                 {status_filter}
@@ -301,6 +357,9 @@ def get_purchase_order_data(
             ORDER BY transaction_date DESC, creation DESC
             LIMIT 100
         """.format(
+                status_field=status_field,
+                approval_condition=approval_condition,
+                cancellation_exclusion=cancellation_exclusion,
                 date_filter=date_filter,
                 supplier_filter=supplier_filter,
                 status_filter=status_filter,
