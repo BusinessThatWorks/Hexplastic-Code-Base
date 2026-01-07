@@ -286,7 +286,7 @@ def get_purchase_order_data(
         po_meta = frappe.get_meta("Purchase Order")
         has_workflow_state = "workflow_state" in [f.fieldname for f in po_meta.fields]
         
-        # Build status filter - check both workflow_state and status if workflow exists
+        # Build status filter for table query - check both workflow_state and status if workflow exists
         if status:
             if status == "Draft":
                 status_filter = " AND docstatus = 0"
@@ -299,6 +299,27 @@ def get_purchase_order_data(
                     status_filter = f" AND status = {status_safe}"
         else:
             status_filter = ""
+
+        # Build status filter for approved count - only apply if status is "Approved" or empty
+        if status == "Approved":
+            status_safe = frappe.db.escape(status)
+            if has_workflow_state:
+                approved_status_filter = f" AND (workflow_state = {status_safe} OR status = {status_safe})"
+            else:
+                approved_status_filter = f" AND status = {status_safe}"
+        else:
+            # If status is "Pending Approval" or empty, don't filter approved count by status
+            approved_status_filter = ""
+
+        # Build status filter for pending approval count - only apply if status is "Pending Approval" or empty
+        if status == "Pending Approval":
+            if has_workflow_state:
+                pending_approval_status_filter = " AND (workflow_state = 'Pending Approval' OR (docstatus = 0 AND workflow_state IS NULL))"
+            else:
+                pending_approval_status_filter = " AND docstatus = 0"
+        else:
+            # If status is "Approved" or empty, don't filter pending approval count by status
+            pending_approval_status_filter = ""
 
         # Build approval condition
         # Approved Purchase Orders = all submitted documents (docstatus = 1) excluding cancelled
@@ -331,7 +352,7 @@ def get_purchase_order_data(
         # Approved Purchase Orders
         # Approval condition: workflow_state = 'Approved' OR docstatus = 1 (if workflow not used)
         # Exclude cancelled: docstatus != 2 AND workflow_state != 'Cancelled'
-        # Apply status filter to update count when filtering by workflow status
+        # Apply status filter only if status is "Approved" or empty
         approved_data = frappe.db.sql(
             """
             SELECT COUNT(*) as count
@@ -340,7 +361,7 @@ def get_purchase_order_data(
                 {cancellation_exclusion}
                 {date_filter}
                 {supplier_filter}
-                {status_filter}
+                {approved_status_filter}
                 {id_filter}
                 {item_filter}
         """.format(
@@ -348,7 +369,40 @@ def get_purchase_order_data(
                 cancellation_exclusion=cancellation_exclusion,
                 date_filter=date_filter,
                 supplier_filter=supplier_filter,
-                status_filter=status_filter,
+                approved_status_filter=approved_status_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
+        # Pending Approval Purchase Orders
+        # Pending approval = documents with workflow_state = 'Pending Approval' OR (docstatus = 0 AND workflow_state IS NULL)
+        # Exclude cancelled: docstatus != 2 AND workflow_state != 'Cancelled'
+        if has_workflow_state:
+            pending_approval_condition = "(workflow_state = 'Pending Approval' OR (docstatus = 0 AND workflow_state IS NULL))"
+        else:
+            # If workflow is not enabled, use docstatus = 0 for draft/pending
+            pending_approval_condition = "docstatus = 0"
+
+        # Apply status filter only if status is "Pending Approval" or empty
+        pending_approval_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as count
+            FROM `tabPurchase Order`
+            WHERE {pending_approval_condition}
+                {cancellation_exclusion}
+                {date_filter}
+                {supplier_filter}
+                {pending_approval_status_filter}
+                {id_filter}
+                {item_filter}
+        """.format(
+                pending_approval_condition=pending_approval_condition,
+                cancellation_exclusion=cancellation_exclusion,
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                pending_approval_status_filter=pending_approval_status_filter,
                 id_filter=id_filter,
                 item_filter=item_filter,
             ),
@@ -356,9 +410,31 @@ def get_purchase_order_data(
         )
 
         # Get Purchase Orders list for table
-        # Only show approved POs, exclude cancelled
-        # Apply the same approval logic as the count query
+        # Show POs based on status filter:
+        # - If status is "Approved" or empty: show approved POs
+        # - If status is "Pending Approval": show pending approval POs
+        # - If status is "Draft": show draft POs
         # Status column shows workflow_state if available, otherwise shows status field
+        
+        # Build table condition based on status filter
+        if status == "Pending Approval":
+            # Show pending approval POs
+            table_condition = pending_approval_condition
+            # Remove status filter from WHERE clause since it's already in the condition
+            table_status_filter = ""
+        elif status == "Draft":
+            # Show draft POs
+            table_condition = "docstatus = 0"
+            table_status_filter = ""
+        else:
+            # Show approved POs (default behavior)
+            table_condition = approval_condition
+            # Apply status filter if status is "Approved" or empty
+            if status == "Approved":
+                table_status_filter = approved_status_filter
+            else:
+                table_status_filter = ""
+        
         purchase_orders = frappe.db.sql(
             """
             SELECT
@@ -368,22 +444,22 @@ def get_purchase_order_data(
                 supplier,
                 grand_total
             FROM `tabPurchase Order`
-            WHERE {approval_condition}
+            WHERE {table_condition}
                 {cancellation_exclusion}
                 {date_filter}
                 {supplier_filter}
-                {status_filter}
+                {table_status_filter}
                 {id_filter}
                 {item_filter}
             ORDER BY transaction_date DESC, creation DESC
             LIMIT 100
         """.format(
                 status_field=status_field,
-                approval_condition=approval_condition,
+                table_condition=table_condition,
                 cancellation_exclusion=cancellation_exclusion,
                 date_filter=date_filter,
                 supplier_filter=supplier_filter,
-                status_filter=status_filter,
+                table_status_filter=table_status_filter,
                 id_filter=id_filter,
                 item_filter=item_filter,
             ),
@@ -394,6 +470,9 @@ def get_purchase_order_data(
             "metrics": {
                 "approved_count": (
                     approved_data[0].get("count", 0) if approved_data else 0
+                ),
+                "pending_approval_count": (
+                    pending_approval_data[0].get("count", 0) if pending_approval_data else 0
                 )
             },
             "purchase_orders": purchase_orders,
@@ -404,7 +483,7 @@ def get_purchase_order_data(
             message=frappe.get_traceback(),
             title=_("Error fetching purchase order data"),
         )
-        return {"metrics": {"approved_count": 0}, "purchase_orders": []}
+        return {"metrics": {"approved_count": 0, "pending_approval_count": 0}, "purchase_orders": []}
 
 
 @frappe.whitelist()

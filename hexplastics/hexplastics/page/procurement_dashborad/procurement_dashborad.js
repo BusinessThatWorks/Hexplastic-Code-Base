@@ -205,6 +205,7 @@ class ProcurementDashboard {
 
 			// Purchase Order tab filter changes
 			this.wrapper.on("change", "#po-status-filter", function () {
+				self.update_po_cards_visibility();
 				self.refresh_purchase_orders();
 			});
 
@@ -547,6 +548,7 @@ class ProcurementDashboard {
 		const filters = this.get_purchase_order_filters();
 
 		this.show_po_loading();
+		this.update_po_cards_visibility();
 
 		frappe.call({
 			method: "hexplastics.api.procurement_dashboard.get_purchase_order_data",
@@ -826,6 +828,25 @@ class ProcurementDashboard {
 		};
 
 		setEl("approved-po", this.format_number(metrics.approved_count));
+		setEl("pending-approval-po", this.format_number(metrics.pending_approval_count || 0));
+	}
+
+	update_po_cards_visibility() {
+		const selectedStatus = document.getElementById("po-status-filter")?.value || "";
+		const cardsContainer = document.getElementById("po-kpi-cards");
+		
+		if (!cardsContainer) return;
+
+		const cards = cardsContainer.querySelectorAll(".kpi-card[data-status]");
+		
+		cards.forEach(card => {
+			const cardStatus = card.getAttribute("data-status");
+			if (selectedStatus === "" || cardStatus === selectedStatus) {
+				card.style.display = "";
+			} else {
+				card.style.display = "none";
+			}
+		});
 	}
 
 	update_purchase_order_table(purchase_orders) {

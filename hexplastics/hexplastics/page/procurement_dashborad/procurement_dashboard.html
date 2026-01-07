@@ -344,13 +344,25 @@
 			</div>
 
 			<!-- KPI Cards -->
-			<div class="kpi-cards-grid">
-				<div class="kpi-card kpi-card-green">
+			<div class="kpi-cards-grid" id="po-kpi-cards">
+				<div class="kpi-card kpi-card-green" id="po-card-approved" data-status="Approved">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="approved-po">0</div>
 						<div class="kpi-title">Approved Purchase Orders</div>
 						<div class="kpi-subtitle">Purchase orders with Approved status</div>
+					</div>
+				</div>
+				<div
+					class="kpi-card kpi-card-orange"
+					id="po-card-pending-approval"
+					data-status="Pending Approval"
+				>
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="pending-approval-po">0</div>
+						<div class="kpi-title">Pending Approval Purchase Orders</div>
+						<div class="kpi-subtitle">Purchase orders pending approval</div>
 					</div>
 				</div>
 			</div>
