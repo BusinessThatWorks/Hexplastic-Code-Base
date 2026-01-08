@@ -1,5 +1,6 @@
 /* Production Log Book Dashboard Styles */
 /* Matching Unified Foundry Dashboard Design */
+/* ALL styles are scoped to .production-log-dashboard to prevent global pollution */
 
 /* ===== Base & Container Styles ===== */
 .production-log-dashboard {
@@ -60,7 +61,7 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
 }
 
 /* ===== Title Styles ===== */
-.dashboard-title {
+.production-log-dashboard .dashboard-title {
     font-size: 24px;
     font-weight: 700;
     color: #1f272e;
@@ -73,7 +74,7 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
 }
 
 /* ===== Filter Section Styles (Light Grey Box) ===== */
-.filter-section {
+.production-log-dashboard .filter-section {
     background: #f0f1f2;
     padding: 24px 28px;
     border-radius: 8px;
@@ -84,7 +85,7 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.filter-row {
+.production-log-dashboard .filter-row {
     display: flex;
     align-items: flex-end;
     gap: 16px;
@@ -93,26 +94,26 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     width: 100%;
 }
 
-.filter-group {
+.production-log-dashboard .filter-group {
     display: flex;
     flex-direction: column;
     flex: 0 0 auto;
     min-width: 180px;
 }
 
-.filter-group-wide {
+.production-log-dashboard .filter-group-wide {
     flex: 1 1 auto;
     min-width: 220px;
     max-width: 350px;
 }
 
-.filter-group-btn {
+.production-log-dashboard .filter-group-btn {
     flex: 0 0 auto;
     align-self: flex-end;
     margin-left: 0;
 }
 
-.filter-label {
+.production-log-dashboard .filter-label {
     font-size: 11px;
     font-weight: 600;
     color: #6c7680;
@@ -121,11 +122,11 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     letter-spacing: 0.5px;
 }
 
-.filter-label .required {
+.production-log-dashboard .filter-label .required {
     color: #e24c4c;
 }
 
-.filter-input {
+.production-log-dashboard .filter-input {
     width: 100%;
     padding: 10px 14px;
     border: 1px solid #d1d8dd;
@@ -138,17 +139,17 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.filter-input:focus {
+.production-log-dashboard .filter-input:focus {
     outline: none;
     border-color: #5e64ff;
     box-shadow: 0 0 0 3px rgba(94, 100, 255, 0.1), 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.filter-input:hover {
+.production-log-dashboard .filter-input:hover {
     border-color: #b8c0c8;
 }
 
-.filter-select {
+.production-log-dashboard .filter-select {
     cursor: pointer;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236c7680' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
@@ -157,7 +158,7 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     padding-right: 32px;
 }
 
-.refresh-btn {
+.production-log-dashboard .refresh-btn {
     background: #1f272e;
     color: #fff;
     border: none;
@@ -177,22 +178,22 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     white-space: nowrap;
 }
 
-.refresh-btn:hover {
+.production-log-dashboard .refresh-btn:hover {
     background: #2c3a47;
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
 }
 
-.refresh-btn:active {
+.production-log-dashboard .refresh-btn:active {
     transform: translateY(1px);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* Autocomplete Styles */
-.awesomplete-wrapper {
+.production-log-dashboard .awesomplete-wrapper {
     position: relative;
 }
 
-.autocomplete-dropdown {
+.production-log-dashboard .autocomplete-dropdown {
     position: absolute;
     top: 100%;
     left: 0;
@@ -207,7 +208,7 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     margin-top: 4px;
 }
 
-.autocomplete-item {
+.production-log-dashboard .autocomplete-item {
     padding: 10px 12px;
     cursor: pointer;
     font-size: 13px;
@@ -215,12 +216,12 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     transition: background 0.1s ease;
 }
 
-.autocomplete-item:hover {
+.production-log-dashboard .autocomplete-item:hover {
     background: #f4f5f6;
 }
 
 /* ===== Tabs Section Styles ===== */
-.tabs-section {
+.production-log-dashboard .tabs-section {
     background: transparent;
     padding: 0 28px;
     border: none;
@@ -231,7 +232,7 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     box-sizing: border-box;
 }
 
-.tabs-container {
+.production-log-dashboard .tabs-container {
     display: flex;
     gap: 4px;
     overflow-x: auto;
@@ -240,11 +241,11 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     -ms-overflow-style: none; /* IE and Edge */
 }
 
-.tabs-container::-webkit-scrollbar {
+.production-log-dashboard .tabs-container::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
 }
 
-.tab-btn {
+.production-log-dashboard .tab-btn {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -261,24 +262,24 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     margin-bottom: -1px;
 }
 
-.tab-btn:hover {
+.production-log-dashboard .tab-btn:hover {
     color: #1f272e;
     background: #f9f9fa;
 }
 
-.tab-btn.active {
+.production-log-dashboard .tab-btn.active {
     color: #5e64ff;
     border-bottom-color: #5e64ff;
 }
 
-.tab-icon {
+.production-log-dashboard .tab-icon {
     width: 16px;
     height: 16px;
     stroke-width: 2;
 }
 
 /* ===== Tab Content Styles ===== */
-.tab-content {
+.production-log-dashboard .tab-content {
     padding: 24px 28px;
     margin: 0;
     width: 100%;
@@ -286,22 +287,22 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     box-sizing: border-box;
 }
 
-.tab-pane {
+.production-log-dashboard .tab-pane {
     display: none;
 }
 
-.tab-pane.active {
+.production-log-dashboard .tab-pane.active {
     display: block;
-    animation: fadeIn 0.2s ease;
+    animation: productionLogFadeIn 0.2s ease;
 }
 
-@keyframes fadeIn {
+@keyframes productionLogFadeIn {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
 /* ===== KPI Cards Grid ===== */
-.kpi-cards-grid {
+.production-log-dashboard .kpi-cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 20px;
@@ -311,7 +312,7 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
 }
 
 /* ===== KPI Card Styles (Matching Reference Image) ===== */
-.kpi-card {
+.production-log-dashboard .kpi-card {
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -321,9 +322,9 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     transform: none !important;
 }
 
-.kpi-card:hover,
-.kpi-card:focus,
-.kpi-card:active {
+.production-log-dashboard .kpi-card:hover,
+.production-log-dashboard .kpi-card:focus,
+.production-log-dashboard .kpi-card:active {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
     transform: none !important;
     transition: none !important;
@@ -333,34 +334,34 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     bottom: 0 !important;
 }
 
-.kpi-card-border {
+.production-log-dashboard .kpi-card-border {
     height: 4px;
     width: 100%;
 }
 
 /* Color variations for card top border */
-.kpi-card-green .kpi-card-border {
+.production-log-dashboard .kpi-card-green .kpi-card-border {
     background: linear-gradient(90deg, #10b981, #34d399);
 }
 
-.kpi-card-orange .kpi-card-border {
+.production-log-dashboard .kpi-card-orange .kpi-card-border {
     background: linear-gradient(90deg, #f59e0b, #fbbf24);
 }
 
-.kpi-card-purple .kpi-card-border {
+.production-log-dashboard .kpi-card-purple .kpi-card-border {
     background: linear-gradient(90deg, #8b5cf6, #a78bfa);
 }
 
-.kpi-card-teal .kpi-card-border {
+.production-log-dashboard .kpi-card-teal .kpi-card-border {
     background: linear-gradient(90deg, #14b8a6, #2dd4bf);
 }
 
-.kpi-card-content {
+.production-log-dashboard .kpi-card-content {
     padding: 24px;
     text-align: center;
 }
 
-.kpi-value {
+.production-log-dashboard .kpi-value {
     font-size: 36px;
     font-weight: 700;
     color: #1f272e;
@@ -369,30 +370,30 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     letter-spacing: -0.5px;
 }
 
-.kpi-value.loading-pulse {
-    animation: pulse 1.5s ease-in-out infinite;
+.production-log-dashboard .kpi-value.loading-pulse {
+    animation: productionLogPulse 1.5s ease-in-out infinite;
 }
 
-@keyframes pulse {
+@keyframes productionLogPulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.4; }
 }
 
-.kpi-title {
+.production-log-dashboard .kpi-title {
     font-size: 14px;
     font-weight: 600;
     color: #1f272e;
     margin-bottom: 4px;
 }
 
-.kpi-subtitle {
+.production-log-dashboard .kpi-subtitle {
     font-size: 12px;
     color: #8d99a6;
     font-weight: 400;
 }
 
 /* ===== Log Book Entries Section ===== */
-.entries-section {
+.production-log-dashboard .entries-section {
     margin-top: 24px;
     background: #fff;
     border-radius: 8px;
@@ -400,7 +401,7 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     overflow: hidden;
 }
 
-.entries-section .entries-table-container {
+.production-log-dashboard .entries-section .entries-table-container {
     border-radius: 0;
     box-shadow: none;
     overflow-x: auto;
@@ -410,7 +411,7 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
 }
 
 /* ===== Table Styles ===== */
-.entries-table-container {
+.production-log-dashboard .entries-table-container {
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -425,8 +426,8 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
 }
 
 /* Visual scroll indicators - shadow when scrollable */
-.entries-table-container::before,
-.entries-table-container::after {
+.production-log-dashboard .entries-table-container::before,
+.production-log-dashboard .entries-table-container::after {
     content: '';
     position: sticky;
     pointer-events: none;
@@ -434,7 +435,7 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     transition: opacity 0.3s ease;
 }
 
-.entries-table-container::before {
+.production-log-dashboard .entries-table-container::before {
     top: 0;
     left: 0;
     right: 0;
@@ -443,7 +444,7 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     opacity: 0;
 }
 
-.entries-table-container::after {
+.production-log-dashboard .entries-table-container::after {
     bottom: 0;
     left: 0;
     right: 0;
@@ -452,29 +453,29 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     opacity: 0;
 }
 
-.entries-table-container.scrollable-top::before {
+.production-log-dashboard .entries-table-container.scrollable-top::before {
     opacity: 1;
 }
 
-.entries-table-container.scrollable-bottom::after {
+.production-log-dashboard .entries-table-container.scrollable-bottom::after {
     opacity: 1;
 }
 
-.entries-table {
+.production-log-dashboard .entries-table {
     width: 100%;
     min-width: 1000px;
     border-collapse: collapse;
     position: relative;
 }
 
-.entries-table thead {
+.production-log-dashboard .entries-table thead {
     background: #f9f9fa;
     position: sticky;
     top: 0;
     z-index: 5;
 }
 
-.entries-table th {
+.production-log-dashboard .entries-table th {
     padding: 14px 16px;
     text-align: left;
     font-size: 12px;
@@ -491,7 +492,7 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.05);
 }
 
-.entries-table td {
+.production-log-dashboard .entries-table td {
     padding: 14px 16px;
     font-size: 13px;
     color: #1f272e;
@@ -500,42 +501,42 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.entries-table tbody tr {
+.production-log-dashboard .entries-table tbody tr {
     transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
-.entries-table tbody tr:hover {
+.production-log-dashboard .entries-table tbody tr:hover {
     background: #f4f5f6;
     cursor: pointer;
 }
 
-.entries-table tbody tr:hover td {
+.production-log-dashboard .entries-table tbody tr:hover td {
     color: #1f272e;
 }
 
-.entries-table tbody tr:active {
+.production-log-dashboard .entries-table tbody tr:active {
     transform: scale(0.998);
 }
 
-.entries-table tbody tr:focus-within {
+.production-log-dashboard .entries-table tbody tr:focus-within {
     background: #f0f4ff;
     outline: 2px solid rgba(94, 100, 255, 0.3);
     outline-offset: -2px;
 }
 
-.entries-table tbody tr:last-child td {
+.production-log-dashboard .entries-table tbody tr:last-child td {
     border-bottom: none;
 }
 
-.text-right {
+.production-log-dashboard .text-right {
     text-align: right !important;
 }
 
-.text-center {
+.production-log-dashboard .text-center {
     text-align: center !important;
 }
 
-.entry-link {
+.production-log-dashboard .entry-link {
     color: #5e64ff;
     text-decoration: none;
     font-weight: 500;
@@ -546,14 +547,14 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     margin: -2px -4px;
 }
 
-.entry-link:hover {
+.production-log-dashboard .entry-link:hover {
     color: #4c52e6;
     text-decoration: underline;
     background: rgba(94, 100, 255, 0.08);
 }
 
 /* Shift Badge Styles */
-.shift-badge {
+.production-log-dashboard .shift-badge {
     display: inline-block;
     padding: 4px 10px;
     border-radius: 12px;
@@ -563,23 +564,23 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     letter-spacing: 0.3px;
 }
 
-.shift-badge.shift-day {
+.production-log-dashboard .shift-badge.shift-day {
     background: #fef3c7;
     color: #92400e;
 }
 
-.shift-badge.shift-night {
+.production-log-dashboard .shift-badge.shift-night {
     background: #ddd6fe;
     color: #5b21b6;
 }
 
-.shift-badge.shift-both {
+.production-log-dashboard .shift-badge.shift-both {
     background: #d1fae5;
     color: #065f46;
 }
 
 /* ===== Loading States ===== */
-.table-loading {
+.production-log-dashboard .table-loading {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -589,21 +590,21 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     font-size: 14px;
 }
 
-.loading-spinner {
+.production-log-dashboard .loading-spinner {
     width: 24px;
     height: 24px;
     border: 3px solid #e8e8e8;
     border-top-color: #5e64ff;
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: productionLogSpin 0.8s linear infinite;
 }
 
-@keyframes spin {
+@keyframes productionLogSpin {
     to { transform: rotate(360deg); }
 }
 
 /* ===== No Data Message ===== */
-.no-data-message {
+.production-log-dashboard .no-data-message {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -613,59 +614,59 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     text-align: center;
 }
 
-.no-data-icon {
+.production-log-dashboard .no-data-icon {
     width: 48px;
     height: 48px;
     margin-bottom: 16px;
     stroke: #d1d8dd;
 }
 
-.no-data-message p {
+.production-log-dashboard .no-data-message p {
     margin: 0;
     font-size: 14px;
 }
 
 /* ===== Process Loss Section ===== */
-.process-loss-container {
+.production-log-dashboard .process-loss-container {
     display: flex;
     flex-direction: column;
     gap: 24px;
 }
 
-.process-loss-chart-section {
+.production-log-dashboard .process-loss-chart-section {
     width: 100%;
 }
 
-.process-loss-table-section {
+.production-log-dashboard .process-loss-table-section {
     width: 100%;
 }
 
-.process-loss-chart-section,
-.process-loss-table-section {
+.production-log-dashboard .process-loss-chart-section,
+.production-log-dashboard .process-loss-table-section {
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     overflow: hidden;
 }
 
-.section-header {
+.production-log-dashboard .section-header {
     padding: 16px 20px;
     border-bottom: 1px solid #e8e8e8;
 }
 
-.section-header h3 {
+.production-log-dashboard .section-header h3 {
     margin: 0;
     font-size: 15px;
     font-weight: 600;
     color: #1f272e;
 }
 
-.chart-container {
+.production-log-dashboard .chart-container {
     padding: 20px;
     min-height: 300px;
 }
 
-.no-chart-data {
+.production-log-dashboard .no-chart-data {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -674,70 +675,70 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     font-size: 14px;
 }
 
-.process-loss-table {
+.production-log-dashboard .process-loss-table {
     margin: 0;
 }
 
-.process-loss-table-section .entries-table {
+.production-log-dashboard .process-loss-table-section .entries-table {
     border-radius: 0;
     box-shadow: none;
 }
 
 /* ===== Responsive Styles ===== */
 @media (max-width: 768px) {
-    .dashboard-header,
-    .filter-section,
-    .tabs-section,
-    .tab-content {
+    .production-log-dashboard .dashboard-header,
+    .production-log-dashboard .filter-section,
+    .production-log-dashboard .tabs-section,
+    .production-log-dashboard .tab-content {
         padding-left: 16px;
         padding-right: 16px;
     }
 
-    .filter-row {
+    .production-log-dashboard .filter-row {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .filter-group,
-    .filter-group-wide {
+    .production-log-dashboard .filter-group,
+    .production-log-dashboard .filter-group-wide {
         min-width: 100%;
         max-width: 100%;
     }
 
-    .filter-group-btn {
+    .production-log-dashboard .filter-group-btn {
         width: 100%;
     }
 
-    .refresh-btn {
+    .production-log-dashboard .refresh-btn {
         width: 100%;
         justify-content: center;
     }
 
-    .kpi-cards-grid {
+    .production-log-dashboard .kpi-cards-grid {
         grid-template-columns: 1fr;
     }
 
-    .kpi-value {
+    .production-log-dashboard .kpi-value {
         font-size: 28px;
     }
 
-    .entries-table {
+    .production-log-dashboard .entries-table {
         display: block;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
 
-    .entries-table-container {
+    .production-log-dashboard .entries-table-container {
         max-height: calc(100vh - 300px);
         min-height: 300px;
     }
 
-    .tab-btn {
+    .production-log-dashboard .tab-btn {
         padding: 12px;
         font-size: 12px;
     }
 
-    .tab-icon {
+    .production-log-dashboard .tab-icon {
         width: 14px;
         height: 14px;
     }
@@ -745,66 +746,61 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
 
 /* ===== Scrollbar Styles ===== */
 /* Hide scrollbar for autocomplete dropdown only */
-.autocomplete-dropdown::-webkit-scrollbar {
+.production-log-dashboard .autocomplete-dropdown::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
 }
 
-.autocomplete-dropdown {
+.production-log-dashboard .autocomplete-dropdown {
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
 }
 
 /* Hide scrollbar for tabs container */
-.tabs-container::-webkit-scrollbar {
+.production-log-dashboard .tabs-container::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
 }
 
-.tabs-container {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
-}
-
 /* Enhanced scrollbar styling for table container */
-.entries-table-container::-webkit-scrollbar {
+.production-log-dashboard .entries-table-container::-webkit-scrollbar {
     height: 10px;
     width: 10px;
 }
 
-.entries-table-container::-webkit-scrollbar-track {
+.production-log-dashboard .entries-table-container::-webkit-scrollbar-track {
     background: #f1f3f5;
     border-radius: 10px;
     margin: 4px;
 }
 
-.entries-table-container::-webkit-scrollbar-thumb {
+.production-log-dashboard .entries-table-container::-webkit-scrollbar-thumb {
     background: #cbd5e1;
     border-radius: 10px;
     border: 2px solid #f1f3f5;
     transition: background 0.2s ease;
 }
 
-.entries-table-container::-webkit-scrollbar-thumb:hover {
+.production-log-dashboard .entries-table-container::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
 
-.entries-table-container::-webkit-scrollbar-thumb:active {
+.production-log-dashboard .entries-table-container::-webkit-scrollbar-thumb:active {
     background: #64748b;
 }
 
-.entries-table-container::-webkit-scrollbar-corner {
+.production-log-dashboard .entries-table-container::-webkit-scrollbar-corner {
     background: #f1f3f5;
 }
 
-.entries-table-container {
+.production-log-dashboard .entries-table-container {
     scrollbar-width: thin; /* Firefox - shows thin scrollbar */
     scrollbar-color: #cbd5e1 #f1f3f5; /* Firefox - thumb and track colors */
 }
 
 /* ===== Print Styles ===== */
 @media print {
-    .filter-section,
-    .tabs-section,
-    .refresh-btn {
+    .production-log-dashboard .filter-section,
+    .production-log-dashboard .tabs-section,
+    .production-log-dashboard .refresh-btn {
         display: none;
     }
 
@@ -812,14 +808,13 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
         background: #fff;
     }
 
-    .kpi-card {
+    .production-log-dashboard .kpi-card {
         box-shadow: none;
         border: 1px solid #e8e8e8;
     }
 
-    .tab-pane {
+    .production-log-dashboard .tab-pane {
         display: block !important;
         page-break-inside: avoid;
     }
 }
-

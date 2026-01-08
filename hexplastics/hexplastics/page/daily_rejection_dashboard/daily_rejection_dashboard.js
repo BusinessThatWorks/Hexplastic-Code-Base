@@ -8,17 +8,13 @@ frappe.pages["daily-rejection-dashboard"].on_page_load = function (wrapper) {
 		single_column: true,
 	});
 
-	// Hide Frappe's default page head/title completely since we have our own custom header
+	// Hide Frappe's default page head/title - SCOPED to this page container only
 	$(page.page_container).find(".page-head").hide();
 
-	// Aggressively hide all possible Frappe title elements
+	// Hide title elements within this page container only (not globally)
 	setTimeout(function () {
-		// Hide various possible Frappe title elements
-		$(
-			".page-title, .page-header h1, .page-title-wrapper, .page-head, .page-head h1, .page-head .page-title, .page-head .page-title-wrapper"
-		).hide();
-
-		// Hide any title in the page container
+		// Only hide elements within this page's container
+		$(page.page_container).find(".page-title, .page-header h1, .page-title-wrapper").hide();
 		$(page.page_container).find("h1, .page-title, .title").not(".dashboard-title").hide();
 
 		// Also hide the title from the page object if it exists
@@ -26,40 +22,18 @@ frappe.pages["daily-rejection-dashboard"].on_page_load = function (wrapper) {
 			$(page.page_title).hide();
 		}
 
-		// Hide any breadcrumb or header that might show the title
-		$(".page-header, .page-breadcrumbs").hide();
+		// Hide breadcrumbs within this page container
+		$(page.page_container).find(".page-header, .page-breadcrumbs").hide();
 	}, 100);
 
-	// Also check after a longer delay in case elements load later
+	// Also check after a longer delay in case elements load later - SCOPED
 	setTimeout(function () {
-		$(".page-title, .page-header h1, .page-title-wrapper, .page-head").hide();
+		$(page.page_container).find(".page-title, .page-header h1, .page-title-wrapper, .page-head").hide();
 		$(page.page_container).find("h1").not(".dashboard-title").hide();
 	}, 500);
 
-	// Force full width by removing container constraints
-	setTimeout(function () {
-		// Remove max-width constraints from all parent containers and remove margins/padding
-		$(
-			".page-container, .layout-main, .page-content, .layout-container, .page-wrapper, .form-container, .page-body, .page-content-wrapper"
-		).css({
-			"max-width": "100%",
-			width: "100%",
-			"margin-left": "0",
-			"margin-right": "0",
-			"padding-left": "0",
-			"padding-right": "0",
-		});
-
-		// Also target the wrapper directly
-		$(wrapper).css({
-			"max-width": "100%",
-			width: "100%",
-			"margin-left": "0",
-			"margin-right": "0",
-			"padding-left": "0",
-			"padding-right": "0",
-		});
-	}, 100);
+	// Note: Full width styling is now handled purely via CSS with body[data-page-route] selectors
+	// This prevents polluting global styles when navigating away from the dashboard
 
 	// Initialize dashboard
 	new RejectionDashboard(page);
