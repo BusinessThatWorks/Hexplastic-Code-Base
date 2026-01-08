@@ -109,8 +109,18 @@
 			<!-- Graph Section -->
 			<div class="chart-section">
 				<div class="chart-container-wrapper">
-					<div class="section-header">
+					<div class="section-header section-header-with-actions">
 						<h3>Rejection Analysis</h3>
+						<div class="export-actions">
+							<button class="export-btn export-btn-primary" id="export-rejection-chart-btn" title="Export as PNG">
+								<svg class="export-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+									<polyline points="7 10 12 15 17 10"></polyline>
+									<line x1="12" y1="15" x2="12" y2="3"></line>
+								</svg>
+								Export
+							</button>
+						</div>
 					</div>
 					<div class="chart-container" id="rejection-chart">
 						<!-- Chart will be rendered here -->
@@ -136,8 +146,21 @@
 			<!-- Table Section -->
 			<div class="table-section">
 				<div class="table-container-wrapper">
-					<div class="section-header">
+					<div class="section-header section-header-with-actions">
 						<h3>Rejection Details</h3>
+						<div class="export-actions">
+							<button class="export-btn export-btn-primary" id="export-rejection-table-btn" title="Export">
+								<svg class="export-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+									<polyline points="7 10 12 15 17 10"></polyline>
+									<line x1="12" y1="15" x2="12" y2="3"></line>
+								</svg>
+								Export
+								<svg class="export-dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<polyline points="6 9 12 15 18 9"></polyline>
+								</svg>
+							</button>
+						</div>
 					</div>
 					<div class="table-container" id="rejection-table">
 						<!-- Table will be rendered here -->

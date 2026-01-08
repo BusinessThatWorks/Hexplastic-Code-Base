@@ -330,6 +330,143 @@ body[data-page-route*="daily-rejection-dashboard"] .page-content-wrapper {
     color: #1f272e;
 }
 
+/* Export Buttons Styles */
+.daily-rejection-dashboard .section-header-with-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.daily-rejection-dashboard .export-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.daily-rejection-dashboard .export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #d1d8dd;
+    border-radius: 6px;
+    background: #fff;
+    color: #1f272e;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    position: relative;
+}
+
+.daily-rejection-dashboard .export-btn:hover {
+    background: #f4f5f6;
+    border-color: #b8c0c8;
+}
+
+.daily-rejection-dashboard .export-btn:active {
+    transform: translateY(1px);
+}
+
+.daily-rejection-dashboard .export-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.daily-rejection-dashboard .export-btn .export-icon {
+    width: 14px;
+    height: 14px;
+    stroke-width: 2;
+}
+
+.daily-rejection-dashboard .export-btn .export-dropdown-icon {
+    width: 12px;
+    height: 12px;
+    stroke-width: 2;
+    margin-left: 2px;
+}
+
+.daily-rejection-dashboard .export-btn-primary {
+    border-color: #5e64ff;
+    color: #5e64ff;
+}
+
+.daily-rejection-dashboard .export-btn-primary:hover {
+    background: #f0f0ff;
+    border-color: #4c52e6;
+    color: #4c52e6;
+}
+
+/* Export Dropdown Menu */
+.daily-rejection-dashboard .export-dropdown-menu,
+.export-dropdown-menu {
+    background: #fff;
+    border: 1px solid #d1d8dd;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 140px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.daily-rejection-dashboard .export-menu-item,
+.export-dropdown-menu .export-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-size: 13px;
+    color: #1f272e;
+}
+
+.daily-rejection-dashboard .export-menu-item:hover,
+.export-dropdown-menu .export-menu-item:hover {
+    background: #f4f5f6;
+}
+
+.daily-rejection-dashboard .export-menu-item:active,
+.export-dropdown-menu .export-menu-item:active {
+    background: #e8e8e8;
+}
+
+.daily-rejection-dashboard .export-menu-item .export-menu-icon,
+.export-dropdown-menu .export-menu-item .export-menu-icon {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
+    color: #6c7680;
+}
+
+.daily-rejection-dashboard .export-menu-item:hover .export-menu-icon,
+.export-dropdown-menu .export-menu-item:hover .export-menu-icon {
+    color: #1f272e;
+}
+
+.daily-rejection-dashboard .export-btn.exporting {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.daily-rejection-dashboard .export-btn.exporting::after {
+    content: '';
+    width: 12px;
+    height: 12px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: rejectionExportSpin 0.6s linear infinite;
+    margin-left: 4px;
+}
+
+@keyframes rejectionExportSpin {
+    to { transform: rotate(360deg); }
+}
+
 .daily-rejection-dashboard .chart-container {
     padding: 20px;
     min-height: 400px;

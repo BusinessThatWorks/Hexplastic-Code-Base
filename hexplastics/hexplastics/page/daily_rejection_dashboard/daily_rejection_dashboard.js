@@ -107,6 +107,25 @@ class RejectionDashboard {
 					self.refresh_data();
 				}
 			);
+
+			// Export buttons
+			// Chart export - direct PNG export
+			this.wrapper.on("click", "#export-rejection-chart-btn", function () {
+				self.export_chart_png();
+			});
+
+			// Table exports - show dropdown menu
+			this.wrapper.on("click", "#export-rejection-table-btn", function (e) {
+				e.stopPropagation();
+				self.show_table_export_menu($(this));
+			});
+
+			// Close dropdown when clicking outside
+			$(document).on("click", function (e) {
+				if (!$(e.target).closest(".export-btn, .export-dropdown-menu").length) {
+					$(".export-dropdown-menu").remove();
+				}
+			});
 		}, 200);
 	}
 
@@ -781,5 +800,483 @@ class RejectionDashboard {
 		`;
 
 		tableContainer.innerHTML = tableHTML;
+	}
+
+	// ===== Export Functionality =====
+
+	get_date_string() {
+		const today = new Date();
+		return today.toISOString().split("T")[0];
+	}
+
+	show_table_export_menu(button) {
+		const self = this;
+
+		// Remove any existing dropdown
+		$(".export-dropdown-menu").remove();
+
+		// Get button position
+		const offset = button.offset();
+		const width = button.outerWidth();
+
+		// Create dropdown menu
+		const dropdown = $('<div class="export-dropdown-menu"></div>');
+		dropdown.html(`
+			<div class="export-menu-item" data-format="excel">
+				<svg class="export-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+					<polyline points="14 2 14 8 20 8"></polyline>
+					<line x1="16" y1="13" x2="8" y2="13"></line>
+					<line x1="16" y1="17" x2="8" y2="17"></line>
+				</svg>
+				<span>Excel</span>
+			</div>
+			<div class="export-menu-item" data-format="pdf">
+				<svg class="export-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+					<polyline points="14 2 14 8 20 8"></polyline>
+					<path d="M9 15v-2h6v2"></path>
+					<path d="M12 13v5"></path>
+				</svg>
+				<span>PDF</span>
+			</div>
+		`);
+
+		// Position dropdown
+		dropdown.css({
+			position: "absolute",
+			top: offset.top + button.outerHeight() + 4 + "px",
+			left: offset.left + "px",
+			zIndex: 1000,
+		});
+
+		// Add to body for proper positioning
+		$("body").append(dropdown);
+
+		// Handle menu item clicks
+		dropdown.on("click", ".export-menu-item", function (e) {
+			e.stopPropagation();
+			const format = $(this).data("format");
+			dropdown.remove();
+
+			if (format === "excel") {
+				self.export_table_excel();
+			} else if (format === "pdf") {
+				self.export_table_pdf();
+			}
+		});
+
+		// Close on outside click
+		setTimeout(() => {
+			$(document).one("click", function () {
+				dropdown.remove();
+			});
+		}, 0);
+	}
+
+	export_chart_png() {
+		const self = this;
+		const btn = this.wrapper.find("#export-rejection-chart-btn");
+
+		if (!this.chart) {
+			frappe.msgprint(__("No chart data available to export"));
+			return;
+		}
+
+		// Add loading state
+		btn.addClass("exporting");
+		btn.prop("disabled", true);
+
+		// Always use canvas conversion to ensure PNG format
+		this.export_chart_canvas_fallback(btn);
+	}
+
+	export_chart_canvas_fallback(btn) {
+		const chartContainer = document.getElementById("rejection-chart");
+		
+		if (!chartContainer) {
+			frappe.msgprint(__("Chart container not found"));
+			btn.removeClass("exporting").prop("disabled", false);
+			return;
+		}
+
+		const svg = chartContainer.querySelector("svg");
+		if (!svg) {
+			frappe.msgprint(__("No chart SVG found to export"));
+			btn.removeClass("exporting").prop("disabled", false);
+			return;
+		}
+
+		// Clone the SVG and prepare for export
+		const svgClone = svg.cloneNode(true);
+		
+		// Get SVG dimensions
+		const svgWidth = svg.getAttribute("width") || svg.clientWidth || 800;
+		const svgHeight = svg.getAttribute("height") || svg.clientHeight || 400;
+		
+		// Ensure SVG has proper viewBox and dimensions
+		if (!svgClone.getAttribute("viewBox")) {
+			svgClone.setAttribute("viewBox", `0 0 ${svgWidth} ${svgHeight}`);
+		}
+		svgClone.setAttribute("width", svgWidth);
+		svgClone.setAttribute("height", svgHeight);
+		
+		const svgData = new XMLSerializer().serializeToString(svgClone);
+		const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+		const svgUrl = URL.createObjectURL(svgBlob);
+
+		// Create canvas and draw SVG
+		const canvas = document.createElement("canvas");
+		const ctx = canvas.getContext("2d");
+		const img = new Image();
+
+		img.onload = () => {
+			try {
+				// Set canvas dimensions
+				canvas.width = parseInt(svgWidth);
+				canvas.height = parseInt(svgHeight);
+
+				// Fill white background
+				ctx.fillStyle = "#ffffff";
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+				// Draw image
+				ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+				// Convert to PNG and download
+				canvas.toBlob((blob) => {
+					if (blob) {
+						const url = URL.createObjectURL(blob);
+						const link = document.createElement("a");
+						link.download = `Rejection_Dashboard_Chart_${this.get_date_string()}.png`;
+						link.href = url;
+						link.style.display = "none";
+						document.body.appendChild(link);
+						link.click();
+						document.body.removeChild(link);
+						
+						// Clean up
+						setTimeout(() => {
+							URL.revokeObjectURL(url);
+							URL.revokeObjectURL(svgUrl);
+						}, 100);
+
+						frappe.show_alert({
+							message: __("Chart exported successfully as PNG"),
+							indicator: "green",
+						});
+					} else {
+						throw new Error("Failed to create PNG blob");
+					}
+				}, "image/png", 1.0);
+			} catch (error) {
+				console.error("Error converting to PNG:", error);
+				frappe.msgprint(__("Failed to export chart. Please try again."));
+			} finally {
+				// Remove loading state
+				btn.removeClass("exporting").prop("disabled", false);
+			}
+		};
+
+		img.onerror = () => {
+			frappe.msgprint(__("Failed to export chart. Please try again."));
+			URL.revokeObjectURL(svgUrl);
+			btn.removeClass("exporting").prop("disabled", false);
+		};
+
+		img.src = svgUrl;
+	}
+
+	export_table_excel() {
+		const self = this;
+		const btn = this.wrapper.find("#export-rejection-table-btn");
+
+		// Add loading state
+		btn.addClass("exporting");
+		btn.prop("disabled", true);
+
+		try {
+			const tableData = this.get_table_data();
+
+			if (!tableData || tableData.rows.length === 0) {
+				frappe.msgprint(__("No data available to export"));
+				btn.removeClass("exporting");
+				btn.prop("disabled", false);
+				return;
+			}
+
+			// Use CSV download (Excel compatible format)
+			this.download_as_csv(tableData, `Rejection_Details_${this.get_date_string()}.csv`);
+
+			frappe.show_alert({
+				message: __("Table exported successfully"),
+				indicator: "green",
+			});
+		} catch (e) {
+			console.error("Excel export error:", e);
+			frappe.msgprint(__("Failed to export table. Please try again."));
+		} finally {
+			setTimeout(() => {
+				btn.removeClass("exporting");
+				btn.prop("disabled", false);
+			}, 500);
+		}
+	}
+
+	get_table_data() {
+		const table = document.querySelector(".rejection-table");
+		if (!table) return null;
+
+		const headers = [];
+		const rows = [];
+
+		// Get headers
+		const headerCells = table.querySelectorAll("thead th");
+		headerCells.forEach((th) => {
+			headers.push(th.textContent.trim());
+		});
+
+		// Get rows
+		const bodyRows = table.querySelectorAll("tbody tr");
+		bodyRows.forEach((tr) => {
+			const rowData = [];
+			const cells = tr.querySelectorAll("td");
+			cells.forEach((td) => {
+				// Get text content, clean it up
+				let text = td.textContent.trim();
+				// Remove extra whitespace
+				text = text.replace(/\s+/g, " ");
+				rowData.push(text);
+			});
+			if (rowData.length > 0) {
+				rows.push(rowData);
+			}
+		});
+
+		return { headers, rows };
+	}
+
+	download_as_csv(tableData, filename) {
+		const { headers, rows } = tableData;
+
+		// Build CSV content
+		let csv = "";
+
+		// Add headers
+		csv += headers.map((h) => `"${h.replace(/"/g, '""')}"`).join(",") + "\n";
+
+		// Add rows
+		rows.forEach((row) => {
+			csv += row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",") + "\n";
+		});
+
+		// Create blob and download
+		const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+		const link = document.createElement("a");
+		const url = URL.createObjectURL(blob);
+
+		link.setAttribute("href", url);
+		link.setAttribute("download", filename);
+		link.style.visibility = "hidden";
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
+	}
+
+	export_table_pdf() {
+		const self = this;
+		const btn = this.wrapper.find("#export-rejection-table-btn");
+
+		// Add loading state
+		btn.addClass("exporting");
+		btn.prop("disabled", true);
+
+		try {
+			const tableData = this.get_table_data();
+
+			if (!tableData || tableData.rows.length === 0) {
+				frappe.msgprint(__("No data available to export"));
+				btn.removeClass("exporting");
+				btn.prop("disabled", false);
+				return;
+			}
+
+			// Load jsPDF and generate PDF directly
+			this.load_jspdf_and_export(tableData, btn);
+		} catch (e) {
+			console.error("PDF export error:", e);
+			frappe.msgprint(__("Failed to export PDF. Please try again."));
+			btn.removeClass("exporting");
+			btn.prop("disabled", false);
+		}
+	}
+
+	load_jspdf_and_export(tableData, btn) {
+		const self = this;
+
+		// Check if jsPDF is already loaded
+		if (typeof window.jspdf !== "undefined" && window.jspdf.jsPDF) {
+			this.generate_pdf_with_jspdf(tableData, btn);
+			return;
+		}
+
+		// Load jsPDF from CDN
+		const script = document.createElement("script");
+		script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+		script.onload = () => {
+			// Load jsPDF AutoTable plugin
+			const autoTableScript = document.createElement("script");
+			autoTableScript.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js";
+			autoTableScript.onload = () => {
+				self.generate_pdf_with_jspdf(tableData, btn);
+			};
+			autoTableScript.onerror = () => {
+				// If autoTable fails, generate PDF without it
+				self.generate_pdf_with_jspdf(tableData, btn);
+			};
+			document.head.appendChild(autoTableScript);
+		};
+		script.onerror = () => {
+			frappe.msgprint(__("Failed to load PDF library. Please check your internet connection."));
+			btn.removeClass("exporting").prop("disabled", false);
+		};
+		document.head.appendChild(script);
+	}
+
+	generate_pdf_with_jspdf(tableData, btn) {
+		const self = this;
+		const { headers, rows } = tableData;
+		const filters = this.get_filters();
+
+		try {
+			// Get jsPDF from window
+			const { jsPDF } = window.jspdf || window.jspdf.jsPDF || window;
+			
+			// Create new PDF document (landscape orientation for tables)
+			const doc = new jsPDF({
+				orientation: "landscape",
+				unit: "mm",
+				format: "a4",
+			});
+
+			// Add header
+			doc.setFontSize(16);
+			doc.setFont(undefined, "bold");
+			doc.text("Rejection Dashboard", 148, 15, { align: "center" });
+
+			doc.setFontSize(10);
+			doc.setFont(undefined, "normal");
+			doc.text("Rejection Details Report", 148, 22, { align: "center" });
+
+			// Add filter information
+			let yPos = 30;
+			doc.setFontSize(9);
+			let filterText = `Period: ${filters.period || "N/A"} | Shift: ${filters.shift || "All"}`;
+			if (filters.date_from && filters.date_to) {
+				filterText += ` | From: ${filters.date_from} | To: ${filters.date_to}`;
+			}
+			doc.text(filterText, 14, yPos);
+
+			// Prepare table data
+			const tableRows = rows.map((row) => row.map((cell) => String(cell)));
+
+			// Use autoTable if available, otherwise manual table
+			if (typeof doc.autoTable !== "undefined") {
+				doc.autoTable({
+					head: [headers],
+					body: tableRows,
+					startY: yPos + 8,
+					styles: {
+						fontSize: 8,
+						cellPadding: 2,
+						overflow: "linebreak",
+					},
+					headStyles: {
+						fillColor: [31, 39, 46],
+						textColor: [255, 255, 255],
+						fontStyle: "bold",
+						fontSize: 8,
+					},
+					alternateRowStyles: {
+						fillColor: [249, 249, 250],
+					},
+					margin: { top: yPos + 8, left: 14, right: 14 },
+					columnStyles: {},
+				});
+			} else {
+				// Fallback: simple table without autoTable
+				this.add_simple_table_to_pdf(doc, headers, tableRows, yPos + 8);
+			}
+
+			// Add footer
+			const pageCount = doc.internal.getNumberOfPages();
+			for (let i = 1; i <= pageCount; i++) {
+				doc.setPage(i);
+				doc.setFontSize(8);
+				doc.text(
+					`Generated on ${new Date().toLocaleString("en-IN")} | Total Records: ${rows.length} | Page ${i} of ${pageCount}`,
+					148,
+					200,
+					{ align: "center" }
+				);
+			}
+
+			// Save PDF
+			const filename = `Rejection_Details_${this.get_date_string()}.pdf`;
+			doc.save(filename);
+
+			// Reset button state
+			btn.removeClass("exporting").prop("disabled", false);
+			frappe.show_alert({
+				message: __("PDF exported successfully"),
+				indicator: "green",
+			});
+		} catch (error) {
+			console.error("PDF generation error:", error);
+			frappe.msgprint(__("Failed to generate PDF. Please try again."));
+			btn.removeClass("exporting").prop("disabled", false);
+		}
+	}
+
+	add_simple_table_to_pdf(doc, headers, rows, startY) {
+		const colWidth = 270 / headers.length; // A4 landscape width minus margins
+		let yPos = startY;
+		const rowHeight = 7;
+
+		// Draw header
+		doc.setFillColor(31, 39, 46);
+		doc.rect(14, yPos, 270, rowHeight, "F");
+		doc.setTextColor(255, 255, 255);
+		doc.setFont(undefined, "bold");
+		doc.setFontSize(8);
+
+		headers.forEach((header, idx) => {
+			doc.text(header.substring(0, 20), 14 + idx * colWidth + 2, yPos + 5);
+		});
+
+		yPos += rowHeight;
+		doc.setTextColor(0, 0, 0);
+		doc.setFont(undefined, "normal");
+
+		// Draw rows
+		rows.forEach((row, rowIdx) => {
+			if (yPos > 190) {
+				// New page
+				doc.addPage();
+				yPos = 20;
+			}
+
+			if (rowIdx % 2 === 0) {
+				doc.setFillColor(249, 249, 250);
+				doc.rect(14, yPos, 270, rowHeight, "F");
+			}
+
+			row.forEach((cell, colIdx) => {
+				doc.text(String(cell).substring(0, 20), 14 + colIdx * colWidth + 2, yPos + 5);
+			});
+
+			yPos += rowHeight;
+		});
 	}
 }

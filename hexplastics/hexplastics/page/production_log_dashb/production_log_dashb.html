@@ -175,8 +175,21 @@
 
 			<!-- Log Book Entries Section -->
 			<div class="entries-section">
-				<div class="section-header">
+				<div class="section-header section-header-with-actions">
 					<h3>Log Book Entries</h3>
+					<div class="export-actions">
+						<button class="export-btn export-btn-primary" id="export-logbook-btn" title="Export">
+							<svg class="export-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+								<polyline points="7 10 12 15 17 10"></polyline>
+								<line x1="12" y1="15" x2="12" y2="3"></line>
+							</svg>
+							Export
+							<svg class="export-dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<polyline points="6 9 12 15 18 9"></polyline>
+							</svg>
+						</button>
+					</div>
 				</div>
 				<div class="entries-table-container">
 					<div class="table-loading" id="entries-loading">
@@ -225,16 +238,39 @@
 		<div class="tab-pane" id="process-loss-tab">
 			<div class="process-loss-container">
 				<div class="process-loss-chart-section">
-					<div class="section-header">
+					<div class="section-header section-header-with-actions">
 						<h3>Process Loss Comparison (Day vs Night)</h3>
+						<div class="export-actions">
+							<button class="export-btn export-btn-primary" id="export-chart-btn" title="Export as PNG">
+								<svg class="export-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+									<polyline points="7 10 12 15 17 10"></polyline>
+									<line x1="12" y1="15" x2="12" y2="3"></line>
+								</svg>
+								Export
+							</button>
+						</div>
 					</div>
 					<div class="chart-container" id="process-loss-chart">
 						<!-- Chart will be rendered here -->
 					</div>
 				</div>
 				<div class="process-loss-table-section">
-					<div class="section-header">
+					<div class="section-header section-header-with-actions">
 						<h3>Process Loss Details</h3>
+						<div class="export-actions">
+							<button class="export-btn export-btn-primary" id="export-processloss-btn" title="Export">
+								<svg class="export-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+									<polyline points="7 10 12 15 17 10"></polyline>
+									<line x1="12" y1="15" x2="12" y2="3"></line>
+								</svg>
+								Export
+								<svg class="export-dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<polyline points="6 9 12 15 18 9"></polyline>
+								</svg>
+							</button>
+						</div>
 					</div>
 					<table class="entries-table process-loss-table">
 						<thead>
