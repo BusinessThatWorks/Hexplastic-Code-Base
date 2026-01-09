@@ -28,7 +28,9 @@ frappe.pages["daily-rejection-dashboard"].on_page_load = function (wrapper) {
 
 	// Also check after a longer delay in case elements load later - SCOPED
 	setTimeout(function () {
-		$(page.page_container).find(".page-title, .page-header h1, .page-title-wrapper, .page-head").hide();
+		$(page.page_container)
+			.find(".page-title, .page-header h1, .page-title-wrapper, .page-head")
+			.hide();
 		$(page.page_container).find("h1").not(".dashboard-title").hide();
 	}, 500);
 
@@ -422,6 +424,167 @@ class RejectionDashboard {
 		// Store values for label rendering
 		this.chart_values = values;
 
+		// Create chart using Frappe Charts - BAR CHART IMPLEMENTATION
+		try {
+			// Format values with % sign for display on bars
+			const formattedValues = values.map((v) => {
+				const num = parseFloat(v) || 0;
+				if (num === 0) return "0%";
+				if (num >= 10) return num.toFixed(1) + "%";
+				return num.toFixed(2) + "%";
+			});
+
+			this.chart = new frappe.Chart(chartContainer, {
+				title: "",
+				type: "bar", // Bar chart for rejection analysis
+				height: 450, // Increased height for label visibility at top
+				colors: ["#e24c4c"], // Red color for rejection percentage
+				data: {
+					labels: labels,
+					datasets: [
+						{
+							name: "Rejection %",
+							values: values,
+						},
+					],
+				},
+				barOptions: {
+					spaceRatio: 0.4, // Space between bars
+				},
+				valuesOverPoints: 1, // Show values on top of bars (built-in Frappe Charts feature)
+				tooltipOptions: {
+					formatTooltipX: (d) => d,
+					formatTooltipY: (d) => this.format_number(d, 2) + "%",
+				},
+				axisOptions: {
+					xAxisMode: "tick",
+					yAxisMode: "tick",
+					xIsSeries: 0,
+				},
+				// Disable animations for stable label positioning
+				animate: 0,
+			});
+
+			// Add % suffix to non-zero values and hide zero labels
+			const addPercentSuffix = () => {
+				this.add_percent_suffix_to_bar_labels(chartContainer, values);
+			};
+			// Multiple attempts to ensure labels are processed after chart renders
+			setTimeout(addPercentSuffix.bind(this), 100);
+			setTimeout(addPercentSuffix.bind(this), 300);
+			setTimeout(addPercentSuffix.bind(this), 600);
+			setTimeout(addPercentSuffix.bind(this), 1000);
+			setTimeout(addPercentSuffix.bind(this), 1500);
+		} catch (e) {
+			console.error("Error rendering chart:", e);
+			chartContainer.innerHTML = '<div class="no-chart-data">Error rendering chart</div>';
+		}
+	}
+
+	// ===== ADD PERCENT SUFFIX TO BAR LABELS AND HIDE ZEROS ON BARS =====
+	add_percent_suffix_to_bar_labels(container, values) {
+		const svg = container.querySelector("svg");
+		if (!svg) return;
+
+		// Get all text elements in the SVG
+		const allTexts = Array.from(svg.querySelectorAll("text"));
+
+		// X-axis labels to skip (month names, day names)
+		const months = [
+			"Jan",
+			"Feb",
+			"Mar",
+			"Apr",
+			"May",
+			"Jun",
+			"Jul",
+			"Aug",
+			"Sep",
+			"Oct",
+			"Nov",
+			"Dec",
+		];
+		const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+		allTexts.forEach((textEl) => {
+			const content = textEl.textContent.trim();
+			const textAnchor = textEl.getAttribute("text-anchor") || "";
+
+			// Skip X-axis labels (month names, day names, years)
+			if (months.some((m) => content.includes(m))) return;
+			if (days.some((d) => content.includes(d))) return;
+			if (/^\d{4}$/.test(content)) return; // Year like 2024, 2025
+
+			// Skip Y-axis labels - they typically have text-anchor="end"
+			// Bar value labels have text-anchor="middle"
+			if (textAnchor === "end") return;
+
+			// Check if it's a numeric value
+			const numContent = parseFloat(content);
+			if (isNaN(numContent)) return;
+
+			// Already has % - skip
+			if (content.includes("%")) return;
+
+			// Check if this value matches our data (to avoid modifying other numbers)
+			const matchesData = values.some((v) => {
+				const dataVal = parseFloat(v);
+				return Math.abs(dataVal - numContent) < 0.01;
+			});
+			if (!matchesData) return;
+
+			// This is a numeric value on top of a bar
+			if (numContent === 0) {
+				// Zero value - keep it visible, just style it
+				textEl.setAttribute("fill", "#c0392b");
+				textEl.setAttribute("font-weight", "500");
+				textEl.setAttribute("font-size", "11");
+			} else {
+				// Non-zero value - add % suffix and style
+				if (numContent >= 10) {
+					textEl.textContent = numContent.toFixed(1) + "%";
+				} else {
+					textEl.textContent = numContent.toFixed(2) + "%";
+				}
+				// Style the label
+				textEl.setAttribute("fill", "#c0392b");
+				textEl.setAttribute("font-weight", "500");
+				textEl.setAttribute("font-size", "11");
+			}
+		});
+	}
+
+	/* ===== COMMENTED OUT: ORIGINAL LINE CHART IMPLEMENTATION =====
+	 * Preserved for future use if line chart visualization is needed again.
+	 * 
+	render_chart_line_graph(data) {
+		const chartContainer = document.getElementById("rejection-chart");
+		const noDataMsg = document.getElementById("no-chart-data-message");
+
+		if (!chartContainer) return;
+
+		// Hide the no data message - we'll show empty chart instead
+		if (noDataMsg) {
+			noDataMsg.style.display = "none";
+		}
+
+		// Clear previous chart
+		chartContainer.innerHTML = "";
+
+		// If no data, show an empty chart with default labels
+		let labels, values;
+		if (!data || !data.labels || data.labels.length === 0) {
+			// Create empty chart with placeholder labels
+			labels = ["No Data"];
+			values = [0];
+		} else {
+			labels = data.labels;
+			values = data.values;
+		}
+
+		// Store values for label rendering
+		this.chart_values = values;
+
 		// Create chart using Frappe Charts
 		try {
 			this.chart = new frappe.Chart(chartContainer, {
@@ -477,6 +640,7 @@ class RejectionDashboard {
 			chartContainer.innerHTML = '<div class="no-chart-data">Error rendering chart</div>';
 		}
 	}
+	===== END COMMENTED OUT LINE CHART ===== */
 
 	add_chartjs_labels(chartInstance, values) {
 		// Try to use Chart.js datalabels plugin if available
@@ -893,7 +1057,7 @@ class RejectionDashboard {
 
 	export_chart_canvas_fallback(btn) {
 		const chartContainer = document.getElementById("rejection-chart");
-		
+
 		if (!chartContainer) {
 			frappe.msgprint(__("Chart container not found"));
 			btn.removeClass("exporting").prop("disabled", false);
@@ -909,18 +1073,18 @@ class RejectionDashboard {
 
 		// Clone the SVG and prepare for export
 		const svgClone = svg.cloneNode(true);
-		
+
 		// Get SVG dimensions
 		const svgWidth = svg.getAttribute("width") || svg.clientWidth || 800;
 		const svgHeight = svg.getAttribute("height") || svg.clientHeight || 400;
-		
+
 		// Ensure SVG has proper viewBox and dimensions
 		if (!svgClone.getAttribute("viewBox")) {
 			svgClone.setAttribute("viewBox", `0 0 ${svgWidth} ${svgHeight}`);
 		}
 		svgClone.setAttribute("width", svgWidth);
 		svgClone.setAttribute("height", svgHeight);
-		
+
 		const svgData = new XMLSerializer().serializeToString(svgClone);
 		const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
 		const svgUrl = URL.createObjectURL(svgBlob);
@@ -944,31 +1108,35 @@ class RejectionDashboard {
 				ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
 				// Convert to PNG and download
-				canvas.toBlob((blob) => {
-					if (blob) {
-						const url = URL.createObjectURL(blob);
-						const link = document.createElement("a");
-						link.download = `Rejection_Dashboard_Chart_${this.get_date_string()}.png`;
-						link.href = url;
-						link.style.display = "none";
-						document.body.appendChild(link);
-						link.click();
-						document.body.removeChild(link);
-						
-						// Clean up
-						setTimeout(() => {
-							URL.revokeObjectURL(url);
-							URL.revokeObjectURL(svgUrl);
-						}, 100);
+				canvas.toBlob(
+					(blob) => {
+						if (blob) {
+							const url = URL.createObjectURL(blob);
+							const link = document.createElement("a");
+							link.download = `Rejection_Dashboard_Chart_${this.get_date_string()}.png`;
+							link.href = url;
+							link.style.display = "none";
+							document.body.appendChild(link);
+							link.click();
+							document.body.removeChild(link);
 
-						frappe.show_alert({
-							message: __("Chart exported successfully as PNG"),
-							indicator: "green",
-						});
-					} else {
-						throw new Error("Failed to create PNG blob");
-					}
-				}, "image/png", 1.0);
+							// Clean up
+							setTimeout(() => {
+								URL.revokeObjectURL(url);
+								URL.revokeObjectURL(svgUrl);
+							}, 100);
+
+							frappe.show_alert({
+								message: __("Chart exported successfully as PNG"),
+								indicator: "green",
+							});
+						} else {
+							throw new Error("Failed to create PNG blob");
+						}
+					},
+					"image/png",
+					1.0
+				);
 			} catch (error) {
 				console.error("Error converting to PNG:", error);
 				frappe.msgprint(__("Failed to export chart. Please try again."));
@@ -1127,7 +1295,8 @@ class RejectionDashboard {
 		script.onload = () => {
 			// Load jsPDF AutoTable plugin
 			const autoTableScript = document.createElement("script");
-			autoTableScript.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js";
+			autoTableScript.src =
+				"https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js";
 			autoTableScript.onload = () => {
 				self.generate_pdf_with_jspdf(tableData, btn);
 			};
@@ -1138,7 +1307,9 @@ class RejectionDashboard {
 			document.head.appendChild(autoTableScript);
 		};
 		script.onerror = () => {
-			frappe.msgprint(__("Failed to load PDF library. Please check your internet connection."));
+			frappe.msgprint(
+				__("Failed to load PDF library. Please check your internet connection.")
+			);
 			btn.removeClass("exporting").prop("disabled", false);
 		};
 		document.head.appendChild(script);
@@ -1152,7 +1323,7 @@ class RejectionDashboard {
 		try {
 			// Get jsPDF from window
 			const { jsPDF } = window.jspdf || window.jspdf.jsPDF || window;
-			
+
 			// Create new PDF document (landscape orientation for tables)
 			const doc = new jsPDF({
 				orientation: "landscape",
@@ -1172,7 +1343,9 @@ class RejectionDashboard {
 			// Add filter information
 			let yPos = 30;
 			doc.setFontSize(9);
-			let filterText = `Period: ${filters.period || "N/A"} | Shift: ${filters.shift || "All"}`;
+			let filterText = `Period: ${filters.period || "N/A"} | Shift: ${
+				filters.shift || "All"
+			}`;
 			if (filters.date_from && filters.date_to) {
 				filterText += ` | From: ${filters.date_from} | To: ${filters.date_to}`;
 			}
@@ -1215,7 +1388,9 @@ class RejectionDashboard {
 				doc.setPage(i);
 				doc.setFontSize(8);
 				doc.text(
-					`Generated on ${new Date().toLocaleString("en-IN")} | Total Records: ${rows.length} | Page ${i} of ${pageCount}`,
+					`Generated on ${new Date().toLocaleString("en-IN")} | Total Records: ${
+						rows.length
+					} | Page ${i} of ${pageCount}`,
 					148,
 					200,
 					{ align: "center" }

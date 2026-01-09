@@ -469,7 +469,31 @@ body[data-page-route*="daily-rejection-dashboard"] .page-content-wrapper {
 
 .daily-rejection-dashboard .chart-container {
     padding: 20px;
-    min-height: 400px;
+    padding-top: 30px; /* Extra top padding for bar labels visibility */
+    min-height: 420px;
+}
+
+/* ===== Bar Chart Value Labels ===== */
+.daily-rejection-dashboard .custom-bar-label,
+.daily-rejection-dashboard .data-point-value {
+    font-family: Calibri, Arial, sans-serif;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    fill: #c0392b !important;
+    pointer-events: none;
+}
+
+/* Ensure SVG container has proper overflow for labels */
+.daily-rejection-dashboard .chart-container svg {
+    overflow: visible;
+}
+
+/* Additional styling for Frappe Charts bar value labels */
+.daily-rejection-dashboard .frappe-chart .data-point-value,
+.daily-rejection-dashboard .frappe-chart text.data-point-value {
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    fill: #c0392b !important;
 }
 
 .daily-rejection-dashboard .loading-spinner-container {
