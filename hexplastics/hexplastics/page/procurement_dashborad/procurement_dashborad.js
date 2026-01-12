@@ -205,6 +205,7 @@ class ProcurementDashboard {
 
 			// Purchase Receipt tab filter changes
 			this.wrapper.on("change", "#pr-status-filter", function () {
+				self.update_pr_cards_visibility();
 				self.refresh_purchase_receipts();
 			});
 
@@ -401,6 +402,7 @@ class ProcurementDashboard {
 		} else if (tabId === "purchase-order") {
 			this.refresh_purchase_orders();
 		} else if (tabId === "purchase-receipt") {
+			this.update_pr_cards_visibility();
 			this.refresh_purchase_receipts();
 		} else if (tabId === "purchase-invoice") {
 			this.refresh_purchase_invoices();
@@ -495,6 +497,7 @@ class ProcurementDashboard {
 		} else if (activeTab === "purchase-order") {
 			this.refresh_purchase_orders();
 		} else if (activeTab === "purchase-receipt") {
+			this.update_pr_cards_visibility();
 			this.refresh_purchase_receipts();
 		} else if (activeTab === "purchase-invoice") {
 			this.refresh_purchase_invoices();
@@ -910,8 +913,32 @@ class ProcurementDashboard {
 			if (el) el.textContent = value;
 		};
 
+		setEl("total-pr", this.format_number(metrics.total_pr_count || 0));
 		setEl("completed-pr", this.format_number(metrics.completed_count));
 		setEl("total-receipt-value", this.format_currency(metrics.total_receipt_value));
+	}
+
+	update_pr_cards_visibility() {
+		const selectedStatus = document.getElementById("pr-status-filter")?.value || "";
+		const cardsContainer = document.getElementById("pr-kpi-cards");
+		
+		if (!cardsContainer) return;
+
+		const totalCard = document.getElementById("pr-card-total");
+		const completedCard = document.getElementById("pr-card-completed");
+		const totalValueCard = document.getElementById("pr-card-total-value");
+		
+		if (selectedStatus === "") {
+			// Show all cards when "All" is selected
+			if (totalCard) totalCard.style.display = "";
+			if (completedCard) completedCard.style.display = "";
+			if (totalValueCard) totalValueCard.style.display = "";
+		} else if (selectedStatus === "Completed") {
+			// Hide Total PR card, show Completed and Total Receipt Value cards
+			if (totalCard) totalCard.style.display = "none";
+			if (completedCard) completedCard.style.display = "";
+			if (totalValueCard) totalValueCard.style.display = "";
+		}
 	}
 
 	update_purchase_receipt_table(purchase_receipts) {

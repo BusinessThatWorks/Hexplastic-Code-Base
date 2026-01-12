@@ -213,14 +213,14 @@ def get_material_request_data(
         if mr_supplier_filter:
             mr_supplier_filter = mr_supplier_filter.replace("supplier", "mr.supplier")
         mr_id_filter = get_id_filter_sql(mr_id, "mr.name")
-        
+
         # Build item filter for partially ordered
         if item:
             item_safe = frappe.db.escape(f"%{item}%")
             mr_item_filter = f" AND mri.item_code LIKE {item_safe}"
         else:
             mr_item_filter = ""
-        
+
         partially_ordered_data = frappe.db.sql(
             """
             SELECT COUNT(DISTINCT mr.name) as count
@@ -246,11 +246,15 @@ def get_material_request_data(
         # Get Material Requests list for table
         # Join with Material Request Item to get Total Qty and UOM
         # Build date filter for MR table in join query
-        mr_date_filter_join = get_date_filter_sql(from_date, to_date, "mr.transaction_date")
+        mr_date_filter_join = get_date_filter_sql(
+            from_date, to_date, "mr.transaction_date"
+        )
         mr_supplier_filter_join = get_supplier_filter_sql(supplier)
         if mr_supplier_filter_join:
-            mr_supplier_filter_join = mr_supplier_filter_join.replace("supplier", "mr.supplier")
-        
+            mr_supplier_filter_join = mr_supplier_filter_join.replace(
+                "supplier", "mr.supplier"
+            )
+
         # Build status filter for join query - need to handle different cases
         if status:
             if status == "Draft":
@@ -267,9 +271,9 @@ def get_material_request_data(
                 mr_status_filter_join = f" AND mr.status = {status_safe}"
         else:
             mr_status_filter_join = ""
-        
+
         mr_id_filter_join = get_id_filter_sql(mr_id, "mr.name")
-        
+
         # Build item filter for join query - use subquery to filter MRs, not items
         # This ensures Total Qty sums ALL items in the MR, not just filtered items
         if item:
@@ -281,7 +285,7 @@ def get_material_request_data(
             )"""
         else:
             mr_item_filter_join = ""
-        
+
         material_requests = frappe.db.sql(
             """
             SELECT 
@@ -314,9 +318,7 @@ def get_material_request_data(
 
         return {
             "metrics": {
-                "total_count": (
-                    total_data[0].get("count", 0) if total_data else 0
-                ),
+                "total_count": (total_data[0].get("count", 0) if total_data else 0),
                 "pending_count": pending_data[0].get("count", 0) if pending_data else 0,
                 "partially_received_count": (
                     partially_received_data[0].get("count", 0)
@@ -342,7 +344,7 @@ def get_material_request_data(
                 "total_count": 0,
                 "pending_count": 0,
                 "partially_received_count": 0,
-                "partially_ordered_count": 0
+                "partially_ordered_count": 0,
             },
             "material_requests": [],
         }
@@ -376,11 +378,11 @@ def get_purchase_order_data(
         supplier_filter = get_supplier_filter_sql(supplier)
         id_filter = get_id_filter_sql(po_id, "name")
         item_filter = get_item_filter_sql(item, "Purchase Order")
-        
+
         # Check if workflow_state field exists in Purchase Order
         po_meta = frappe.get_meta("Purchase Order")
         has_workflow_state = "workflow_state" in [f.fieldname for f in po_meta.fields]
-        
+
         # Build status filter for table query - check both workflow_state and status if workflow exists
         if status:
             if status == "Draft":
@@ -399,7 +401,9 @@ def get_purchase_order_data(
         if status == "Approved":
             status_safe = frappe.db.escape(status)
             if has_workflow_state:
-                approved_status_filter = f" AND (workflow_state = {status_safe} OR status = {status_safe})"
+                approved_status_filter = (
+                    f" AND (workflow_state = {status_safe} OR status = {status_safe})"
+                )
             else:
                 approved_status_filter = f" AND status = {status_safe}"
         else:
@@ -510,7 +514,7 @@ def get_purchase_order_data(
         # - If status is "Pending Approval": show pending approval POs
         # - If status is "Draft": show draft POs
         # Status column shows workflow_state if available, otherwise shows status field
-        
+
         # Build table condition based on status filter
         if status == "Pending Approval":
             # Show pending approval POs
@@ -529,7 +533,7 @@ def get_purchase_order_data(
                 table_status_filter = approved_status_filter
             else:
                 table_status_filter = ""
-        
+
         purchase_orders = frappe.db.sql(
             """
             SELECT
@@ -567,8 +571,10 @@ def get_purchase_order_data(
                     approved_data[0].get("count", 0) if approved_data else 0
                 ),
                 "pending_approval_count": (
-                    pending_approval_data[0].get("count", 0) if pending_approval_data else 0
-                )
+                    pending_approval_data[0].get("count", 0)
+                    if pending_approval_data
+                    else 0
+                ),
             },
             "purchase_orders": purchase_orders,
         }
@@ -578,7 +584,10 @@ def get_purchase_order_data(
             message=frappe.get_traceback(),
             title=_("Error fetching purchase order data"),
         )
-        return {"metrics": {"approved_count": 0, "pending_approval_count": 0}, "purchase_orders": []}
+        return {
+            "metrics": {"approved_count": 0, "pending_approval_count": 0},
+            "purchase_orders": [],
+        }
 
 
 @frappe.whitelist()
@@ -599,6 +608,7 @@ def get_purchase_receipt_data(
     Returns:
         dict: {
             metrics: {
+                total_pr_count: int,
                 completed_count: int,
                 total_receipt_value: float
             },
@@ -611,6 +621,22 @@ def get_purchase_receipt_data(
         status_filter = get_status_filter_sql(status)
         id_filter = get_id_filter_sql(pr_id, "name")
         item_filter = get_item_filter_sql(item, "Purchase Receipt")
+
+        # Total PR - Count all Purchase Receipts excluding cancelled (docstatus != 2)
+        # Apply only global filters: from_date, to_date, supplier
+        total_pr_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as count
+            FROM `tabPurchase Receipt`
+            WHERE docstatus != 2
+                {date_filter}
+                {supplier_filter}
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+            ),
+            as_dict=True,
+        )
 
         # Completed Purchase Receipts
         completed_data = frappe.db.sql(
@@ -683,6 +709,9 @@ def get_purchase_receipt_data(
 
         return {
             "metrics": {
+                "total_pr_count": (
+                    total_pr_data[0].get("count", 0) if total_pr_data else 0
+                ),
                 "completed_count": (
                     completed_data[0].get("count", 0) if completed_data else 0
                 ),
@@ -701,7 +730,11 @@ def get_purchase_receipt_data(
             title=_("Error fetching purchase receipt data"),
         )
         return {
-            "metrics": {"completed_count": 0, "total_receipt_value": 0},
+            "metrics": {
+                "total_pr_count": 0,
+                "completed_count": 0,
+                "total_receipt_value": 0,
+            },
             "purchase_receipts": [],
         }
 

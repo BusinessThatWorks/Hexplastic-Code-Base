@@ -432,9 +432,10 @@
 			<div class="tab-filter-section">
 				<div class="tab-filter-row">
 					<div class="tab-filter-group">
-						<label class="filter-label">Workflow Status</label>
+						<label class="filter-label">Status</label>
 						<select class="filter-input filter-select" id="pr-status-filter">
 							<option value="">All</option>
+							<option value="Completed">Completed</option>
 						</select>
 					</div>
 					<div class="tab-filter-group">
@@ -468,8 +469,20 @@
 			</div>
 
 			<!-- KPI Cards -->
-			<div class="kpi-cards-grid">
-				<div class="kpi-card kpi-card-green">
+			<div class="kpi-cards-grid" id="pr-kpi-cards">
+				<div class="kpi-card kpi-card-blue" id="pr-card-total">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-pr">0</div>
+						<div class="kpi-title">Total Purchase Receipts</div>
+						<div class="kpi-subtitle">Total purchase receipts</div>
+					</div>
+				</div>
+				<div
+					class="kpi-card kpi-card-green"
+					id="pr-card-completed"
+					data-status="Completed"
+				>
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="completed-pr">0</div>
@@ -477,7 +490,7 @@
 						<div class="kpi-subtitle">Purchase receipts with Completed status</div>
 					</div>
 				</div>
-				<div class="kpi-card kpi-card-purple">
+				<div class="kpi-card kpi-card-purple" id="pr-card-total-value">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="total-receipt-value">₹0</div>
@@ -536,7 +549,7 @@
 			<div class="tab-filter-section">
 				<div class="tab-filter-row">
 					<div class="tab-filter-group">
-						<label class="filter-label">Workflow Status</label>
+						<label class="filter-label">Status</label>
 						<select class="filter-input filter-select" id="pi-status-filter">
 							<option value="">All</option>
 							<option value="Overdue">Overdue</option>
