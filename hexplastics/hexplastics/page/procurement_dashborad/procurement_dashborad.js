@@ -22,7 +22,9 @@ frappe.pages["Procurement Dashborad"].on_page_load = function (wrapper) {
 
 	// Also check after a longer delay in case elements load later - SCOPED
 	setTimeout(function () {
-		$(page.page_container).find(".page-title, .page-header h1, .page-title-wrapper, .page-head").hide();
+		$(page.page_container)
+			.find(".page-title, .page-header h1, .page-title-wrapper, .page-head")
+			.hide();
 		$(page.page_container).find("h1").not(".dashboard-title").hide();
 	}, 500);
 
@@ -52,6 +54,13 @@ class ProcurementDashboard {
 		this.set_default_dates();
 		this.bind_events();
 		this.load_filter_options();
+		// Set initial supplier filter visibility (overview tab is default, so hide supplier)
+		setTimeout(() => {
+			const supplierFilterGroup = this.wrapper.find(".filter-group-wide").first();
+			if (supplierFilterGroup.length) {
+				supplierFilterGroup.hide();
+			}
+		}, 300);
 		this.refresh_data();
 	}
 
@@ -374,16 +383,38 @@ class ProcurementDashboard {
 		this.wrapper.find(".tab-pane").removeClass("active");
 		this.wrapper.find(`#${tabId}-tab`).addClass("active");
 
+		// Show/hide supplier filter based on active tab
+		// Hide supplier filter for Overview, Material Request, and Item Wise Tracker tabs
+		const supplierFilterGroup = this.wrapper.find(".filter-group-wide").first();
+		if (
+			tabId === "overview" ||
+			tabId === "material-request" ||
+			tabId === "item-wise-tracker"
+		) {
+			supplierFilterGroup.hide();
+			// Clear supplier filter value when switching to these tabs
+			const supplierInput = document.getElementById("supplier-filter");
+			if (supplierInput) {
+				supplierInput.value = "";
+			}
+		} else {
+			supplierFilterGroup.show();
+		}
+
 		// Refresh data for the selected tab
-		if (tabId === "material-request") {
+		if (tabId === "overview") {
+			this.refresh_data();
+		} else if (tabId === "material-request") {
 			this.update_mr_cards_visibility();
 			this.refresh_material_requests();
 		} else if (tabId === "purchase-order") {
+			this.update_po_cards_visibility();
 			this.refresh_purchase_orders();
 		} else if (tabId === "purchase-receipt") {
 			this.update_pr_cards_visibility();
 			this.refresh_purchase_receipts();
 		} else if (tabId === "purchase-invoice") {
+			this.update_pi_cards_visibility();
 			this.refresh_purchase_invoices();
 		} else if (tabId === "item-wise-tracker") {
 			this.refresh_item_wise_tracker();
@@ -391,65 +422,97 @@ class ProcurementDashboard {
 	}
 
 	get_global_filters() {
+		const fromDateEl = document.getElementById("from-date");
+		const toDateEl = document.getElementById("to-date");
+		const supplierEl = document.getElementById("supplier-filter");
+
 		return {
-			from_date: document.getElementById("from-date")?.value || "",
-			to_date: document.getElementById("to-date")?.value || "",
-			supplier: document.getElementById("supplier-filter")?.value || "",
+			from_date: fromDateEl?.value?.trim() || null,
+			to_date: toDateEl?.value?.trim() || null,
+			supplier: supplierEl?.value?.trim() || null,
 		};
 	}
 
 	get_material_request_filters() {
 		const global = this.get_global_filters();
+		const statusEl = document.getElementById("mr-status-filter");
+		const idEl = document.getElementById("mr-id-filter");
+		const itemEl = document.getElementById("mr-item-filter");
+
+		// Exclude supplier from Material Request filters
+		const { supplier, ...filtersWithoutSupplier } = global;
+
 		return {
-			...global,
-			status: document.getElementById("mr-status-filter")?.value || "",
-			mr_id: document.getElementById("mr-id-filter")?.value || "",
-			item: document.getElementById("mr-item-filter")?.value || "",
+			...filtersWithoutSupplier,
+			status: statusEl?.value?.trim() || null,
+			mr_id: idEl?.value?.trim() || null,
+			item: itemEl?.value?.trim() || null,
 		};
 	}
 
 	get_purchase_order_filters() {
 		const global = this.get_global_filters();
+		const statusEl = document.getElementById("po-status-filter");
+		const idEl = document.getElementById("po-id-filter");
+		const itemEl = document.getElementById("po-item-filter");
+
 		return {
 			...global,
-			status: document.getElementById("po-status-filter")?.value || "",
-			po_id: document.getElementById("po-id-filter")?.value || "",
-			item: document.getElementById("po-item-filter")?.value || "",
+			status: statusEl?.value?.trim() || null,
+			po_id: idEl?.value?.trim() || null,
+			item: itemEl?.value?.trim() || null,
 		};
 	}
 
 	get_purchase_receipt_filters() {
 		const global = this.get_global_filters();
+		const statusEl = document.getElementById("pr-status-filter");
+		const idEl = document.getElementById("pr-id-filter");
+		const itemEl = document.getElementById("pr-item-filter");
+
 		return {
 			...global,
-			status: document.getElementById("pr-status-filter")?.value || "",
-			pr_id: document.getElementById("pr-id-filter")?.value || "",
-			item: document.getElementById("pr-item-filter")?.value || "",
+			status: statusEl?.value?.trim() || null,
+			pr_id: idEl?.value?.trim() || null,
+			item: itemEl?.value?.trim() || null,
 		};
 	}
 
 	get_purchase_invoice_filters() {
 		const global = this.get_global_filters();
+		const statusEl = document.getElementById("pi-status-filter");
+		const idEl = document.getElementById("pi-id-filter");
+		const itemEl = document.getElementById("pi-item-filter");
+
 		return {
 			...global,
-			status: document.getElementById("pi-status-filter")?.value || "",
-			pi_id: document.getElementById("pi-id-filter")?.value || "",
-			item: document.getElementById("pi-item-filter")?.value || "",
+			status: statusEl?.value?.trim() || null,
+			pi_id: idEl?.value?.trim() || null,
+			item: itemEl?.value?.trim() || null,
 		};
 	}
 
 	get_item_wise_tracker_filters() {
 		const global = this.get_global_filters();
+		const poNoEl = document.getElementById("tracker-po-filter");
+		const itemEl = document.getElementById("tracker-item-filter");
+
+		// Exclude supplier from Item Wise Tracker filters
+		const { supplier, ...filtersWithoutSupplier } = global;
+
 		return {
-			...global,
-			po_no: document.getElementById("tracker-po-filter")?.value || "",
-			item: document.getElementById("tracker-item-filter")?.value || "",
+			...filtersWithoutSupplier,
+			po_no: poNoEl?.value?.trim() || null,
+			item: itemEl?.value?.trim() || null,
 		};
 	}
 
 	refresh_data() {
 		const self = this;
 		const filters = this.get_global_filters();
+
+		// Clear previous overview data
+		this.clear_overview_data();
 
 		// Show loading state
 		this.show_loading();
@@ -489,6 +552,8 @@ class ProcurementDashboard {
 		const self = this;
 		const filters = this.get_material_request_filters();
 
+		// Clear previous data
+		this.clear_material_request_data();
 		this.show_mr_loading();
 
 		frappe.call({
@@ -512,6 +577,8 @@ class ProcurementDashboard {
 		const self = this;
 		const filters = this.get_purchase_order_filters();
 
+		// Clear previous data
+		this.clear_purchase_order_data();
 		this.show_po_loading();
 		this.update_po_cards_visibility();
 
@@ -536,6 +603,8 @@ class ProcurementDashboard {
 		const self = this;
 		const filters = this.get_purchase_receipt_filters();
 
+		// Clear previous data
+		this.clear_purchase_receipt_data();
 		this.show_pr_loading();
 
 		frappe.call({
@@ -559,6 +628,8 @@ class ProcurementDashboard {
 		const self = this;
 		const filters = this.get_purchase_invoice_filters();
 
+		// Clear previous data
+		this.clear_purchase_invoice_data();
 		this.show_pi_loading();
 		this.update_pi_cards_visibility();
 
@@ -583,6 +654,8 @@ class ProcurementDashboard {
 		const self = this;
 		const filters = this.get_item_wise_tracker_filters();
 
+		// Clear previous data
+		this.clear_item_wise_tracker_data();
 		this.show_tracker_loading();
 
 		frappe.call({
@@ -599,6 +672,75 @@ class ProcurementDashboard {
 				self.hide_tracker_loading();
 			},
 		});
+	}
+
+	clear_overview_data() {
+		const setEl = (id, value) => {
+			const el = document.getElementById(id);
+			if (el) el.textContent = value;
+		};
+		setEl("total-material-requests", "0");
+		setEl("total-purchase-orders", "0");
+		setEl("total-purchase-receipts", "0");
+		setEl("total-purchase-invoices", "0");
+	}
+
+	clear_material_request_data() {
+		const setEl = (id, value) => {
+			const el = document.getElementById(id);
+			if (el) el.textContent = value;
+		};
+		setEl("total-mr", "0");
+		setEl("pending-mr", "0");
+		setEl("partially-received-mr", "0");
+		setEl("partially-ordered-mr", "0");
+
+		const tbody = document.getElementById("mr-tbody");
+		if (tbody) tbody.innerHTML = "";
+	}
+
+	clear_purchase_order_data() {
+		const setEl = (id, value) => {
+			const el = document.getElementById(id);
+			if (el) el.textContent = value;
+		};
+		setEl("approved-po", "0");
+		setEl("pending-approval-po", "0");
+
+		const tbody = document.getElementById("po-tbody");
+		if (tbody) tbody.innerHTML = "";
+	}
+
+	clear_purchase_receipt_data() {
+		const setEl = (id, value) => {
+			const el = document.getElementById(id);
+			if (el) el.textContent = value;
+		};
+		setEl("total-pr", "0");
+		setEl("completed-pr", "0");
+		setEl("total-receipt-value", "₹0");
+
+		const tbody = document.getElementById("pr-tbody");
+		if (tbody) tbody.innerHTML = "";
+	}
+
+	clear_purchase_invoice_data() {
+		const setEl = (id, value) => {
+			const el = document.getElementById(id);
+			if (el) el.textContent = value;
+		};
+		setEl("total-pi", "0");
+		setEl("paid-pi", "0");
+		setEl("overdue-pi", "0");
+		setEl("total-invoice-value", "₹0");
+
+		const tbody = document.getElementById("pi-tbody");
+		if (tbody) tbody.innerHTML = "";
+	}
+
+	clear_item_wise_tracker_data() {
+		const tbody = document.getElementById("tracker-tbody");
+		if (tbody) tbody.innerHTML = "";
 	}
 
 	show_loading() {
@@ -732,7 +874,7 @@ class ProcurementDashboard {
 	update_mr_cards_visibility() {
 		const selectedStatus = document.getElementById("mr-status-filter")?.value || "";
 		const cardsContainer = document.getElementById("mr-kpi-cards");
-		
+
 		if (!cardsContainer) return;
 
 		// Get all cards
@@ -756,8 +898,8 @@ class ProcurementDashboard {
 		} else {
 			// For other statuses (Pending, Partially Received), show only the matching card
 			const cards = cardsContainer.querySelectorAll(".kpi-card[data-status]");
-			
-			cards.forEach(card => {
+
+			cards.forEach((card) => {
 				const cardStatus = card.getAttribute("data-status");
 				if (cardStatus === selectedStatus) {
 					card.style.display = "";
@@ -765,7 +907,7 @@ class ProcurementDashboard {
 					card.style.display = "none";
 				}
 			});
-			
+
 			// Hide cards without data-status (Total and Partially Ordered)
 			if (totalCard) totalCard.style.display = "none";
 			if (partiallyOrderedCard) partiallyOrderedCard.style.display = "none";
@@ -828,12 +970,12 @@ class ProcurementDashboard {
 	update_po_cards_visibility() {
 		const selectedStatus = document.getElementById("po-status-filter")?.value || "";
 		const cardsContainer = document.getElementById("po-kpi-cards");
-		
+
 		if (!cardsContainer) return;
 
 		const cards = cardsContainer.querySelectorAll(".kpi-card[data-status]");
-		
-		cards.forEach(card => {
+
+		cards.forEach((card) => {
 			const cardStatus = card.getAttribute("data-status");
 			if (selectedStatus === "" || cardStatus === selectedStatus) {
 				card.style.display = "";
@@ -899,13 +1041,13 @@ class ProcurementDashboard {
 	update_pr_cards_visibility() {
 		const selectedStatus = document.getElementById("pr-status-filter")?.value || "";
 		const cardsContainer = document.getElementById("pr-kpi-cards");
-		
+
 		if (!cardsContainer) return;
 
 		const totalCard = document.getElementById("pr-card-total");
 		const completedCard = document.getElementById("pr-card-completed");
 		const totalValueCard = document.getElementById("pr-card-total-value");
-		
+
 		if (selectedStatus === "") {
 			// Show all cards when "All" is selected
 			if (totalCard) totalCard.style.display = "";
@@ -976,13 +1118,13 @@ class ProcurementDashboard {
 	update_pi_cards_visibility() {
 		const selectedStatus = document.getElementById("pi-status-filter")?.value || "";
 		const cardsContainer = document.getElementById("pi-kpi-cards");
-		
+
 		if (!cardsContainer) return;
 
 		const totalCard = document.getElementById("pi-card-total");
 		const paidCard = document.getElementById("pi-card-paid");
 		const overdueCard = document.getElementById("pi-card-overdue");
-		
+
 		if (selectedStatus === "") {
 			// Show all cards when "All" is selected
 			if (totalCard) totalCard.style.display = "";

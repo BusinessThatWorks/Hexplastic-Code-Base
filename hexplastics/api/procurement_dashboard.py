@@ -29,7 +29,8 @@ def get_overview_metrics(from_date=None, to_date=None, supplier=None):
         po_date_filter = get_date_filter_sql(from_date, to_date, "transaction_date")
         pr_date_filter = get_date_filter_sql(from_date, to_date, "posting_date")
         pi_date_filter = get_date_filter_sql(from_date, to_date, "posting_date")
-        supplier_filter = get_supplier_filter_sql(supplier)
+        # Overview tab does not use supplier filter
+        supplier_filter = ""
 
         # Get Material Request count (submitted)
         mr_data = frappe.db.sql(
@@ -140,7 +141,8 @@ def get_material_request_data(
     """
     try:
         date_filter = get_date_filter_sql(from_date, to_date, "transaction_date")
-        supplier_filter = get_supplier_filter_sql(supplier)
+        # Material Request does not use supplier filter
+        supplier_filter = ""
         status_filter = get_status_filter_sql(status)
         id_filter = get_id_filter_sql(mr_id, "name")
         item_filter = get_item_filter_sql(item, "Material Request")
@@ -209,9 +211,8 @@ def get_material_request_data(
         # This means at least one item has some ordered quantity but not all requested quantity is ordered
         # Build date filter for MR table
         mr_date_filter = get_date_filter_sql(from_date, to_date, "mr.transaction_date")
-        mr_supplier_filter = get_supplier_filter_sql(supplier)
-        if mr_supplier_filter:
-            mr_supplier_filter = mr_supplier_filter.replace("supplier", "mr.supplier")
+        # Material Request does not use supplier filter
+        mr_supplier_filter = ""
         mr_id_filter = get_id_filter_sql(mr_id, "mr.name")
 
         # Build item filter for partially ordered
@@ -249,11 +250,8 @@ def get_material_request_data(
         mr_date_filter_join = get_date_filter_sql(
             from_date, to_date, "mr.transaction_date"
         )
-        mr_supplier_filter_join = get_supplier_filter_sql(supplier)
-        if mr_supplier_filter_join:
-            mr_supplier_filter_join = mr_supplier_filter_join.replace(
-                "supplier", "mr.supplier"
-            )
+        # Material Request does not use supplier filter
+        mr_supplier_filter_join = ""
 
         # Build status filter for join query - need to handle different cases
         if status:
@@ -951,7 +949,8 @@ def get_item_wise_tracker_data(
     """
     try:
         date_filter = get_date_filter_sql(from_date, to_date, "transaction_date")
-        supplier_filter = get_supplier_filter_sql(supplier)
+        # Item Wise Tracker does not use supplier filter
+        supplier_filter = ""
 
         # Build PO filter
         if po_no:
