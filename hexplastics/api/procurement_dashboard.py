@@ -130,8 +130,10 @@ def get_material_request_data(
     Returns:
         dict: {
             metrics: {
+                total_count: int,
+                pending_count: int,
                 partially_received_count: int,
-                pending_count: int
+                partially_ordered_count: int
             },
             material_requests: list of material requests
         }
@@ -143,13 +145,12 @@ def get_material_request_data(
         id_filter = get_id_filter_sql(mr_id, "name")
         item_filter = get_item_filter_sql(item, "Material Request")
 
-        # Partially Received Material Requests
-        partially_received_data = frappe.db.sql(
+        # Total Material Requests (exclude cancelled only)
+        total_data = frappe.db.sql(
             """
             SELECT COUNT(*) as count
             FROM `tabMaterial Request`
-            WHERE docstatus = 1
-                AND status = 'Partially Received'
+            WHERE docstatus != 2
                 {date_filter}
                 {supplier_filter}
                 {id_filter}
@@ -183,13 +184,13 @@ def get_material_request_data(
             as_dict=True,
         )
 
-        # Ordered Material Requests
-        ordered_data = frappe.db.sql(
+        # Partially Received Material Requests
+        partially_received_data = frappe.db.sql(
             """
             SELECT COUNT(*) as count
             FROM `tabMaterial Request`
             WHERE docstatus = 1
-                AND status = 'Ordered'
+                AND status = 'Partially Received'
                 {date_filter}
                 {supplier_filter}
                 {id_filter}
@@ -199,6 +200,44 @@ def get_material_request_data(
                 supplier_filter=supplier_filter,
                 id_filter=id_filter,
                 item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
+
+        # Partially Ordered Material Requests
+        # Material Requests where ordered_qty > 0 AND ordered_qty < requested_qty
+        # This means at least one item has some ordered quantity but not all requested quantity is ordered
+        # Build date filter for MR table
+        mr_date_filter = get_date_filter_sql(from_date, to_date, "mr.transaction_date")
+        mr_supplier_filter = get_supplier_filter_sql(supplier)
+        if mr_supplier_filter:
+            mr_supplier_filter = mr_supplier_filter.replace("supplier", "mr.supplier")
+        mr_id_filter = get_id_filter_sql(mr_id, "mr.name")
+        
+        # Build item filter for partially ordered
+        if item:
+            item_safe = frappe.db.escape(f"%{item}%")
+            mr_item_filter = f" AND mri.item_code LIKE {item_safe}"
+        else:
+            mr_item_filter = ""
+        
+        partially_ordered_data = frappe.db.sql(
+            """
+            SELECT COUNT(DISTINCT mr.name) as count
+            FROM `tabMaterial Request` mr
+            INNER JOIN `tabMaterial Request Item` mri ON mri.parent = mr.name
+            WHERE mr.docstatus != 2
+                AND mri.ordered_qty > 0
+                AND mri.ordered_qty < mri.qty
+                {date_filter}
+                {supplier_filter}
+                {id_filter}
+                {item_filter}
+        """.format(
+                date_filter=mr_date_filter,
+                supplier_filter=mr_supplier_filter,
+                id_filter=mr_id_filter,
+                item_filter=mr_item_filter,
             ),
             as_dict=True,
         )
@@ -231,13 +270,20 @@ def get_material_request_data(
 
         return {
             "metrics": {
+                "total_count": (
+                    total_data[0].get("count", 0) if total_data else 0
+                ),
+                "pending_count": pending_data[0].get("count", 0) if pending_data else 0,
                 "partially_received_count": (
                     partially_received_data[0].get("count", 0)
                     if partially_received_data
                     else 0
                 ),
-                "pending_count": pending_data[0].get("count", 0) if pending_data else 0,
-                "ordered_count": ordered_data[0].get("count", 0) if ordered_data else 0,
+                "partially_ordered_count": (
+                    partially_ordered_data[0].get("count", 0)
+                    if partially_ordered_data
+                    else 0
+                ),
             },
             "material_requests": material_requests,
         }
@@ -248,7 +294,12 @@ def get_material_request_data(
             title=_("Error fetching material request data"),
         )
         return {
-            "metrics": {"partially_received_count": 0, "pending_count": 0, "ordered_count": 0},
+            "metrics": {
+                "total_count": 0,
+                "pending_count": 0,
+                "partially_received_count": 0,
+                "partially_ordered_count": 0
+            },
             "material_requests": [],
         }
 

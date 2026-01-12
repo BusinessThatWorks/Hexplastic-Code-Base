@@ -741,9 +741,10 @@ class ProcurementDashboard {
 			if (el) el.textContent = value;
 		};
 
-		setEl("partially-received-mr", this.format_number(metrics.partially_received_count));
+		setEl("total-mr", this.format_number(metrics.total_count));
 		setEl("pending-mr", this.format_number(metrics.pending_count));
-		setEl("ordered-mr", this.format_number(metrics.ordered_count));
+		setEl("partially-received-mr", this.format_number(metrics.partially_received_count));
+		setEl("partially-ordered-mr", this.format_number(metrics.partially_ordered_count));
 	}
 
 	update_mr_cards_visibility() {

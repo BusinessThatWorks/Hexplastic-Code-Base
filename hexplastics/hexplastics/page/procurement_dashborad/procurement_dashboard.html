@@ -225,17 +225,13 @@
 
 			<!-- KPI Cards -->
 			<div class="kpi-cards-grid" id="mr-kpi-cards">
-				<div
-					class="kpi-card kpi-card-orange"
-					id="mr-card-partially-received"
-					data-status="Partially Received"
-				>
+				<div class="kpi-card kpi-card-blue" id="mr-card-total">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
-						<div class="kpi-value" id="partially-received-mr">0</div>
-						<div class="kpi-title">Partially Received Material Requests</div>
+						<div class="kpi-value" id="total-mr">0</div>
+						<div class="kpi-title">Total Material Requests</div>
 						<div class="kpi-subtitle">
-							Material requests with Partially Received status
+							Total material requests (excluding cancelled)
 						</div>
 					</div>
 				</div>
@@ -247,13 +243,27 @@
 						<div class="kpi-subtitle">Material requests with Pending status</div>
 					</div>
 				</div>
-				<div class="kpi-card kpi-card-green" id="mr-card-ordered" data-status="Ordered">
+				<div
+					class="kpi-card kpi-card-orange"
+					id="mr-card-partially-received"
+					data-status="Partially Received"
+				>
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
-						<div class="kpi-value" id="ordered-mr">0</div>
-						<div class="kpi-title">Ordered Material Requests</div>
+						<div class="kpi-value" id="partially-received-mr">0</div>
+						<div class="kpi-title">Partially Received MR</div>
 						<div class="kpi-subtitle">
-							Material requests converted to Purchase Orders
+							Material requests with Partially Received status
+						</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-green" id="mr-card-partially-ordered">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="partially-ordered-mr">0</div>
+						<div class="kpi-title">Partially Ordered MR</div>
+						<div class="kpi-subtitle">
+							Material requests with partial order quantity
 						</div>
 					</div>
 				</div>
