@@ -114,9 +114,6 @@ def check_stock_levels_and_send_alert():
 
 		# Set recipient emails - send to 6 people
 		recipient_email = [
-			"beetashoke.chakraborty@clapgrow.com",
-			"beetashokechakraborty721@gmail.com",
-			"ritika@clapgrow.com",
 			"rohanathex@gmail.com",
 			"avinashathex@gmail.com",
 			"gauravmartinian@gmail.com",
