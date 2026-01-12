@@ -611,7 +611,6 @@ class ProcurementDashboard {
 			args: filters,
 			callback: function (r) {
 				if (r.message) {
-					self.update_item_wise_tracker_metrics(r.message.metrics);
 					self.update_item_wise_tracker_table(r.message.items);
 				}
 				self.hide_tracker_loading();
@@ -1064,17 +1063,6 @@ class ProcurementDashboard {
 			.join("");
 	}
 
-	update_item_wise_tracker_metrics(metrics) {
-		if (!metrics) return;
-
-		const setEl = (id, value) => {
-			const el = document.getElementById(id);
-			if (el) el.textContent = value;
-		};
-
-		setEl("tracked-items", this.format_number(metrics.tracked_items_count));
-	}
-
 	update_item_wise_tracker_table(items) {
 		const tbody = document.getElementById("tracker-tbody");
 		const noDataMsg = document.getElementById("no-tracker-message");
@@ -1107,6 +1095,7 @@ class ProcurementDashboard {
 					<td>${item.uom || "-"}</td>
 					<td>${this.format_number(item.received_qty)}</td>
 					<td>${this.format_percentage(item.received_percent)}</td>
+					<td>${this.format_percentage(item.bill_percent)}</td>
 				</tr>
 			`
 			)

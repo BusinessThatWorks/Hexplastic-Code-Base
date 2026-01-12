@@ -980,11 +980,18 @@ def get_item_wise_tracker_data(
                     WHEN poi.qty > 0 THEN 
                         ROUND((COALESCE(SUM(pr_item.received_qty), 0) / poi.qty) * 100, 2)
                     ELSE 0 
-                END as received_percent
+                END as received_percent,
+                CASE 
+                    WHEN poi.qty > 0 THEN 
+                        ROUND((COALESCE(SUM(pi_item.qty), 0) / poi.qty) * 100, 2)
+                    ELSE 0 
+                END as bill_percent
             FROM `tabPurchase Order Item` poi
             INNER JOIN `tabPurchase Order` po ON poi.parent = po.name
             LEFT JOIN `tabPurchase Receipt Item` pr_item ON pr_item.purchase_order_item = poi.name
             LEFT JOIN `tabPurchase Receipt` pr ON pr_item.parent = pr.name AND pr.docstatus = 1
+            LEFT JOIN `tabPurchase Invoice Item` pi_item ON pi_item.po_detail = poi.name
+            LEFT JOIN `tabPurchase Invoice` pi ON pi_item.parent = pi.name AND pi.docstatus = 1
             WHERE po.docstatus = 1
                 {date_filter}
                 {supplier_filter}
