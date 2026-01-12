@@ -818,6 +818,9 @@ class ProcurementDashboard {
 						</a>
 					</td>
 					<td>${this.format_date(mr.transaction_date)}</td>
+					<td>${this.format_date(mr.required_by)}</td>
+					<td>${this.format_number(mr.total_qty)}</td>
+					<td>${mr.uom || "-"}</td>
 					<td>
 						<span class="status-badge status-${this.get_status_class(mr.status)}">
 							${mr.status || "-"}

@@ -244,27 +244,70 @@ def get_material_request_data(
         )
 
         # Get Material Requests list for table
+        # Join with Material Request Item to get Total Qty and UOM
+        # Build date filter for MR table in join query
+        mr_date_filter_join = get_date_filter_sql(from_date, to_date, "mr.transaction_date")
+        mr_supplier_filter_join = get_supplier_filter_sql(supplier)
+        if mr_supplier_filter_join:
+            mr_supplier_filter_join = mr_supplier_filter_join.replace("supplier", "mr.supplier")
+        
+        # Build status filter for join query - need to handle different cases
+        if status:
+            if status == "Draft":
+                mr_status_filter_join = " AND mr.docstatus = 0"
+            elif status == "Partially Ordered":
+                mr_status_filter_join = """ AND mr.status = 'Partially Ordered'
+                    AND mr.name IN (
+                        SELECT DISTINCT parent 
+                        FROM `tabMaterial Request Item` 
+                        WHERE ordered_qty > 0 AND ordered_qty < qty
+                    )"""
+            else:
+                status_safe = frappe.db.escape(status)
+                mr_status_filter_join = f" AND mr.status = {status_safe}"
+        else:
+            mr_status_filter_join = ""
+        
+        mr_id_filter_join = get_id_filter_sql(mr_id, "mr.name")
+        
+        # Build item filter for join query - use subquery to filter MRs, not items
+        # This ensures Total Qty sums ALL items in the MR, not just filtered items
+        if item:
+            item_safe = frappe.db.escape(f"%{item}%")
+            mr_item_filter_join = f""" AND mr.name IN (
+                SELECT DISTINCT parent 
+                FROM `tabMaterial Request Item` 
+                WHERE item_code LIKE {item_safe}
+            )"""
+        else:
+            mr_item_filter_join = ""
+        
         material_requests = frappe.db.sql(
             """
             SELECT 
-                name,
-                transaction_date,
-                status
-            FROM `tabMaterial Request`
-            WHERE docstatus = 1
+                mr.name,
+                mr.transaction_date,
+                mr.schedule_date as required_by,
+                COALESCE(SUM(mri.qty), 0) as total_qty,
+                COALESCE(MAX(mri.stock_uom), '') as uom,
+                mr.status
+            FROM `tabMaterial Request` mr
+            LEFT JOIN `tabMaterial Request Item` mri ON mri.parent = mr.name
+            WHERE mr.docstatus = 1
                 {date_filter}
                 {supplier_filter}
                 {status_filter}
                 {id_filter}
                 {item_filter}
-            ORDER BY transaction_date DESC, creation DESC
+            GROUP BY mr.name, mr.transaction_date, mr.schedule_date, mr.status
+            ORDER BY mr.transaction_date DESC, mr.creation DESC
             LIMIT 100
         """.format(
-                date_filter=date_filter,
-                supplier_filter=supplier_filter,
-                status_filter=status_filter,
-                id_filter=id_filter,
-                item_filter=item_filter,
+                date_filter=mr_date_filter_join,
+                supplier_filter=mr_supplier_filter_join,
+                status_filter=mr_status_filter_join,
+                id_filter=mr_id_filter_join,
+                item_filter=mr_item_filter_join,
             ),
             as_dict=True,
         )
