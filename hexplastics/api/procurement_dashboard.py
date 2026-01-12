@@ -227,6 +227,7 @@ def get_material_request_data(
             FROM `tabMaterial Request` mr
             INNER JOIN `tabMaterial Request Item` mri ON mri.parent = mr.name
             WHERE mr.docstatus != 2
+                AND mr.status = 'Partially Ordered'
                 AND mri.ordered_qty > 0
                 AND mri.ordered_qty < mri.qty
                 {date_filter}
@@ -997,6 +998,16 @@ def get_status_filter_sql(status):
     # Handle Draft status specially (docstatus = 0)
     if status == "Draft":
         return " AND docstatus = 0"
+
+    # Handle Partially Ordered status specially - use subquery to find MRs with partially ordered items
+    # AND status must be 'Partially Ordered' (not 'Stopped' or other statuses)
+    if status == "Partially Ordered":
+        return """ AND status = 'Partially Ordered'
+            AND name IN (
+                SELECT DISTINCT parent 
+                FROM `tabMaterial Request Item` 
+                WHERE ordered_qty > 0 AND ordered_qty < qty
+            )"""
 
     status_safe = frappe.db.escape(status)
     return f" AND status = {status_safe}"

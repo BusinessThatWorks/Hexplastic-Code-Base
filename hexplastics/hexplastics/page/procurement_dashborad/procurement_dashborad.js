@@ -396,6 +396,7 @@ class ProcurementDashboard {
 
 		// Refresh data for the selected tab
 		if (tabId === "material-request") {
+			this.update_mr_cards_visibility();
 			this.refresh_material_requests();
 		} else if (tabId === "purchase-order") {
 			this.refresh_purchase_orders();
@@ -753,16 +754,41 @@ class ProcurementDashboard {
 		
 		if (!cardsContainer) return;
 
-		const cards = cardsContainer.querySelectorAll(".kpi-card[data-status]");
-		
-		cards.forEach(card => {
-			const cardStatus = card.getAttribute("data-status");
-			if (selectedStatus === "" || cardStatus === selectedStatus) {
-				card.style.display = "";
-			} else {
-				card.style.display = "none";
-			}
-		});
+		// Get all cards
+		const totalCard = document.getElementById("mr-card-total");
+		const pendingCard = document.getElementById("mr-card-pending");
+		const partiallyReceivedCard = document.getElementById("mr-card-partially-received");
+		const partiallyOrderedCard = document.getElementById("mr-card-partially-ordered");
+
+		if (selectedStatus === "") {
+			// Show all cards when "All" is selected
+			if (totalCard) totalCard.style.display = "";
+			if (pendingCard) pendingCard.style.display = "";
+			if (partiallyReceivedCard) partiallyReceivedCard.style.display = "";
+			if (partiallyOrderedCard) partiallyOrderedCard.style.display = "";
+		} else if (selectedStatus === "Partially Ordered") {
+			// Show only Partially Ordered MR card
+			if (totalCard) totalCard.style.display = "none";
+			if (pendingCard) pendingCard.style.display = "none";
+			if (partiallyReceivedCard) partiallyReceivedCard.style.display = "none";
+			if (partiallyOrderedCard) partiallyOrderedCard.style.display = "";
+		} else {
+			// For other statuses (Pending, Partially Received), show only the matching card
+			const cards = cardsContainer.querySelectorAll(".kpi-card[data-status]");
+			
+			cards.forEach(card => {
+				const cardStatus = card.getAttribute("data-status");
+				if (cardStatus === selectedStatus) {
+					card.style.display = "";
+				} else {
+					card.style.display = "none";
+				}
+			});
+			
+			// Hide cards without data-status (Total and Partially Ordered)
+			if (totalCard) totalCard.style.display = "none";
+			if (partiallyOrderedCard) partiallyOrderedCard.style.display = "none";
+		}
 	}
 
 	update_material_request_table(material_requests) {
