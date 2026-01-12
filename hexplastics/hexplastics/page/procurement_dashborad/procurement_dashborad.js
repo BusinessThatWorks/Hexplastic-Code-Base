@@ -111,27 +111,6 @@ class ProcurementDashboard {
 				self.refresh_data();
 			});
 
-			// Tab-specific Refresh buttons
-			this.wrapper.on("click", "#mr-refresh-btn", function () {
-				self.refresh_material_requests();
-			});
-
-			this.wrapper.on("click", "#po-refresh-btn", function () {
-				self.refresh_purchase_orders();
-			});
-
-			this.wrapper.on("click", "#pr-refresh-btn", function () {
-				self.refresh_purchase_receipts();
-			});
-
-			this.wrapper.on("click", "#pi-refresh-btn", function () {
-				self.refresh_purchase_invoices();
-			});
-
-			this.wrapper.on("click", "#tracker-refresh-btn", function () {
-				self.refresh_item_wise_tracker();
-			});
-
 			// Enter key on filters
 			this.wrapper.on("keypress", ".filter-input", function (e) {
 				if (e.which === 13) {
