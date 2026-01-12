@@ -553,7 +553,7 @@
 						<select class="filter-input filter-select" id="pi-status-filter">
 							<option value="">All</option>
 							<option value="Overdue">Overdue</option>
-							<option value="Cancelled">Cancelled</option>
+							<option value="Paid">Paid</option>
 						</select>
 					</div>
 					<div class="tab-filter-group">
@@ -588,24 +588,30 @@
 
 			<!-- KPI Cards -->
 			<div class="kpi-cards-grid" id="pi-kpi-cards">
+				<div class="kpi-card kpi-card-blue" id="pi-card-total">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-pi">0</div>
+						<div class="kpi-title">Total Purchase Invoice</div>
+						<div class="kpi-subtitle">
+							Total purchase invoices (excluding cancelled)
+						</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-green" id="pi-card-paid" data-status="Paid">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="paid-pi">0</div>
+						<div class="kpi-title">Paid Purchase Invoice</div>
+						<div class="kpi-subtitle">Purchase invoices with Paid status</div>
+					</div>
+				</div>
 				<div class="kpi-card kpi-card-red" id="pi-card-overdue" data-status="Overdue">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="overdue-pi">0</div>
 						<div class="kpi-title">Overdue Purchase Invoices</div>
 						<div class="kpi-subtitle">Purchase invoices with Overdue status</div>
-					</div>
-				</div>
-				<div
-					class="kpi-card kpi-card-orange"
-					id="pi-card-cancelled"
-					data-status="Cancelled"
-				>
-					<div class="kpi-card-border"></div>
-					<div class="kpi-card-content">
-						<div class="kpi-value" id="cancelled-pi">0</div>
-						<div class="kpi-title">Cancelled Purchase Invoices</div>
-						<div class="kpi-subtitle">Purchase invoices with Cancelled status</div>
 					</div>
 				</div>
 				<div class="kpi-card kpi-card-purple">

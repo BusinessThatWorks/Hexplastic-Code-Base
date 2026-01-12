@@ -989,8 +989,9 @@ class ProcurementDashboard {
 			if (el) el.textContent = value;
 		};
 
+		setEl("total-pi", this.format_number(metrics.total_pi_count));
+		setEl("paid-pi", this.format_number(metrics.paid_count));
 		setEl("overdue-pi", this.format_number(metrics.overdue_count));
-		setEl("cancelled-pi", this.format_number(metrics.cancelled_count));
 		setEl("total-invoice-value", this.format_currency(metrics.total_invoice_value));
 	}
 
@@ -1000,21 +1001,25 @@ class ProcurementDashboard {
 		
 		if (!cardsContainer) return;
 
+		const totalCard = document.getElementById("pi-card-total");
+		const paidCard = document.getElementById("pi-card-paid");
 		const overdueCard = document.getElementById("pi-card-overdue");
-		const cancelledCard = document.getElementById("pi-card-cancelled");
 		
 		if (selectedStatus === "") {
 			// Show all cards when "All" is selected
+			if (totalCard) totalCard.style.display = "";
+			if (paidCard) paidCard.style.display = "";
 			if (overdueCard) overdueCard.style.display = "";
-			if (cancelledCard) cancelledCard.style.display = "";
-		} else if (selectedStatus === "Overdue") {
-			// Show overdue card, hide cancelled card
-			if (overdueCard) overdueCard.style.display = "";
-			if (cancelledCard) cancelledCard.style.display = "none";
-		} else if (selectedStatus === "Cancelled") {
-			// Show cancelled card, hide overdue card
+		} else if (selectedStatus === "Paid") {
+			// Show paid card, hide others
+			if (totalCard) totalCard.style.display = "none";
+			if (paidCard) paidCard.style.display = "";
 			if (overdueCard) overdueCard.style.display = "none";
-			if (cancelledCard) cancelledCard.style.display = "";
+		} else if (selectedStatus === "Overdue") {
+			// Show overdue card, hide others
+			if (totalCard) totalCard.style.display = "none";
+			if (paidCard) paidCard.style.display = "none";
+			if (overdueCard) overdueCard.style.display = "";
 		}
 	}
 

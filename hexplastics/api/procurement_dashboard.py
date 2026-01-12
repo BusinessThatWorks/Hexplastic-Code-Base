@@ -757,8 +757,9 @@ def get_purchase_invoice_data(
     Returns:
         dict: {
             metrics: {
+                total_pi_count: int,
+                paid_count: int,
                 overdue_count: int,
-                cancelled_count: int,
                 total_invoice_value: float
             },
             purchase_invoices: list of purchase invoices
@@ -769,6 +770,41 @@ def get_purchase_invoice_data(
         supplier_filter = get_supplier_filter_sql(supplier)
         id_filter = get_id_filter_sql(pi_id, "name")
         item_filter = get_item_filter_sql(item, "Purchase Invoice")
+
+        # Total Purchase Invoices (exclude cancelled only, apply only global filters)
+        total_pi_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as count
+            FROM `tabPurchase Invoice`
+            WHERE docstatus != 2
+                {date_filter}
+                {supplier_filter}
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+            ),
+            as_dict=True,
+        )
+
+        # Paid Purchase Invoices (exclude cancelled)
+        paid_data = frappe.db.sql(
+            """
+            SELECT COUNT(*) as count
+            FROM `tabPurchase Invoice`
+            WHERE docstatus != 2
+                AND status = 'Paid'
+                {date_filter}
+                {supplier_filter}
+                {id_filter}
+                {item_filter}
+        """.format(
+                date_filter=date_filter,
+                supplier_filter=supplier_filter,
+                id_filter=id_filter,
+                item_filter=item_filter,
+            ),
+            as_dict=True,
+        )
 
         # Overdue Purchase Invoices (exclude cancelled)
         overdue_data = frappe.db.sql(
@@ -790,39 +826,20 @@ def get_purchase_invoice_data(
             as_dict=True,
         )
 
-        # Cancelled Purchase Invoices
-        cancelled_data = frappe.db.sql(
-            """
-            SELECT COUNT(*) as count
-            FROM `tabPurchase Invoice`
-            WHERE docstatus = 2
-                {date_filter}
-                {supplier_filter}
-                {id_filter}
-                {item_filter}
-        """.format(
-                date_filter=date_filter,
-                supplier_filter=supplier_filter,
-                id_filter=id_filter,
-                item_filter=item_filter,
-            ),
-            as_dict=True,
-        )
-
         # Build table query based on status filter
         # When "Overdue" is selected: show overdue invoices and exclude cancelled
-        # When "Cancelled" is selected: show cancelled invoices and exclude overdue
-        # When "All" is selected: show all invoices
+        # When "Paid" is selected: show paid invoices and exclude cancelled
+        # When "All" is selected: show all invoices (excluding cancelled)
         if status == "Overdue":
             # Show overdue invoices, exclude cancelled (docstatus != 2)
             table_condition = "docstatus IN (0, 1) AND status = 'Overdue'"
             table_status_filter = ""
-        elif status == "Cancelled":
-            # Show cancelled invoices (docstatus = 2)
-            table_condition = "docstatus = 2"
+        elif status == "Paid":
+            # Show paid invoices, exclude cancelled (docstatus != 2)
+            table_condition = "docstatus IN (0, 1) AND status = 'Paid'"
             table_status_filter = ""
         else:
-            # Show all invoices (default behavior)
+            # Show all invoices (default behavior, exclude cancelled)
             table_condition = "docstatus IN (0, 1)"
             table_status_filter = ""
 
@@ -880,10 +897,11 @@ def get_purchase_invoice_data(
 
         return {
             "metrics": {
-                "overdue_count": overdue_data[0].get("count", 0) if overdue_data else 0,
-                "cancelled_count": (
-                    cancelled_data[0].get("count", 0) if cancelled_data else 0
+                "total_pi_count": (
+                    total_pi_data[0].get("count", 0) if total_pi_data else 0
                 ),
+                "paid_count": paid_data[0].get("count", 0) if paid_data else 0,
+                "overdue_count": overdue_data[0].get("count", 0) if overdue_data else 0,
                 "total_invoice_value": (
                     flt(total_value_data[0].get("total_value", 0), 2)
                     if total_value_data
@@ -900,8 +918,9 @@ def get_purchase_invoice_data(
         )
         return {
             "metrics": {
+                "total_pi_count": 0,
+                "paid_count": 0,
                 "overdue_count": 0,
-                "cancelled_count": 0,
                 "total_invoice_value": 0,
             },
             "purchase_invoices": [],
