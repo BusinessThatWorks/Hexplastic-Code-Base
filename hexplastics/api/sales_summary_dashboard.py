@@ -93,9 +93,9 @@ def get_sales_order_data(from_date=None, to_date=None, customer=None, status=Non
     Returns:
         dict: {
             metrics: {
-                draft_count: int,
+                total_so_count: int,
                 to_deliver_and_bill_count: int,
-                completed_count: int,
+                partly_delivered_count: int,
                 total_value: float
             },
             orders: list of sales orders
@@ -104,16 +104,15 @@ def get_sales_order_data(from_date=None, to_date=None, customer=None, status=Non
     try:
         date_filter = get_date_filter_sql(from_date, to_date, "transaction_date")
         customer_filter = get_customer_filter_sql(customer)
-        status_filter = get_status_filter_sql(status)
+        status_filter = get_so_status_filter_sql(status)
         id_filter = get_id_filter_sql(order_id, "name")
         item_filter = get_item_filter_sql(item, "Sales Order")
         
-        # For metrics, we need to count by status
-        # Draft orders have docstatus = 0
-        draft_count_data = frappe.db.sql("""
+        # Total SO count (non-cancelled only)
+        total_so_data = frappe.db.sql("""
             SELECT COUNT(*) as count
             FROM `tabSales Order`
-            WHERE docstatus = 0
+            WHERE docstatus != 2
                 {date_filter}
                 {customer_filter}
                 {id_filter}
@@ -142,12 +141,12 @@ def get_sales_order_data(from_date=None, to_date=None, customer=None, status=Non
             item_filter=item_filter
         ), as_dict=True)
         
-        # Completed orders
-        completed_data = frappe.db.sql("""
+        # Partly Delivered orders
+        partly_delivered_data = frappe.db.sql("""
             SELECT COUNT(*) as count
             FROM `tabSales Order`
             WHERE docstatus = 1
-                AND status = 'Completed'
+                AND status = 'Partially Delivered'
                 {date_filter}
                 {customer_filter}
                 {id_filter}
@@ -159,11 +158,11 @@ def get_sales_order_data(from_date=None, to_date=None, customer=None, status=Non
             item_filter=item_filter
         ), as_dict=True)
         
-        # Total value for filtered orders (include Draft in the total)
+        # Total value for non-cancelled orders
         total_value_data = frappe.db.sql("""
             SELECT COALESCE(SUM(grand_total), 0) as total_value
             FROM `tabSales Order`
-            WHERE docstatus IN (0, 1)
+            WHERE docstatus != 2
                 {date_filter}
                 {customer_filter}
                 {status_filter}
@@ -177,22 +176,23 @@ def get_sales_order_data(from_date=None, to_date=None, customer=None, status=Non
             item_filter=item_filter
         ), as_dict=True)
         
-        # Get orders list for table
+        # Get orders list for table with additional fields
         orders = frappe.db.sql("""
             SELECT 
-                name,
-                transaction_date,
-                status,
-                customer,
-                grand_total
-            FROM `tabSales Order`
-            WHERE docstatus IN (0, 1)
+                so.name,
+                so.transaction_date,
+                so.delivery_date,
+                so.status,
+                so.customer,
+                so.grand_total
+            FROM `tabSales Order` so
+            WHERE so.docstatus != 2
                 {date_filter}
                 {customer_filter}
                 {status_filter}
                 {id_filter}
                 {item_filter}
-            ORDER BY transaction_date DESC, creation DESC
+            ORDER BY so.transaction_date DESC, so.creation DESC
             LIMIT 100
         """.format(
             date_filter=date_filter,
@@ -202,11 +202,37 @@ def get_sales_order_data(from_date=None, to_date=None, customer=None, status=Non
             item_filter=item_filter
         ), as_dict=True)
         
+        # Enrich orders with lead time, ordered qty, and delivered qty
+        for order in orders:
+            # Calculate lead time (days between delivery_date and transaction_date)
+            if order.get("delivery_date") and order.get("transaction_date"):
+                delivery = getdate(order.delivery_date)
+                transaction = getdate(order.transaction_date)
+                order["lead_time"] = (delivery - transaction).days
+            else:
+                order["lead_time"] = None
+            
+            # Get ordered and delivered quantities from Sales Order Item
+            item_data = frappe.db.sql("""
+                SELECT 
+                    COALESCE(SUM(qty), 0) as ordered_qty,
+                    COALESCE(SUM(delivered_qty), 0) as delivered_qty
+                FROM `tabSales Order Item`
+                WHERE parent = %s
+            """, (order.name,), as_dict=True)
+            
+            if item_data and item_data[0]:
+                order["ordered_qty"] = flt(item_data[0].get("ordered_qty", 0), 2)
+                order["delivered_qty"] = flt(item_data[0].get("delivered_qty", 0), 2)
+            else:
+                order["ordered_qty"] = 0
+                order["delivered_qty"] = 0
+        
         return {
             "metrics": {
-                "draft_count": draft_count_data[0].get("count", 0) if draft_count_data else 0,
+                "total_so_count": total_so_data[0].get("count", 0) if total_so_data else 0,
                 "to_deliver_and_bill_count": to_deliver_bill_data[0].get("count", 0) if to_deliver_bill_data else 0,
-                "completed_count": completed_data[0].get("count", 0) if completed_data else 0,
+                "partly_delivered_count": partly_delivered_data[0].get("count", 0) if partly_delivered_data else 0,
                 "total_value": flt(total_value_data[0].get("total_value", 0), 2) if total_value_data else 0
             },
             "orders": orders
@@ -219,9 +245,9 @@ def get_sales_order_data(from_date=None, to_date=None, customer=None, status=Non
         )
         return {
             "metrics": {
-                "draft_count": 0,
+                "total_so_count": 0,
                 "to_deliver_and_bill_count": 0,
-                "completed_count": 0,
+                "partly_delivered_count": 0,
                 "total_value": 0
             },
             "orders": []
@@ -327,11 +353,11 @@ def get_sales_invoice_data(from_date=None, to_date=None, customer=None, status=N
             item_filter=item_filter
         ), as_dict=True)
         
-        # Total value for filtered invoices
+        # Total value for filtered invoices (non-cancelled)
         total_value_data = frappe.db.sql("""
             SELECT COALESCE(SUM(grand_total), 0) as total_value
             FROM `tabSales Invoice`
-            WHERE docstatus IN (0, 1)
+            WHERE docstatus != 2
                 {date_filter}
                 {customer_filter}
                 {status_filter}
@@ -345,7 +371,7 @@ def get_sales_invoice_data(from_date=None, to_date=None, customer=None, status=N
             item_filter=item_filter
         ), as_dict=True)
         
-        # Get invoices list for table
+        # Get invoices list for table (non-cancelled)
         invoices = frappe.db.sql("""
             SELECT 
                 name,
@@ -355,7 +381,7 @@ def get_sales_invoice_data(from_date=None, to_date=None, customer=None, status=N
                 customer,
                 grand_total
             FROM `tabSales Invoice`
-            WHERE docstatus IN (0, 1)
+            WHERE docstatus != 2
                 {date_filter}
                 {customer_filter}
                 {status_filter}
@@ -371,12 +397,28 @@ def get_sales_invoice_data(from_date=None, to_date=None, customer=None, status=N
             item_filter=item_filter
         ), as_dict=True)
         
+        # Get total invoice count (non-cancelled)
+        total_invoice_data = frappe.db.sql("""
+            SELECT COUNT(*) as count
+            FROM `tabSales Invoice`
+            WHERE docstatus != 2
+                {date_filter}
+                {customer_filter}
+                {id_filter}
+                {item_filter}
+        """.format(
+            date_filter=date_filter,
+            customer_filter=customer_filter,
+            id_filter=id_filter,
+            item_filter=item_filter
+        ), as_dict=True)
+        
         return {
             "metrics": {
-                "unpaid_count": unpaid_data[0].get("count", 0) if unpaid_data else 0,
-                "draft_count": draft_data[0].get("count", 0) if draft_data else 0,
-                "overdue_count": overdue_data[0].get("count", 0) if overdue_data else 0,
+                "total_invoice_count": total_invoice_data[0].get("count", 0) if total_invoice_data else 0,
                 "paid_count": paid_data[0].get("count", 0) if paid_data else 0,
+                "unpaid_count": unpaid_data[0].get("count", 0) if unpaid_data else 0,
+                "overdue_count": overdue_data[0].get("count", 0) if overdue_data else 0,
                 "total_value": flt(total_value_data[0].get("total_value", 0), 2) if total_value_data else 0
             },
             "invoices": invoices
@@ -389,10 +431,10 @@ def get_sales_invoice_data(from_date=None, to_date=None, customer=None, status=N
         )
         return {
             "metrics": {
-                "unpaid_count": 0,
-                "draft_count": 0,
-                "overdue_count": 0,
+                "total_invoice_count": 0,
                 "paid_count": 0,
+                "unpaid_count": 0,
+                "overdue_count": 0,
                 "total_value": 0
             },
             "invoices": []
@@ -475,6 +517,30 @@ def get_status_filter_sql(status):
     # Handle Draft status specially (docstatus = 0)
     if status == "Draft":
         return " AND docstatus = 0"
+    
+    status_safe = frappe.db.escape(status)
+    return f" AND status = {status_safe}"
+
+
+def get_so_status_filter_sql(status):
+    """Generate SQL status filter clause for Sales Order tab."""
+    if not status or status == "All":
+        return ""
+    
+    # Handle Pending status - includes "To Deliver and Bill", "To Deliver", "To Bill"
+    if status == "Pending":
+        return """ AND (
+            status = 'To Deliver and Bill' 
+            OR status = 'To Deliver' 
+            OR status = 'To Bill'
+        )"""
+    
+    # Handle Partially status - includes "Partially Delivered", "Partially Delivered and Billed"
+    if status == "Partially":
+        return """ AND (
+            status = 'Partially Delivered' 
+            OR status = 'Partially Delivered and Billed'
+        )"""
     
     status_safe = frappe.db.escape(status)
     return f" AND status = {status_safe}"

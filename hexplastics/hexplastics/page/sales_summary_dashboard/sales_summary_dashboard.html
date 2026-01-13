@@ -125,7 +125,11 @@
 					<h3>Sales Overview</h3>
 				</div>
 				<div class="overview-content" id="sales-overview-content">
-					<p class="overview-text">This dashboard provides a comprehensive view of sales performance, including order and invoice metrics for the selected period. Use the filters above to analyze sales data by date range and customer.</p>
+					<p class="overview-text">
+						This dashboard provides a comprehensive view of sales performance,
+						including order and invoice metrics for the selected period. Use the
+						filters above to analyze sales data by date range and customer.
+					</p>
 				</div>
 			</div>
 		</div>
@@ -139,9 +143,8 @@
 						<label class="filter-label">Status</label>
 						<select class="filter-input filter-select" id="so-status-filter">
 							<option value="">All</option>
-							<option value="Draft">Draft</option>
-							<option value="Completed">Completed</option>
-							<option value="To Deliver and Bill">To Deliver and Bill</option>
+							<option value="Pending">Pending</option>
+							<option value="Partially">Partially</option>
 						</select>
 					</div>
 					<div class="tab-filter-group">
@@ -166,44 +169,51 @@
 							/>
 						</div>
 					</div>
-					<div class="tab-filter-group tab-filter-btn">
-						<button class="btn btn-primary refresh-btn" id="so-refresh-btn">Refresh</button>
-					</div>
 				</div>
 			</div>
 
 			<!-- KPI Cards -->
 			<div class="kpi-cards-grid" id="so-kpi-cards">
-				<div class="kpi-card kpi-card-blue" id="so-card-draft" data-status="Draft">
+				<div class="kpi-card kpi-card-blue" id="so-card-total" data-card-type="total">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
-						<div class="kpi-value" id="draft-sales-orders">0</div>
-						<div class="kpi-title">Draft Sales Orders</div>
-						<div class="kpi-subtitle">Sales orders with Draft status</div>
+						<div class="kpi-value" id="total-so-count">0</div>
+						<div class="kpi-title">Total Sales Orders</div>
+						<div class="kpi-subtitle">Count of all non-cancelled Sales Orders</div>
 					</div>
 				</div>
-				<div class="kpi-card kpi-card-teal" id="so-card-to-deliver-bill" data-status="To Deliver and Bill">
+				<div
+					class="kpi-card kpi-card-teal"
+					id="so-card-to-deliver-bill"
+					data-card-type="pending"
+				>
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="to-deliver-bill-orders">0</div>
-						<div class="kpi-title">To Deliver and Bill Sales Orders</div>
-						<div class="kpi-subtitle">Sales orders with To Deliver and Bill status</div>
+						<div class="kpi-title">Pending Delivered Orders</div>
+						<div class="kpi-subtitle">Status = "To Deliver and Bill"</div>
 					</div>
 				</div>
-				<div class="kpi-card kpi-card-green" id="so-card-completed" data-status="Completed">
+				<div
+					class="kpi-card kpi-card-green"
+					id="so-card-partly-delivered"
+					data-card-type="partially"
+				>
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
-						<div class="kpi-value" id="completed-sales-orders">0</div>
-						<div class="kpi-title">Completed Sales Orders</div>
-						<div class="kpi-subtitle">Sales orders with Completed status</div>
+						<div class="kpi-value" id="partly-delivered-orders">0</div>
+						<div class="kpi-title">Partially Delivered Orders</div>
+						<div class="kpi-subtitle">Status = "Partially Delivered"</div>
 					</div>
 				</div>
-				<div class="kpi-card kpi-card-orange">
+				<div class="kpi-card kpi-card-orange" id="so-card-total-value">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="so-total-value">₹0</div>
-						<div class="kpi-title">Total Order Value</div>
-						<div class="kpi-subtitle">Sum of grand total for selected date range</div>
+						<div class="kpi-title">Total Ordered Value</div>
+						<div class="kpi-subtitle">
+							SUM(grand_total) of non-cancelled Sales Orders
+						</div>
 					</div>
 				</div>
 			</div>
@@ -223,9 +233,12 @@
 							<tr>
 								<th>Sales Order</th>
 								<th>Date</th>
-								<th>Status</th>
 								<th>Customer</th>
+								<th>Lead Time</th>
+								<th>Ordered Quantity</th>
+								<th>Delivered Quantity</th>
 								<th class="text-right">Grand Total</th>
+								<th>Status</th>
 							</tr>
 						</thead>
 						<tbody id="so-tbody">
@@ -264,7 +277,6 @@
 						<select class="filter-input filter-select" id="si-status-filter">
 							<option value="">All</option>
 							<option value="Unpaid">Unpaid</option>
-							<option value="Draft">Draft</option>
 							<option value="Overdue">Overdue</option>
 							<option value="Paid">Paid</option>
 						</select>
@@ -291,47 +303,44 @@
 							/>
 						</div>
 					</div>
-					<div class="tab-filter-group tab-filter-btn">
-						<button class="btn btn-primary refresh-btn" id="si-refresh-btn">Refresh</button>
-					</div>
 				</div>
 			</div>
 
 			<!-- KPI Cards -->
 			<div class="kpi-cards-grid" id="si-kpi-cards">
-				<div class="kpi-card kpi-card-orange" id="si-card-unpaid" data-status="Unpaid">
+				<div class="kpi-card kpi-card-blue" id="si-card-total">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
-						<div class="kpi-value" id="unpaid-sales-invoices">0</div>
-						<div class="kpi-title">Unpaid Sales Invoices</div>
-						<div class="kpi-subtitle">Sales invoices with Unpaid status</div>
-					</div>
-				</div>
-				<div class="kpi-card kpi-card-blue" id="si-card-draft" data-status="Draft">
-					<div class="kpi-card-border"></div>
-					<div class="kpi-card-content">
-						<div class="kpi-value" id="draft-sales-invoices">0</div>
-						<div class="kpi-title">Draft Sales Invoices</div>
-						<div class="kpi-subtitle">Sales invoices with Draft status</div>
-					</div>
-				</div>
-				<div class="kpi-card kpi-card-red" id="si-card-overdue" data-status="Overdue">
-					<div class="kpi-card-border"></div>
-					<div class="kpi-card-content">
-						<div class="kpi-value" id="overdue-sales-invoices">0</div>
-						<div class="kpi-title">Overdue Sales Invoices</div>
-						<div class="kpi-subtitle">Sales invoices with Overdue status</div>
+						<div class="kpi-value" id="total-sales-invoices-count">0</div>
+						<div class="kpi-title">Total Sales Invoice</div>
+						<div class="kpi-subtitle">Count of all non-cancelled Sales Invoices</div>
 					</div>
 				</div>
 				<div class="kpi-card kpi-card-green" id="si-card-paid" data-status="Paid">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="paid-sales-invoices">0</div>
-						<div class="kpi-title">Paid Sales Invoices</div>
+						<div class="kpi-title">Paid Sales Invoice</div>
 						<div class="kpi-subtitle">Sales invoices with Paid status</div>
 					</div>
 				</div>
-				<div class="kpi-card kpi-card-purple">
+				<div class="kpi-card kpi-card-orange" id="si-card-unpaid" data-status="Unpaid">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="unpaid-sales-invoices">0</div>
+						<div class="kpi-title">Unpaid Sales Invoice</div>
+						<div class="kpi-subtitle">Sales invoices with Unpaid status</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-red" id="si-card-overdue" data-status="Overdue">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="overdue-sales-invoices">0</div>
+						<div class="kpi-title">Overdue Sales Invoice</div>
+						<div class="kpi-subtitle">Sales invoices with Overdue status</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-purple" id="si-card-total-value">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="si-total-value">₹0</div>
@@ -357,9 +366,9 @@
 								<th>Sales Invoice</th>
 								<th>Date</th>
 								<th>Due Date</th>
-								<th>Status</th>
 								<th>Customer</th>
 								<th class="text-right">Grand Total</th>
+								<th>Status</th>
 							</tr>
 						</thead>
 						<tbody id="si-tbody">

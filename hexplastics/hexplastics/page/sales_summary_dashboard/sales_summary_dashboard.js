@@ -52,7 +52,7 @@ class SalesSummaryDashboard {
 		this.set_default_dates();
 		this.bind_events();
 		this.load_filter_options();
-		this.refresh_data();
+		// Note: refresh_data() is called in set_default_dates() after dates are set
 	}
 
 	load_html() {
@@ -81,18 +81,23 @@ class SalesSummaryDashboard {
 
 	set_default_dates() {
 		const today = new Date();
-		const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+		const sevenDaysAgo = new Date(today);
+		sevenDaysAgo.setDate(today.getDate() - 7);
 
 		const formatDate = (date) => {
 			return date.toISOString().split("T")[0];
 		};
 
+		const self = this;
 		setTimeout(() => {
 			const fromDateInput = document.getElementById("from-date");
 			const toDateInput = document.getElementById("to-date");
 
-			if (fromDateInput) fromDateInput.value = formatDate(firstDay);
+			if (fromDateInput) fromDateInput.value = formatDate(sevenDaysAgo);
 			if (toDateInput) toDateInput.value = formatDate(today);
+			
+			// Trigger refresh after dates are set to ensure data is fetched with default dates
+			self.refresh_data();
 		}, 100);
 	}
 
@@ -109,16 +114,15 @@ class SalesSummaryDashboard {
 			// Global Refresh button
 			this.wrapper.on("click", "#refresh-btn", function () {
 				self.refresh_data();
-			});
-
-			// Sales Order tab Refresh button
-			this.wrapper.on("click", "#so-refresh-btn", function () {
-				self.refresh_sales_orders();
-			});
-
-			// Sales Invoice tab Refresh button
-			this.wrapper.on("click", "#si-refresh-btn", function () {
-				self.refresh_sales_invoices();
+				// Also refresh the current tab if not overview
+				const activeTab = self.wrapper.find(".tab-btn.active").data("tab");
+				if (activeTab === "sales-order") {
+					self.update_so_cards_visibility();
+					self.refresh_sales_orders();
+				} else if (activeTab === "sales-invoice") {
+					self.update_si_cards_visibility();
+					self.refresh_sales_invoices();
+				}
 			});
 
 			// Enter key on filters
@@ -530,10 +534,10 @@ class SalesSummaryDashboard {
 			if (el) el.textContent = value;
 		};
 
-		setEl("draft-sales-orders", this.format_number(metrics.draft_count));
-		setEl("to-deliver-bill-orders", this.format_number(metrics.to_deliver_and_bill_count));
-		setEl("completed-sales-orders", this.format_number(metrics.completed_count));
-		setEl("so-total-value", this.format_currency(metrics.total_value));
+		setEl("total-so-count", this.format_number(metrics.total_so_count || 0));
+		setEl("to-deliver-bill-orders", this.format_number(metrics.to_deliver_and_bill_count || 0));
+		setEl("partly-delivered-orders", this.format_number(metrics.partly_delivered_count || 0));
+		setEl("so-total-value", this.format_currency(metrics.total_value || 0));
 	}
 
 	update_sales_order_table(orders) {
@@ -563,13 +567,16 @@ class SalesSummaryDashboard {
 						</a>
 					</td>
 					<td>${this.format_date(order.transaction_date)}</td>
+					<td>${order.customer || "-"}</td>
+					<td>${order.lead_time !== null && order.lead_time !== undefined ? order.lead_time + " days" : "-"}</td>
+					<td class="text-right">${this.format_number(order.ordered_qty || 0)}</td>
+					<td class="text-right">${this.format_number(order.delivered_qty || 0)}</td>
+					<td class="text-right">${this.format_currency(order.grand_total)}</td>
 					<td>
 						<span class="status-badge status-${this.get_status_class(order.status)}">
 							${order.status || "-"}
 						</span>
 					</td>
-					<td>${order.customer || "-"}</td>
-					<td class="text-right">${this.format_currency(order.grand_total)}</td>
 				</tr>
 			`
 			)
@@ -584,10 +591,10 @@ class SalesSummaryDashboard {
 			if (el) el.textContent = value;
 		};
 
-		setEl("unpaid-sales-invoices", this.format_number(metrics.unpaid_count || 0));
-		setEl("draft-sales-invoices", this.format_number(metrics.draft_count || 0));
-		setEl("overdue-sales-invoices", this.format_number(metrics.overdue_count || 0));
+		setEl("total-sales-invoices-count", this.format_number(metrics.total_invoice_count || 0));
 		setEl("paid-sales-invoices", this.format_number(metrics.paid_count || 0));
+		setEl("unpaid-sales-invoices", this.format_number(metrics.unpaid_count || 0));
+		setEl("overdue-sales-invoices", this.format_number(metrics.overdue_count || 0));
 		setEl("si-total-value", this.format_currency(metrics.total_value || 0));
 	}
 
@@ -597,17 +604,33 @@ class SalesSummaryDashboard {
 		
 		if (!cardsContainer) return;
 
-		const cards = cardsContainer.querySelectorAll(".kpi-card[data-status]");
+		// Get all cards with data-card-type attribute
+		const totalCard = cardsContainer.querySelector("#so-card-total");
+		const toDeliverBillCard = cardsContainer.querySelector("#so-card-to-deliver-bill");
+		const partlyDeliveredCard = cardsContainer.querySelector("#so-card-partly-delivered");
+		const totalValueCard = cardsContainer.querySelector("#so-card-total-value");
 		
-		cards.forEach(card => {
-			const cardStatus = card.getAttribute("data-status");
-			// Show card if no filter is selected, or if the card matches the selected status
-			if (selectedStatus === "" || cardStatus === selectedStatus) {
-				card.style.display = "";
-			} else {
-				card.style.display = "none";
-			}
-		});
+		// Default: show all cards
+		if (selectedStatus === "" || selectedStatus === "All") {
+			if (totalCard) totalCard.style.display = "";
+			if (toDeliverBillCard) toDeliverBillCard.style.display = "";
+			if (partlyDeliveredCard) partlyDeliveredCard.style.display = "";
+			if (totalValueCard) totalValueCard.style.display = "";
+		}
+		// Pending: Hide "Total SO" and "Partly Delivered Orders"
+		else if (selectedStatus === "Pending") {
+			if (totalCard) totalCard.style.display = "none";
+			if (toDeliverBillCard) toDeliverBillCard.style.display = "";
+			if (partlyDeliveredCard) partlyDeliveredCard.style.display = "none";
+			if (totalValueCard) totalValueCard.style.display = "";
+		}
+		// Partially: Hide "Total SO" and "To Deliver and Bill Sales Order"
+		else if (selectedStatus === "Partially") {
+			if (totalCard) totalCard.style.display = "none";
+			if (toDeliverBillCard) toDeliverBillCard.style.display = "none";
+			if (partlyDeliveredCard) partlyDeliveredCard.style.display = "";
+			if (totalValueCard) totalValueCard.style.display = "";
+		}
 	}
 
 	update_si_cards_visibility() {
@@ -616,16 +639,34 @@ class SalesSummaryDashboard {
 		
 		if (!cardsContainer) return;
 
-		const cards = cardsContainer.querySelectorAll(".kpi-card[data-status]");
-		
-		cards.forEach(card => {
-			const cardStatus = card.getAttribute("data-status");
-			if (selectedStatus === "" || cardStatus === selectedStatus) {
-				card.style.display = "";
-			} else {
-				card.style.display = "none";
-			}
-		});
+		// Get all cards
+		const totalCard = cardsContainer.querySelector("#si-card-total");
+		const paidCard = cardsContainer.querySelector("#si-card-paid");
+		const unpaidCard = cardsContainer.querySelector("#si-card-unpaid");
+		const overdueCard = cardsContainer.querySelector("#si-card-overdue");
+		const totalValueCard = cardsContainer.querySelector("#si-card-total-value");
+
+		// Default: show all cards
+		if (selectedStatus === "" || selectedStatus === "All") {
+			if (totalCard) totalCard.style.display = "";
+			if (paidCard) paidCard.style.display = "";
+			if (unpaidCard) unpaidCard.style.display = "";
+			if (overdueCard) overdueCard.style.display = "";
+			if (totalValueCard) totalValueCard.style.display = "";
+		}
+		// When a specific status is selected: Hide "Total Sales Invoice" and show only relevant status card
+		else {
+			// Hide Total Sales Invoice card when any status filter is selected
+			if (totalCard) totalCard.style.display = "none";
+			
+			// Show/hide status-specific cards
+			if (paidCard) paidCard.style.display = selectedStatus === "Paid" ? "" : "none";
+			if (unpaidCard) unpaidCard.style.display = selectedStatus === "Unpaid" ? "" : "none";
+			if (overdueCard) overdueCard.style.display = selectedStatus === "Overdue" ? "" : "none";
+			
+			// Always show Total Invoice Value
+			if (totalValueCard) totalValueCard.style.display = "";
+		}
 	}
 
 	update_sales_invoice_table(invoices) {
@@ -656,13 +697,13 @@ class SalesSummaryDashboard {
 					</td>
 					<td>${this.format_date(invoice.posting_date)}</td>
 					<td>${this.format_date(invoice.due_date)}</td>
+					<td>${invoice.customer || "-"}</td>
+					<td class="text-right">${this.format_currency(invoice.grand_total)}</td>
 					<td>
 						<span class="status-badge status-${this.get_status_class(invoice.status)}">
 							${invoice.status || "-"}
 						</span>
 					</td>
-					<td>${invoice.customer || "-"}</td>
-					<td class="text-right">${this.format_currency(invoice.grand_total)}</td>
 				</tr>
 			`
 			)
