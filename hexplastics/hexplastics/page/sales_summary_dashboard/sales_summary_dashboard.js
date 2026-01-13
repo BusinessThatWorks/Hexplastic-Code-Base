@@ -39,6 +39,8 @@ class SalesSummaryDashboard {
 		this.wrapper = $(page.body);
 		this.customers = [];
 		this.items = [];
+		this.sales_order_ids = [];
+		this.sales_invoice_ids = [];
 		this.debounce_timer = null;
 
 		this.init();
@@ -196,10 +198,8 @@ class SalesSummaryDashboard {
 				}, 500);
 			});
 
-			// Setup autocomplete for filters
-			this.setup_customer_autocomplete();
-			this.setup_item_autocomplete("so-item-filter", "so-item-filter-wrapper");
-			this.setup_item_autocomplete("si-item-filter", "si-item-filter-wrapper");
+			// Note: Autocomplete setup is now done in load_filter_options callback
+			// to ensure data is loaded before setting up autocomplete
 		}, 200);
 	}
 
@@ -210,10 +210,16 @@ class SalesSummaryDashboard {
 		if (!input) return;
 
 		const wrapper = document.getElementById("customer-filter-wrapper");
-		const dropdown = document.createElement("div");
-		dropdown.className = "autocomplete-dropdown";
-		dropdown.style.display = "none";
-		wrapper.appendChild(dropdown);
+		if (!wrapper) return;
+
+		// Check if dropdown already exists
+		let dropdown = wrapper.querySelector(".autocomplete-dropdown");
+		if (!dropdown) {
+			dropdown = document.createElement("div");
+			dropdown.className = "autocomplete-dropdown";
+			dropdown.style.display = "none";
+			wrapper.appendChild(dropdown);
+		}
 
 		input.addEventListener("input", function () {
 			const value = this.value.toLowerCase();
@@ -244,6 +250,7 @@ class SalesSummaryDashboard {
 			if (e.target.classList.contains("autocomplete-item")) {
 				input.value = e.target.textContent;
 				dropdown.style.display = "none";
+				// Trigger change event to refresh filters
 				const changeEvent = new Event("change", { bubbles: true });
 				input.dispatchEvent(changeEvent);
 			}
@@ -263,10 +270,16 @@ class SalesSummaryDashboard {
 		if (!input) return;
 
 		const wrapper = document.getElementById(wrapperId);
-		const dropdown = document.createElement("div");
-		dropdown.className = "autocomplete-dropdown";
-		dropdown.style.display = "none";
-		wrapper.appendChild(dropdown);
+		if (!wrapper) return;
+
+		// Check if dropdown already exists
+		let dropdown = wrapper.querySelector(".autocomplete-dropdown");
+		if (!dropdown) {
+			dropdown = document.createElement("div");
+			dropdown.className = "autocomplete-dropdown";
+			dropdown.style.display = "none";
+			wrapper.appendChild(dropdown);
+		}
 
 		input.addEventListener("input", function () {
 			const value = this.value.toLowerCase();
@@ -297,6 +310,84 @@ class SalesSummaryDashboard {
 			if (e.target.classList.contains("autocomplete-item")) {
 				input.value = e.target.textContent;
 				dropdown.style.display = "none";
+				// Trigger change event to refresh filters
+				const changeEvent = new Event("change", { bubbles: true });
+				input.dispatchEvent(changeEvent);
+			}
+		});
+
+		document.addEventListener("click", function (e) {
+			if (!wrapper.contains(e.target)) {
+				dropdown.style.display = "none";
+			}
+		});
+	}
+
+	setup_id_autocomplete(inputId, filterType) {
+		const self = this;
+		const input = document.getElementById(inputId);
+
+		if (!input) return;
+
+		const wrapperId = inputId + "-wrapper";
+		let wrapper = document.getElementById(wrapperId);
+		
+		// If wrapper doesn't exist, use parent element or create one
+		if (!wrapper) {
+			wrapper = input.parentElement;
+			if (!wrapper.classList.contains("awesomplete-wrapper")) {
+				// Create wrapper and move input into it
+				const newWrapper = document.createElement("div");
+				newWrapper.className = "awesomplete-wrapper";
+				newWrapper.id = wrapperId;
+				input.parentNode.insertBefore(newWrapper, input);
+				newWrapper.appendChild(input);
+				wrapper = newWrapper;
+			}
+		}
+
+		// Check if dropdown already exists
+		let dropdown = wrapper.querySelector(".autocomplete-dropdown");
+		if (!dropdown) {
+			dropdown = document.createElement("div");
+			dropdown.className = "autocomplete-dropdown";
+			dropdown.style.display = "none";
+			wrapper.appendChild(dropdown);
+		}
+
+		// Get the appropriate ID list
+		const idList = filterType === "so-id-filter" ? self.sales_order_ids : self.sales_invoice_ids;
+
+		input.addEventListener("input", function () {
+			const value = this.value.toLowerCase();
+			const filtered = idList.filter((id) => id.toLowerCase().includes(value));
+
+			if (filtered.length > 0 && value.length > 0) {
+				dropdown.innerHTML = filtered
+					.slice(0, 10)
+					.map((id) => `<div class="autocomplete-item">${id}</div>`)
+					.join("");
+				dropdown.style.display = "block";
+			} else {
+				dropdown.style.display = "none";
+			}
+		});
+
+		input.addEventListener("focus", function () {
+			if (idList.length > 0 && this.value.length === 0) {
+				dropdown.innerHTML = idList
+					.slice(0, 10)
+					.map((id) => `<div class="autocomplete-item">${id}</div>`)
+					.join("");
+				dropdown.style.display = "block";
+			}
+		});
+
+		wrapper.addEventListener("click", function (e) {
+			if (e.target.classList.contains("autocomplete-item")) {
+				input.value = e.target.textContent;
+				dropdown.style.display = "none";
+				// Trigger change event to refresh filters
 				const changeEvent = new Event("change", { bubbles: true });
 				input.dispatchEvent(changeEvent);
 			}
@@ -319,6 +410,17 @@ class SalesSummaryDashboard {
 				if (r.message) {
 					self.customers = r.message.customers || [];
 					self.items = r.message.items || [];
+					self.sales_order_ids = r.message.sales_order_ids || [];
+					self.sales_invoice_ids = r.message.sales_invoice_ids || [];
+					
+					// Setup autocomplete after data is loaded
+					setTimeout(() => {
+						self.setup_customer_autocomplete();
+						self.setup_item_autocomplete("so-item-filter", "so-item-filter-wrapper");
+						self.setup_item_autocomplete("si-item-filter", "si-item-filter-wrapper");
+						self.setup_id_autocomplete("so-id-filter", "so-id-filter");
+						self.setup_id_autocomplete("si-id-filter", "si-id-filter");
+					}, 100);
 				}
 			},
 		});

@@ -449,7 +449,9 @@ def get_filter_options():
     Returns:
         dict: {
             customers: list of customer names,
-            items: list of item codes
+            items: list of item codes,
+            sales_order_ids: list of sales order names,
+            sales_invoice_ids: list of sales invoice names
         }
     """
     try:
@@ -472,9 +474,29 @@ def get_filter_options():
             LIMIT 200
         """, as_dict=True)
         
+        # Get Sales Order IDs (non-cancelled)
+        sales_order_ids = frappe.db.sql("""
+            SELECT DISTINCT name
+            FROM `tabSales Order`
+            WHERE docstatus != 2
+            ORDER BY name DESC
+            LIMIT 200
+        """, as_dict=True)
+        
+        # Get Sales Invoice IDs (non-cancelled)
+        sales_invoice_ids = frappe.db.sql("""
+            SELECT DISTINCT name
+            FROM `tabSales Invoice`
+            WHERE docstatus != 2
+            ORDER BY name DESC
+            LIMIT 200
+        """, as_dict=True)
+        
         return {
             "customers": [c.get("name") for c in customers if c.get("name")],
-            "items": [i.get("item_code") for i in items if i.get("item_code")]
+            "items": [i.get("item_code") for i in items if i.get("item_code")],
+            "sales_order_ids": [so.get("name") for so in sales_order_ids if so.get("name")],
+            "sales_invoice_ids": [si.get("name") for si in sales_invoice_ids if si.get("name")]
         }
         
     except Exception:
@@ -482,7 +504,7 @@ def get_filter_options():
             message=frappe.get_traceback(),
             title=_("Error fetching filter options")
         )
-        return {"customers": [], "items": []}
+        return {"customers": [], "items": [], "sales_order_ids": [], "sales_invoice_ids": []}
 
 
 def get_date_filter_sql(from_date, to_date, date_field):
