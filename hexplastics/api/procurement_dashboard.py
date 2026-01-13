@@ -1067,6 +1067,261 @@ def get_filter_options():
         return {"suppliers": [], "items": []}
 
 
+@frappe.whitelist()
+def get_supplier_suggestions(from_date=None, to_date=None, search_term=""):
+    """
+    Get supplier suggestions filtered by date range and search term.
+
+    Args:
+        from_date: Start date filter
+        to_date: End date filter
+        search_term: Search term to filter suppliers
+
+    Returns:
+        list: List of supplier names
+    """
+    try:
+        date_filter = get_date_filter_sql(from_date, to_date, "po.transaction_date")
+
+        # Build search filter
+        if search_term:
+            search_safe = frappe.db.escape(f"%{search_term}%")
+            search_filter = f" AND s.supplier_name LIKE {search_safe}"
+        else:
+            search_filter = ""
+
+        # Get suppliers from Purchase Orders within date range
+        suppliers = frappe.db.sql(
+            """
+            SELECT DISTINCT s.supplier_name as name
+            FROM `tabSupplier` s
+            INNER JOIN `tabPurchase Order` po ON po.supplier = s.supplier_name
+            WHERE s.disabled = 0
+                {date_filter}
+                {search_filter}
+            ORDER BY s.supplier_name
+            LIMIT 50
+        """.format(
+                date_filter=date_filter, search_filter=search_filter
+            ),
+            as_dict=True,
+        )
+
+        return [s.get("name") for s in suppliers if s.get("name")]
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching supplier suggestions"),
+        )
+        return []
+
+
+@frappe.whitelist()
+def get_item_suggestions(
+    from_date=None, to_date=None, search_term="", doctype="Purchase Order"
+):
+    """
+    Get item suggestions filtered by date range and search term.
+
+    Args:
+        from_date: Start date filter
+        to_date: End date filter
+        search_term: Search term to filter items
+        doctype: Document type to filter items from (Purchase Order, Material Request, etc.)
+
+    Returns:
+        list: List of item codes
+    """
+    try:
+        # Determine date field and table aliases based on doctype
+        if doctype == "Purchase Order":
+            date_field = "po.transaction_date"
+            parent_table = "`tabPurchase Order` po"
+            child_table = "`tabPurchase Order Item` ct"
+            child_alias = "ct"
+            join_condition = "ct.parent = po.name"
+        elif doctype == "Material Request":
+            date_field = "mr.transaction_date"
+            parent_table = "`tabMaterial Request` mr"
+            child_table = "`tabMaterial Request Item` ct"
+            child_alias = "ct"
+            join_condition = "ct.parent = mr.name"
+        elif doctype == "Purchase Receipt":
+            date_field = "pr.posting_date"
+            parent_table = "`tabPurchase Receipt` pr"
+            child_table = "`tabPurchase Receipt Item` ct"
+            child_alias = "ct"
+            join_condition = "ct.parent = pr.name"
+        elif doctype == "Purchase Invoice":
+            date_field = "pi.posting_date"
+            parent_table = "`tabPurchase Invoice` pi"
+            child_table = "`tabPurchase Invoice Item` ct"
+            child_alias = "ct"
+            join_condition = "ct.parent = pi.name"
+        else:
+            # Default to Purchase Order
+            date_field = "po.transaction_date"
+            parent_table = "`tabPurchase Order` po"
+            child_table = "`tabPurchase Order Item` ct"
+            child_alias = "ct"
+            join_condition = "ct.parent = po.name"
+
+        date_filter = get_date_filter_sql(from_date, to_date, date_field)
+
+        # Build search filter
+        if search_term:
+            search_safe = frappe.db.escape(f"%{search_term}%")
+            search_filter = f" AND i.item_code LIKE {search_safe}"
+        else:
+            search_filter = ""
+
+        # Get items from the specified doctype within date range
+        # Items already in documents are valid suggestions regardless of is_purchase_item flag
+        items = frappe.db.sql(
+            """
+            SELECT DISTINCT i.item_code
+            FROM `tabItem` i
+            INNER JOIN {child_table} ON {child_alias}.item_code = i.item_code
+            INNER JOIN {parent_table} ON {join_condition}
+            WHERE i.disabled = 0
+                {date_filter}
+                {search_filter}
+            ORDER BY i.item_code
+            LIMIT 50
+        """.format(
+                child_table=child_table,
+                child_alias=child_alias,
+                parent_table=parent_table,
+                join_condition=join_condition,
+                date_filter=date_filter,
+                search_filter=search_filter,
+            ),
+            as_dict=True,
+        )
+
+        return [i.get("item_code") for i in items if i.get("item_code")]
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(), title=_("Error fetching item suggestions")
+        )
+        return []
+
+
+@frappe.whitelist()
+def get_po_suggestions(from_date=None, to_date=None, search_term=""):
+    """
+    Get Purchase Order suggestions filtered by date range and search term.
+
+    Args:
+        from_date: Start date filter
+        to_date: End date filter
+        search_term: Search term to filter PO numbers
+
+    Returns:
+        list: List of Purchase Order names
+    """
+    try:
+        date_filter = get_date_filter_sql(from_date, to_date, "transaction_date")
+
+        # Build search filter
+        if search_term:
+            search_safe = frappe.db.escape(f"%{search_term}%")
+            search_filter = f" AND name LIKE {search_safe}"
+        else:
+            search_filter = ""
+
+        # Get Purchase Orders within date range
+        pos = frappe.db.sql(
+            """
+            SELECT DISTINCT name
+            FROM `tabPurchase Order`
+            WHERE docstatus != 2
+                {date_filter}
+                {search_filter}
+            ORDER BY name DESC
+            LIMIT 50
+        """.format(
+                date_filter=date_filter, search_filter=search_filter
+            ),
+            as_dict=True,
+        )
+
+        return [po.get("name") for po in pos if po.get("name")]
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(), title=_("Error fetching PO suggestions")
+        )
+        return []
+
+
+@frappe.whitelist()
+def get_doc_id_suggestions(doctype, from_date=None, to_date=None, search_term=""):
+    """
+    Get document ID suggestions filtered by date range and search term.
+
+    Args:
+        doctype: Document type (Material Request, Purchase Order, etc.)
+        from_date: Start date filter
+        to_date: End date filter
+        search_term: Search term to filter document names
+
+    Returns:
+        list: List of document names
+    """
+    try:
+        # Determine date field based on doctype
+        if doctype == "Material Request":
+            date_field = "transaction_date"
+        elif doctype == "Purchase Order":
+            date_field = "transaction_date"
+        elif doctype == "Purchase Receipt":
+            date_field = "posting_date"
+        elif doctype == "Purchase Invoice":
+            date_field = "posting_date"
+        else:
+            date_field = "creation"
+
+        date_filter = get_date_filter_sql(from_date, to_date, date_field)
+
+        # Build search filter
+        if search_term:
+            search_safe = frappe.db.escape(f"%{search_term}%")
+            search_filter = f" AND name LIKE {search_safe}"
+        else:
+            search_filter = ""
+
+        # Get documents within date range
+        table_name = f"tab{doctype}"
+        docs = frappe.db.sql(
+            """
+            SELECT DISTINCT name
+            FROM `{table_name}`
+            WHERE docstatus != 2
+                {date_filter}
+                {search_filter}
+            ORDER BY name DESC
+            LIMIT 50
+        """.format(
+                table_name=table_name,
+                date_filter=date_filter,
+                search_filter=search_filter,
+            ),
+            as_dict=True,
+        )
+
+        return [doc.get("name") for doc in docs if doc.get("name")]
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching document ID suggestions"),
+        )
+        return []
+
+
 def get_date_filter_sql(from_date, to_date, date_field):
     """Generate SQL date filter clause."""
     filters = []

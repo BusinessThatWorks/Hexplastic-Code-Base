@@ -54,13 +54,6 @@ class ProcurementDashboard {
 		this.set_default_dates();
 		this.bind_events();
 		this.load_filter_options();
-		// Set initial supplier filter visibility (overview tab is default, so hide supplier)
-		setTimeout(() => {
-			const supplierFilterGroup = this.wrapper.find(".filter-group-wide").first();
-			if (supplierFilterGroup.length) {
-				supplierFilterGroup.hide();
-			}
-		}, 300);
 		this.refresh_data();
 	}
 
@@ -90,7 +83,9 @@ class ProcurementDashboard {
 
 	set_default_dates() {
 		const today = new Date();
-		const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+		// Set from date to 7 days ago
+		const sevenDaysAgo = new Date(today);
+		sevenDaysAgo.setDate(today.getDate() - 7);
 
 		const formatDate = (date) => {
 			return date.toISOString().split("T")[0];
@@ -100,7 +95,7 @@ class ProcurementDashboard {
 			const fromDateInput = document.getElementById("from-date");
 			const toDateInput = document.getElementById("to-date");
 
-			if (fromDateInput) fromDateInput.value = formatDate(firstDay);
+			if (fromDateInput) fromDateInput.value = formatDate(sevenDaysAgo);
 			if (toDateInput) toDateInput.value = formatDate(today);
 		}, 100);
 	}
@@ -129,10 +124,14 @@ class ProcurementDashboard {
 
 			// Auto-refresh on global filter changes
 			this.wrapper.on("change", "#from-date", function () {
+				// Clear and refresh autocomplete suggestions when date changes
+				self.refresh_autocomplete_suggestions();
 				self.refresh_data();
 			});
 
 			this.wrapper.on("change", "#to-date", function () {
+				// Clear and refresh autocomplete suggestions when date changes
+				self.refresh_autocomplete_suggestions();
 				self.refresh_data();
 			});
 
@@ -141,16 +140,20 @@ class ProcurementDashboard {
 					clearTimeout(self.debounce_timer);
 					self.debounce_timer = null;
 				}
+				// Refresh data when supplier is selected or cleared
 				self.refresh_data();
 			});
 
+			// Handle clearing supplier filter
 			this.wrapper.on("input", "#supplier-filter", function () {
-				if (self.debounce_timer) {
-					clearTimeout(self.debounce_timer);
-				}
-				self.debounce_timer = setTimeout(function () {
+				if (this.value.trim() === "") {
+					// Field was cleared, refresh data immediately
+					if (self.debounce_timer) {
+						clearTimeout(self.debounce_timer);
+						self.debounce_timer = null;
+					}
 					self.refresh_data();
-				}, 500);
+				}
 			});
 
 			// Material Request tab filter changes
@@ -164,12 +167,22 @@ class ProcurementDashboard {
 			});
 
 			this.wrapper.on("input", "#mr-id-filter, #mr-item-filter", function () {
-				if (self.debounce_timer) {
-					clearTimeout(self.debounce_timer);
-				}
-				self.debounce_timer = setTimeout(function () {
+				const value = this.value.trim();
+				if (value === "") {
+					// Field was cleared, refresh immediately
+					if (self.debounce_timer) {
+						clearTimeout(self.debounce_timer);
+						self.debounce_timer = null;
+					}
 					self.refresh_material_requests();
-				}, 500);
+				} else {
+					if (self.debounce_timer) {
+						clearTimeout(self.debounce_timer);
+					}
+					self.debounce_timer = setTimeout(function () {
+						self.refresh_material_requests();
+					}, 500);
+				}
 			});
 
 			// Purchase Order tab filter changes
@@ -183,12 +196,22 @@ class ProcurementDashboard {
 			});
 
 			this.wrapper.on("input", "#po-id-filter, #po-item-filter", function () {
-				if (self.debounce_timer) {
-					clearTimeout(self.debounce_timer);
-				}
-				self.debounce_timer = setTimeout(function () {
+				const value = this.value.trim();
+				if (value === "") {
+					// Field was cleared, refresh immediately
+					if (self.debounce_timer) {
+						clearTimeout(self.debounce_timer);
+						self.debounce_timer = null;
+					}
 					self.refresh_purchase_orders();
-				}, 500);
+				} else {
+					if (self.debounce_timer) {
+						clearTimeout(self.debounce_timer);
+					}
+					self.debounce_timer = setTimeout(function () {
+						self.refresh_purchase_orders();
+					}, 500);
+				}
 			});
 
 			// Purchase Receipt tab filter changes
@@ -202,12 +225,22 @@ class ProcurementDashboard {
 			});
 
 			this.wrapper.on("input", "#pr-id-filter, #pr-item-filter", function () {
-				if (self.debounce_timer) {
-					clearTimeout(self.debounce_timer);
-				}
-				self.debounce_timer = setTimeout(function () {
+				const value = this.value.trim();
+				if (value === "") {
+					// Field was cleared, refresh immediately
+					if (self.debounce_timer) {
+						clearTimeout(self.debounce_timer);
+						self.debounce_timer = null;
+					}
 					self.refresh_purchase_receipts();
-				}, 500);
+				} else {
+					if (self.debounce_timer) {
+						clearTimeout(self.debounce_timer);
+					}
+					self.debounce_timer = setTimeout(function () {
+						self.refresh_purchase_receipts();
+					}, 500);
+				}
 			});
 
 			// Purchase Invoice tab filter changes
@@ -221,12 +254,22 @@ class ProcurementDashboard {
 			});
 
 			this.wrapper.on("input", "#pi-id-filter, #pi-item-filter", function () {
-				if (self.debounce_timer) {
-					clearTimeout(self.debounce_timer);
-				}
-				self.debounce_timer = setTimeout(function () {
+				const value = this.value.trim();
+				if (value === "") {
+					// Field was cleared, refresh immediately
+					if (self.debounce_timer) {
+						clearTimeout(self.debounce_timer);
+						self.debounce_timer = null;
+					}
 					self.refresh_purchase_invoices();
-				}, 500);
+				} else {
+					if (self.debounce_timer) {
+						clearTimeout(self.debounce_timer);
+					}
+					self.debounce_timer = setTimeout(function () {
+						self.refresh_purchase_invoices();
+					}, 500);
+				}
 			});
 
 			// Item Wise Tracker tab filter changes
@@ -235,21 +278,60 @@ class ProcurementDashboard {
 			});
 
 			this.wrapper.on("input", "#tracker-po-filter, #tracker-item-filter", function () {
-				if (self.debounce_timer) {
-					clearTimeout(self.debounce_timer);
-				}
-				self.debounce_timer = setTimeout(function () {
+				const value = this.value.trim();
+				if (value === "") {
+					// Field was cleared, refresh immediately
+					if (self.debounce_timer) {
+						clearTimeout(self.debounce_timer);
+						self.debounce_timer = null;
+					}
 					self.refresh_item_wise_tracker();
-				}, 500);
+				} else {
+					if (self.debounce_timer) {
+						clearTimeout(self.debounce_timer);
+					}
+					self.debounce_timer = setTimeout(function () {
+						self.refresh_item_wise_tracker();
+					}, 500);
+				}
 			});
 
 			// Setup autocomplete for filters
 			this.setup_supplier_autocomplete();
-			this.setup_item_autocomplete("mr-item-filter", "mr-item-filter-wrapper");
-			this.setup_item_autocomplete("po-item-filter", "po-item-filter-wrapper");
-			this.setup_item_autocomplete("pr-item-filter", "pr-item-filter-wrapper");
-			this.setup_item_autocomplete("pi-item-filter", "pi-item-filter-wrapper");
-			this.setup_item_autocomplete("tracker-item-filter", "tracker-item-filter-wrapper");
+			this.setup_item_autocomplete(
+				"mr-item-filter",
+				"mr-item-filter-wrapper",
+				"Material Request"
+			);
+			this.setup_item_autocomplete(
+				"po-item-filter",
+				"po-item-filter-wrapper",
+				"Purchase Order"
+			);
+			this.setup_item_autocomplete(
+				"pr-item-filter",
+				"pr-item-filter-wrapper",
+				"Purchase Receipt"
+			);
+			this.setup_item_autocomplete(
+				"pi-item-filter",
+				"pi-item-filter-wrapper",
+				"Purchase Invoice"
+			);
+			this.setup_item_autocomplete(
+				"tracker-item-filter",
+				"tracker-item-filter-wrapper",
+				"Purchase Order"
+			);
+
+			// Setup autocomplete for ID fields
+			this.setup_id_autocomplete("mr-id-filter", "Material Request");
+			this.setup_id_autocomplete("po-id-filter", "Purchase Order");
+			this.setup_id_autocomplete("pr-id-filter", "Purchase Receipt");
+			this.setup_id_autocomplete("pi-id-filter", "Purchase Invoice");
+
+			// Setup autocomplete for PO No field
+			this.setup_po_autocomplete("tracker-po-filter");
 		}, 200);
 	}
 
@@ -265,28 +347,56 @@ class ProcurementDashboard {
 		dropdown.style.display = "none";
 		wrapper.appendChild(dropdown);
 
-		input.addEventListener("input", function () {
-			const value = this.value.toLowerCase();
-			const filtered = self.suppliers.filter((s) => s.toLowerCase().includes(value));
+		let debounceTimer = null;
 
-			if (filtered.length > 0 && value.length > 0) {
-				dropdown.innerHTML = filtered
-					.slice(0, 10)
-					.map((s) => `<div class="autocomplete-item">${s}</div>`)
-					.join("");
-				dropdown.style.display = "block";
+		const fetchSuggestions = (searchTerm) => {
+			if (debounceTimer) {
+				clearTimeout(debounceTimer);
+			}
+
+			debounceTimer = setTimeout(() => {
+				const globalFilters = self.get_global_filters();
+
+				frappe.call({
+					method: "hexplastics.api.procurement_dashboard.get_supplier_suggestions",
+					args: {
+						from_date: globalFilters.from_date,
+						to_date: globalFilters.to_date,
+						search_term: searchTerm || "",
+					},
+					callback: function (r) {
+						if (r.message && r.message.length > 0) {
+							dropdown.innerHTML = r.message
+								.slice(0, 10)
+								.map((s) => `<div class="autocomplete-item">${s}</div>`)
+								.join("");
+							dropdown.style.display = "block";
+						} else {
+							dropdown.style.display = "none";
+						}
+					},
+					error: function () {
+						dropdown.style.display = "none";
+					},
+				});
+			}, 300);
+		};
+
+		input.addEventListener("input", function () {
+			const value = this.value.trim();
+			if (value.length > 0) {
+				fetchSuggestions(value);
 			} else {
 				dropdown.style.display = "none";
 			}
 		});
 
 		input.addEventListener("focus", function () {
-			if (self.suppliers.length > 0 && this.value.length === 0) {
-				dropdown.innerHTML = self.suppliers
-					.slice(0, 10)
-					.map((s) => `<div class="autocomplete-item">${s}</div>`)
-					.join("");
-				dropdown.style.display = "block";
+			const value = this.value.trim();
+			if (value.length === 0) {
+				fetchSuggestions("");
+			} else {
+				fetchSuggestions(value);
 			}
 		});
 
@@ -306,7 +416,7 @@ class ProcurementDashboard {
 		});
 	}
 
-	setup_item_autocomplete(inputId, wrapperId) {
+	setup_item_autocomplete(inputId, wrapperId, doctype = "Purchase Order") {
 		const self = this;
 		const input = document.getElementById(inputId);
 
@@ -318,28 +428,57 @@ class ProcurementDashboard {
 		dropdown.style.display = "none";
 		wrapper.appendChild(dropdown);
 
-		input.addEventListener("input", function () {
-			const value = this.value.toLowerCase();
-			const filtered = self.items.filter((item) => item.toLowerCase().includes(value));
+		let debounceTimer = null;
 
-			if (filtered.length > 0 && value.length > 0) {
-				dropdown.innerHTML = filtered
-					.slice(0, 10)
-					.map((item) => `<div class="autocomplete-item">${item}</div>`)
-					.join("");
-				dropdown.style.display = "block";
+		const fetchSuggestions = (searchTerm) => {
+			if (debounceTimer) {
+				clearTimeout(debounceTimer);
+			}
+
+			debounceTimer = setTimeout(() => {
+				const globalFilters = self.get_global_filters();
+
+				frappe.call({
+					method: "hexplastics.api.procurement_dashboard.get_item_suggestions",
+					args: {
+						from_date: globalFilters.from_date,
+						to_date: globalFilters.to_date,
+						search_term: searchTerm || "",
+						doctype: doctype,
+					},
+					callback: function (r) {
+						if (r.message && r.message.length > 0) {
+							dropdown.innerHTML = r.message
+								.slice(0, 10)
+								.map((item) => `<div class="autocomplete-item">${item}</div>`)
+								.join("");
+							dropdown.style.display = "block";
+						} else {
+							dropdown.style.display = "none";
+						}
+					},
+					error: function () {
+						dropdown.style.display = "none";
+					},
+				});
+			}, 300);
+		};
+
+		input.addEventListener("input", function () {
+			const value = this.value.trim();
+			if (value.length > 0) {
+				fetchSuggestions(value);
 			} else {
 				dropdown.style.display = "none";
 			}
 		});
 
 		input.addEventListener("focus", function () {
-			if (self.items.length > 0 && this.value.length === 0) {
-				dropdown.innerHTML = self.items
-					.slice(0, 10)
-					.map((item) => `<div class="autocomplete-item">${item}</div>`)
-					.join("");
-				dropdown.style.display = "block";
+			const value = this.value.trim();
+			if (value.length === 0) {
+				fetchSuggestions("");
+			} else {
+				fetchSuggestions(value);
 			}
 		});
 
@@ -371,6 +510,189 @@ class ProcurementDashboard {
 					self.items = r.message.items || [];
 				}
 			},
+		});
+	}
+
+	setup_id_autocomplete(inputId, doctype) {
+		const self = this;
+		const input = document.getElementById(inputId);
+
+		if (!input) return;
+
+		// Create wrapper if it doesn't exist
+		let wrapper = input.parentElement;
+		if (!wrapper.classList.contains("awesomplete-wrapper")) {
+			// Wrap the input in a div
+			const newWrapper = document.createElement("div");
+			newWrapper.className = "awesomplete-wrapper";
+			input.parentNode.insertBefore(newWrapper, input);
+			newWrapper.appendChild(input);
+			wrapper = newWrapper;
+		}
+
+		const dropdown = document.createElement("div");
+		dropdown.className = "autocomplete-dropdown";
+		dropdown.style.display = "none";
+		wrapper.appendChild(dropdown);
+
+		let debounceTimer = null;
+
+		const fetchSuggestions = (searchTerm) => {
+			if (debounceTimer) {
+				clearTimeout(debounceTimer);
+			}
+
+			debounceTimer = setTimeout(() => {
+				const globalFilters = self.get_global_filters();
+
+				frappe.call({
+					method: "hexplastics.api.procurement_dashboard.get_doc_id_suggestions",
+					args: {
+						doctype: doctype,
+						from_date: globalFilters.from_date,
+						to_date: globalFilters.to_date,
+						search_term: searchTerm || "",
+					},
+					callback: function (r) {
+						if (r.message && r.message.length > 0) {
+							dropdown.innerHTML = r.message
+								.slice(0, 10)
+								.map((id) => `<div class="autocomplete-item">${id}</div>`)
+								.join("");
+							dropdown.style.display = "block";
+						} else {
+							dropdown.style.display = "none";
+						}
+					},
+					error: function () {
+						dropdown.style.display = "none";
+					},
+				});
+			}, 300);
+		};
+
+		input.addEventListener("input", function () {
+			const value = this.value.trim();
+			if (value.length > 0) {
+				fetchSuggestions(value);
+			} else {
+				dropdown.style.display = "none";
+			}
+		});
+
+		input.addEventListener("focus", function () {
+			const value = this.value.trim();
+			if (value.length === 0) {
+				fetchSuggestions("");
+			} else {
+				fetchSuggestions(value);
+			}
+		});
+
+		wrapper.addEventListener("click", function (e) {
+			if (e.target.classList.contains("autocomplete-item")) {
+				input.value = e.target.textContent;
+				dropdown.style.display = "none";
+				const changeEvent = new Event("change", { bubbles: true });
+				input.dispatchEvent(changeEvent);
+			}
+		});
+
+		document.addEventListener("click", function (e) {
+			if (!wrapper.contains(e.target)) {
+				dropdown.style.display = "none";
+			}
+		});
+	}
+
+	setup_po_autocomplete(inputId) {
+		const self = this;
+		const input = document.getElementById(inputId);
+
+		if (!input) return;
+
+		// Create wrapper if it doesn't exist
+		let wrapper = input.parentElement;
+		if (!wrapper.classList.contains("awesomplete-wrapper")) {
+			// Wrap the input in a div
+			const newWrapper = document.createElement("div");
+			newWrapper.className = "awesomplete-wrapper";
+			input.parentNode.insertBefore(newWrapper, input);
+			newWrapper.appendChild(input);
+			wrapper = newWrapper;
+		}
+
+		const dropdown = document.createElement("div");
+		dropdown.className = "autocomplete-dropdown";
+		dropdown.style.display = "none";
+		wrapper.appendChild(dropdown);
+
+		let debounceTimer = null;
+
+		const fetchSuggestions = (searchTerm) => {
+			if (debounceTimer) {
+				clearTimeout(debounceTimer);
+			}
+
+			debounceTimer = setTimeout(() => {
+				const globalFilters = self.get_global_filters();
+
+				frappe.call({
+					method: "hexplastics.api.procurement_dashboard.get_po_suggestions",
+					args: {
+						from_date: globalFilters.from_date,
+						to_date: globalFilters.to_date,
+						search_term: searchTerm || "",
+					},
+					callback: function (r) {
+						if (r.message && r.message.length > 0) {
+							dropdown.innerHTML = r.message
+								.slice(0, 10)
+								.map((po) => `<div class="autocomplete-item">${po}</div>`)
+								.join("");
+							dropdown.style.display = "block";
+						} else {
+							dropdown.style.display = "none";
+						}
+					},
+					error: function () {
+						dropdown.style.display = "none";
+					},
+				});
+			}, 300);
+		};
+
+		input.addEventListener("input", function () {
+			const value = this.value.trim();
+			if (value.length > 0) {
+				fetchSuggestions(value);
+			} else {
+				dropdown.style.display = "none";
+			}
+		});
+
+		input.addEventListener("focus", function () {
+			const value = this.value.trim();
+			if (value.length === 0) {
+				fetchSuggestions("");
+			} else {
+				fetchSuggestions(value);
+			}
+		});
+
+		wrapper.addEventListener("click", function (e) {
+			if (e.target.classList.contains("autocomplete-item")) {
+				input.value = e.target.textContent;
+				dropdown.style.display = "none";
+				const changeEvent = new Event("change", { bubbles: true });
+				input.dispatchEvent(changeEvent);
+			}
+		});
+
+		document.addEventListener("click", function (e) {
+			if (!wrapper.contains(e.target)) {
+				dropdown.style.display = "none";
+			}
 		});
 	}
 
@@ -1246,5 +1568,12 @@ class ProcurementDashboard {
 			"credit-note-issued": "return",
 		};
 		return statusMap[statusLower] || "default";
+	}
+
+	refresh_autocomplete_suggestions() {
+		// This method can be called when date filters change
+		// to refresh autocomplete suggestions with new date context
+		// The autocomplete methods will fetch fresh data on next focus/input
+		// No action needed here as suggestions are fetched on-demand
 	}
 }
