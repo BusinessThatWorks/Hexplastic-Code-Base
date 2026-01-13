@@ -41,7 +41,7 @@ class ProcurementDashboard {
 		this.wrapper = $(page.body);
 		this.suppliers = [];
 		this.items = [];
-		this.debounce_timer = null;
+		this.debounce_timers = {};
 
 		this.init();
 	}
@@ -136,10 +136,6 @@ class ProcurementDashboard {
 			});
 
 			this.wrapper.on("change", "#supplier-filter", function () {
-				if (self.debounce_timer) {
-					clearTimeout(self.debounce_timer);
-					self.debounce_timer = null;
-				}
 				// Refresh data when supplier is selected or cleared
 				self.refresh_data();
 			});
@@ -148,10 +144,6 @@ class ProcurementDashboard {
 			this.wrapper.on("input", "#supplier-filter", function () {
 				if (this.value.trim() === "") {
 					// Field was cleared, refresh data immediately
-					if (self.debounce_timer) {
-						clearTimeout(self.debounce_timer);
-						self.debounce_timer = null;
-					}
 					self.refresh_data();
 				}
 			});
@@ -162,26 +154,26 @@ class ProcurementDashboard {
 				self.refresh_material_requests();
 			});
 
-			this.wrapper.on("change", "#mr-id-filter, #mr-item-filter", function () {
-				self.refresh_material_requests();
-			});
-
+			// Material Request ID and Item filters - debounced input only
 			this.wrapper.on("input", "#mr-id-filter, #mr-item-filter", function () {
+				const fieldId = this.id;
 				const value = this.value.trim();
+
+				// Clear existing timer for this field
+				if (self.debounce_timers[fieldId]) {
+					clearTimeout(self.debounce_timers[fieldId]);
+					delete self.debounce_timers[fieldId];
+				}
+
 				if (value === "") {
 					// Field was cleared, refresh immediately
-					if (self.debounce_timer) {
-						clearTimeout(self.debounce_timer);
-						self.debounce_timer = null;
-					}
 					self.refresh_material_requests();
 				} else {
-					if (self.debounce_timer) {
-						clearTimeout(self.debounce_timer);
-					}
-					self.debounce_timer = setTimeout(function () {
+					// Debounce the refresh - wait 800ms after user stops typing
+					self.debounce_timers[fieldId] = setTimeout(function () {
+						delete self.debounce_timers[fieldId];
 						self.refresh_material_requests();
-					}, 500);
+					}, 800);
 				}
 			});
 
@@ -191,26 +183,26 @@ class ProcurementDashboard {
 				self.refresh_purchase_orders();
 			});
 
-			this.wrapper.on("change", "#po-id-filter, #po-item-filter", function () {
-				self.refresh_purchase_orders();
-			});
-
+			// Purchase Order ID and Item filters - debounced input only
 			this.wrapper.on("input", "#po-id-filter, #po-item-filter", function () {
+				const fieldId = this.id;
 				const value = this.value.trim();
+
+				// Clear existing timer for this field
+				if (self.debounce_timers[fieldId]) {
+					clearTimeout(self.debounce_timers[fieldId]);
+					delete self.debounce_timers[fieldId];
+				}
+
 				if (value === "") {
 					// Field was cleared, refresh immediately
-					if (self.debounce_timer) {
-						clearTimeout(self.debounce_timer);
-						self.debounce_timer = null;
-					}
 					self.refresh_purchase_orders();
 				} else {
-					if (self.debounce_timer) {
-						clearTimeout(self.debounce_timer);
-					}
-					self.debounce_timer = setTimeout(function () {
+					// Debounce the refresh - wait 800ms after user stops typing
+					self.debounce_timers[fieldId] = setTimeout(function () {
+						delete self.debounce_timers[fieldId];
 						self.refresh_purchase_orders();
-					}, 500);
+					}, 800);
 				}
 			});
 
@@ -220,26 +212,26 @@ class ProcurementDashboard {
 				self.refresh_purchase_receipts();
 			});
 
-			this.wrapper.on("change", "#pr-id-filter, #pr-item-filter", function () {
-				self.refresh_purchase_receipts();
-			});
-
+			// Purchase Receipt ID and Item filters - debounced input only
 			this.wrapper.on("input", "#pr-id-filter, #pr-item-filter", function () {
+				const fieldId = this.id;
 				const value = this.value.trim();
+
+				// Clear existing timer for this field
+				if (self.debounce_timers[fieldId]) {
+					clearTimeout(self.debounce_timers[fieldId]);
+					delete self.debounce_timers[fieldId];
+				}
+
 				if (value === "") {
 					// Field was cleared, refresh immediately
-					if (self.debounce_timer) {
-						clearTimeout(self.debounce_timer);
-						self.debounce_timer = null;
-					}
 					self.refresh_purchase_receipts();
 				} else {
-					if (self.debounce_timer) {
-						clearTimeout(self.debounce_timer);
-					}
-					self.debounce_timer = setTimeout(function () {
+					// Debounce the refresh - wait 800ms after user stops typing
+					self.debounce_timers[fieldId] = setTimeout(function () {
+						delete self.debounce_timers[fieldId];
 						self.refresh_purchase_receipts();
-					}, 500);
+					}, 800);
 				}
 			});
 
@@ -249,50 +241,49 @@ class ProcurementDashboard {
 				self.refresh_purchase_invoices();
 			});
 
-			this.wrapper.on("change", "#pi-id-filter, #pi-item-filter", function () {
-				self.refresh_purchase_invoices();
-			});
-
+			// Purchase Invoice ID and Item filters - debounced input only
 			this.wrapper.on("input", "#pi-id-filter, #pi-item-filter", function () {
+				const fieldId = this.id;
 				const value = this.value.trim();
+
+				// Clear existing timer for this field
+				if (self.debounce_timers[fieldId]) {
+					clearTimeout(self.debounce_timers[fieldId]);
+					delete self.debounce_timers[fieldId];
+				}
+
 				if (value === "") {
 					// Field was cleared, refresh immediately
-					if (self.debounce_timer) {
-						clearTimeout(self.debounce_timer);
-						self.debounce_timer = null;
-					}
 					self.refresh_purchase_invoices();
 				} else {
-					if (self.debounce_timer) {
-						clearTimeout(self.debounce_timer);
-					}
-					self.debounce_timer = setTimeout(function () {
+					// Debounce the refresh - wait 800ms after user stops typing
+					self.debounce_timers[fieldId] = setTimeout(function () {
+						delete self.debounce_timers[fieldId];
 						self.refresh_purchase_invoices();
-					}, 500);
+					}, 800);
 				}
 			});
 
-			// Item Wise Tracker tab filter changes
-			this.wrapper.on("change", "#tracker-po-filter, #tracker-item-filter", function () {
-				self.refresh_item_wise_tracker();
-			});
-
+			// Item Wise Tracker PO No and Item filters - debounced input only
 			this.wrapper.on("input", "#tracker-po-filter, #tracker-item-filter", function () {
+				const fieldId = this.id;
 				const value = this.value.trim();
+
+				// Clear existing timer for this field
+				if (self.debounce_timers[fieldId]) {
+					clearTimeout(self.debounce_timers[fieldId]);
+					delete self.debounce_timers[fieldId];
+				}
+
 				if (value === "") {
 					// Field was cleared, refresh immediately
-					if (self.debounce_timer) {
-						clearTimeout(self.debounce_timer);
-						self.debounce_timer = null;
-					}
 					self.refresh_item_wise_tracker();
 				} else {
-					if (self.debounce_timer) {
-						clearTimeout(self.debounce_timer);
-					}
-					self.debounce_timer = setTimeout(function () {
+					// Debounce the refresh - wait 800ms after user stops typing
+					self.debounce_timers[fieldId] = setTimeout(function () {
+						delete self.debounce_timers[fieldId];
 						self.refresh_item_wise_tracker();
-					}, 500);
+					}, 800);
 				}
 			});
 
@@ -873,10 +864,14 @@ class ProcurementDashboard {
 	refresh_material_requests() {
 		const self = this;
 		const filters = this.get_material_request_filters();
+		const tbody = document.getElementById("mr-tbody");
+		const is_table_empty = !tbody || tbody.innerHTML.trim() === "";
 
-		// Clear previous data
-		this.clear_material_request_data();
-		this.show_mr_loading();
+		// Only clear and show loading if table is empty
+		if (is_table_empty) {
+			this.clear_material_request_data();
+			this.show_mr_loading();
+		}
 
 		frappe.call({
 			method: "hexplastics.api.procurement_dashboard.get_material_request_data",
@@ -886,11 +881,15 @@ class ProcurementDashboard {
 					self.update_material_request_metrics(r.message.metrics);
 					self.update_material_request_table(r.message.material_requests);
 				}
-				self.hide_mr_loading();
+				if (is_table_empty) {
+					self.hide_mr_loading();
+				}
 			},
 			error: function () {
 				frappe.msgprint(__("Error loading material request data"));
-				self.hide_mr_loading();
+				if (is_table_empty) {
+					self.hide_mr_loading();
+				}
 			},
 		});
 	}
@@ -898,10 +897,14 @@ class ProcurementDashboard {
 	refresh_purchase_orders() {
 		const self = this;
 		const filters = this.get_purchase_order_filters();
+		const tbody = document.getElementById("po-tbody");
+		const is_table_empty = !tbody || tbody.innerHTML.trim() === "";
 
-		// Clear previous data
-		this.clear_purchase_order_data();
-		this.show_po_loading();
+		// Only clear and show loading if table is empty
+		if (is_table_empty) {
+			this.clear_purchase_order_data();
+			this.show_po_loading();
+		}
 		this.update_po_cards_visibility();
 
 		frappe.call({
@@ -912,11 +915,15 @@ class ProcurementDashboard {
 					self.update_purchase_order_metrics(r.message.metrics);
 					self.update_purchase_order_table(r.message.purchase_orders);
 				}
-				self.hide_po_loading();
+				if (is_table_empty) {
+					self.hide_po_loading();
+				}
 			},
 			error: function () {
 				frappe.msgprint(__("Error loading purchase order data"));
-				self.hide_po_loading();
+				if (is_table_empty) {
+					self.hide_po_loading();
+				}
 			},
 		});
 	}
@@ -924,10 +931,14 @@ class ProcurementDashboard {
 	refresh_purchase_receipts() {
 		const self = this;
 		const filters = this.get_purchase_receipt_filters();
+		const tbody = document.getElementById("pr-tbody");
+		const is_table_empty = !tbody || tbody.innerHTML.trim() === "";
 
-		// Clear previous data
-		this.clear_purchase_receipt_data();
-		this.show_pr_loading();
+		// Only clear and show loading if table is empty
+		if (is_table_empty) {
+			this.clear_purchase_receipt_data();
+			this.show_pr_loading();
+		}
 
 		frappe.call({
 			method: "hexplastics.api.procurement_dashboard.get_purchase_receipt_data",
@@ -937,11 +948,15 @@ class ProcurementDashboard {
 					self.update_purchase_receipt_metrics(r.message.metrics);
 					self.update_purchase_receipt_table(r.message.purchase_receipts);
 				}
-				self.hide_pr_loading();
+				if (is_table_empty) {
+					self.hide_pr_loading();
+				}
 			},
 			error: function () {
 				frappe.msgprint(__("Error loading purchase receipt data"));
-				self.hide_pr_loading();
+				if (is_table_empty) {
+					self.hide_pr_loading();
+				}
 			},
 		});
 	}
@@ -949,10 +964,14 @@ class ProcurementDashboard {
 	refresh_purchase_invoices() {
 		const self = this;
 		const filters = this.get_purchase_invoice_filters();
+		const tbody = document.getElementById("pi-tbody");
+		const is_table_empty = !tbody || tbody.innerHTML.trim() === "";
 
-		// Clear previous data
-		this.clear_purchase_invoice_data();
-		this.show_pi_loading();
+		// Only clear and show loading if table is empty
+		if (is_table_empty) {
+			this.clear_purchase_invoice_data();
+			this.show_pi_loading();
+		}
 		this.update_pi_cards_visibility();
 
 		frappe.call({
@@ -963,11 +982,15 @@ class ProcurementDashboard {
 					self.update_purchase_invoice_metrics(r.message.metrics);
 					self.update_purchase_invoice_table(r.message.purchase_invoices);
 				}
-				self.hide_pi_loading();
+				if (is_table_empty) {
+					self.hide_pi_loading();
+				}
 			},
 			error: function () {
 				frappe.msgprint(__("Error loading purchase invoice data"));
-				self.hide_pi_loading();
+				if (is_table_empty) {
+					self.hide_pi_loading();
+				}
 			},
 		});
 	}
@@ -975,10 +998,14 @@ class ProcurementDashboard {
 	refresh_item_wise_tracker() {
 		const self = this;
 		const filters = this.get_item_wise_tracker_filters();
+		const tbody = document.getElementById("tracker-tbody");
+		const is_table_empty = !tbody || tbody.innerHTML.trim() === "";
 
-		// Clear previous data
-		this.clear_item_wise_tracker_data();
-		this.show_tracker_loading();
+		// Only clear and show loading if table is empty
+		if (is_table_empty) {
+			this.clear_item_wise_tracker_data();
+			this.show_tracker_loading();
+		}
 
 		frappe.call({
 			method: "hexplastics.api.procurement_dashboard.get_item_wise_tracker_data",
@@ -987,11 +1014,15 @@ class ProcurementDashboard {
 				if (r.message) {
 					self.update_item_wise_tracker_table(r.message.items);
 				}
-				self.hide_tracker_loading();
+				if (is_table_empty) {
+					self.hide_tracker_loading();
+				}
 			},
 			error: function () {
 				frappe.msgprint(__("Error loading item wise tracker data"));
-				self.hide_tracker_loading();
+				if (is_table_empty) {
+					self.hide_tracker_loading();
+				}
 			},
 		});
 	}
