@@ -317,10 +317,7 @@
 						<label class="filter-label">Workflow Status</label>
 						<select class="filter-input filter-select" id="po-status-filter">
 							<option value="">All</option>
-							<option value="Approved">Approved</option>
-							￼Begin typing for results. ￼No new notifications ￼Help ￼ P Procurement
-							Tracker Dashboard
-
+							<option value="Pending">Pending</option>
 							<option value="Pending Approval">Pending Approval</option>
 						</select>
 					</div>
@@ -351,16 +348,24 @@
 
 			<!-- KPI Cards -->
 			<div class="kpi-cards-grid" id="po-kpi-cards">
-				<div class="kpi-card kpi-card-green" id="po-card-approved" data-status="Approved">
+				<div class="kpi-card kpi-card-blue" id="po-card-total">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
-						<div class="kpi-value" id="approved-po">0</div>
-						<div class="kpi-title">Approved Purchase Orders</div>
-						<div class="kpi-subtitle">Purchase orders with Approved status</div>
+						<div class="kpi-value" id="total-po">0</div>
+						<div class="kpi-title">Total Purchase Orders</div>
+						<div class="kpi-subtitle">Total purchase orders (excluding cancelled)</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-orange" id="po-card-pending" data-status="Pending">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="pending-po">0</div>
+						<div class="kpi-title">Pending Purchase Orders</div>
+						<div class="kpi-subtitle">Purchase orders with Pending status</div>
 					</div>
 				</div>
 				<div
-					class="kpi-card kpi-card-orange"
+					class="kpi-card kpi-card-teal"
 					id="po-card-pending-approval"
 					data-status="Pending Approval"
 				>
@@ -369,6 +374,14 @@
 						<div class="kpi-value" id="pending-approval-po">0</div>
 						<div class="kpi-title">Pending Approval Purchase Orders</div>
 						<div class="kpi-subtitle">Purchase orders pending approval</div>
+					</div>
+				</div>
+				<div class="kpi-card kpi-card-purple" id="po-card-total-value">
+					<div class="kpi-card-border"></div>
+					<div class="kpi-card-content">
+						<div class="kpi-value" id="total-po-value">₹0</div>
+						<div class="kpi-title">Total Purchase Order Value</div>
+						<div class="kpi-subtitle">Sum of grand total for selected date range</div>
 					</div>
 				</div>
 			</div>

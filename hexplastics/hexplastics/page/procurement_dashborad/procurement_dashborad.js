@@ -1026,8 +1026,10 @@ class ProcurementDashboard {
 			const el = document.getElementById(id);
 			if (el) el.textContent = value;
 		};
-		setEl("approved-po", "0");
+		setEl("total-po", "0");
+		setEl("pending-po", "0");
 		setEl("pending-approval-po", "0");
+		setEl("total-po-value", "₹0");
 
 		const tbody = document.getElementById("po-tbody");
 		if (tbody) tbody.innerHTML = "";
@@ -1285,8 +1287,10 @@ class ProcurementDashboard {
 			if (el) el.textContent = value;
 		};
 
-		setEl("approved-po", this.format_number(metrics.approved_count));
+		setEl("total-po", this.format_number(metrics.total_count || 0));
+		setEl("pending-po", this.format_number(metrics.pending_count || 0));
 		setEl("pending-approval-po", this.format_number(metrics.pending_approval_count || 0));
+		setEl("total-po-value", this.format_currency(metrics.total_po_value || 0));
 	}
 
 	update_po_cards_visibility() {
@@ -1295,16 +1299,37 @@ class ProcurementDashboard {
 
 		if (!cardsContainer) return;
 
-		const cards = cardsContainer.querySelectorAll(".kpi-card[data-status]");
+		// Get all cards
+		const totalCard = document.getElementById("po-card-total");
+		const pendingCard = document.getElementById("po-card-pending");
+		const pendingApprovalCard = document.getElementById("po-card-pending-approval");
+		const totalValueCard = document.getElementById("po-card-total-value");
 
-		cards.forEach((card) => {
-			const cardStatus = card.getAttribute("data-status");
-			if (selectedStatus === "" || cardStatus === selectedStatus) {
-				card.style.display = "";
-			} else {
-				card.style.display = "none";
-			}
-		});
+		if (selectedStatus === "") {
+			// Show all cards when "All" is selected
+			if (totalCard) totalCard.style.display = "";
+			if (pendingCard) pendingCard.style.display = "";
+			if (pendingApprovalCard) pendingApprovalCard.style.display = "";
+			if (totalValueCard) totalValueCard.style.display = "";
+		} else if (selectedStatus === "Pending") {
+			// Show only Pending card and Total Value card
+			if (totalCard) totalCard.style.display = "none";
+			if (pendingCard) pendingCard.style.display = "";
+			if (pendingApprovalCard) pendingApprovalCard.style.display = "none";
+			if (totalValueCard) totalValueCard.style.display = "";
+		} else if (selectedStatus === "Pending Approval") {
+			// Show only Pending Approval card and Total Value card
+			if (totalCard) totalCard.style.display = "none";
+			if (pendingCard) pendingCard.style.display = "none";
+			if (pendingApprovalCard) pendingApprovalCard.style.display = "";
+			if (totalValueCard) totalValueCard.style.display = "";
+		} else {
+			// For other statuses, show all cards
+			if (totalCard) totalCard.style.display = "";
+			if (pendingCard) pendingCard.style.display = "";
+			if (pendingApprovalCard) pendingApprovalCard.style.display = "";
+			if (totalValueCard) totalValueCard.style.display = "";
+		}
 	}
 
 	update_purchase_order_table(purchase_orders) {
