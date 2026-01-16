@@ -307,23 +307,18 @@ class CustomerDashboard {
 
 		const thead = document.getElementById("table-head");
 		const tbody = document.getElementById("table-body");
+		const tfoot = document.getElementById("table-foot");
 		const noDataMsg = document.getElementById("no-data-message");
 		const table = document.getElementById("pivot-table");
-		const tableWrapper = document.getElementById("table-wrapper");
-		const grandTotalHead = document.getElementById("grand-total-head");
-		const grandTotalBody = document.getElementById("grand-total-body");
-		const grandTotalContainer = document.getElementById("grand-total-container");
 		const tableScrollContainer = document.getElementById("table-scroll-container");
 
-		if (!thead || !tbody) return;
+		if (!thead || !tbody || !tfoot) return;
 
 		// Check if we have data
 		if (!data.data || data.data.length === 0) {
 			tbody.innerHTML = "";
+			tfoot.innerHTML = "";
 			thead.innerHTML = "";
-			if (grandTotalHead) grandTotalHead.innerHTML = "";
-			if (grandTotalBody) grandTotalBody.innerHTML = "";
-			if (grandTotalContainer) grandTotalContainer.style.display = "none";
 			if (noDataMsg) noDataMsg.style.display = "flex";
 			if (table) table.style.display = "none";
 			if (tableScrollContainer) tableScrollContainer.style.display = "none";
@@ -333,7 +328,6 @@ class CustomerDashboard {
 		if (noDataMsg) noDataMsg.style.display = "none";
 		if (table) table.style.display = "table";
 		if (tableScrollContainer) tableScrollContainer.style.display = "block";
-		if (grandTotalContainer) grandTotalContainer.style.display = "block";
 
 		const mode = this.get_filters().mode;
 		const isValueMode = mode === "Value";
@@ -352,11 +346,6 @@ class CustomerDashboard {
 		headerHtml += "</tr>";
 
 		thead.innerHTML = headerHtml;
-		
-		// Also set header for grand total table (hidden but needed for column alignment)
-		if (grandTotalHead) {
-			grandTotalHead.innerHTML = headerHtml;
-		}
 
 		// Build body rows (without grand total)
 		let bodyHtml = "";
@@ -385,108 +374,39 @@ class CustomerDashboard {
 
 		tbody.innerHTML = bodyHtml;
 
-		// Build Grand Total row in separate container
-		if (grandTotalBody) {
-			let grandTotalHtml = "<tr>";
-			grandTotalHtml += '<td class="sticky-col"><strong>Grand Total</strong></td>';
+		// Build Grand Total row in tfoot (inside the same table)
+		let grandTotalHtml = "<tr>";
+		grandTotalHtml += '<td class="sticky-col"><strong>Grand Total</strong></td>';
 
-			// Add grand totals for each month
-			data.month_keys.forEach((monthKey) => {
-				const value = data.grand_totals[monthKey] || 0;
-				const formattedValue = isValueMode
-					? this.format_currency(value)
-					: this.format_number(value);
-				grandTotalHtml += `<td class="month-col text-right"><strong>${formattedValue}</strong></td>`;
-			});
+		// Add grand totals for each month
+		data.month_keys.forEach((monthKey) => {
+			const value = data.grand_totals[monthKey] || 0;
+			const formattedValue = isValueMode
+				? this.format_currency(value)
+				: this.format_number(value);
+			grandTotalHtml += `<td class="month-col text-right"><strong>${formattedValue}</strong></td>`;
+		});
 
-			// Add grand total sum
-			const grandTotal = data.grand_total || 0;
-			const formattedGrandTotal = isValueMode
-				? this.format_currency(grandTotal)
-				: this.format_number(grandTotal);
-			grandTotalHtml += `<td class="total-col text-right"><strong>${formattedGrandTotal}</strong></td>`;
-			grandTotalHtml += "</tr>";
+		// Add grand total sum
+		const grandTotal = data.grand_total || 0;
+		const formattedGrandTotal = isValueMode
+			? this.format_currency(grandTotal)
+			: this.format_number(grandTotal);
+		grandTotalHtml += `<td class="total-col text-right"><strong>${formattedGrandTotal}</strong></td>`;
+		grandTotalHtml += "</tr>";
 
-			grandTotalBody.innerHTML = grandTotalHtml;
-		}
-
-		// Sync horizontal scroll between main table and grand total
-		this.sync_horizontal_scroll();
-		
-		// Sync column widths after a brief delay to ensure table is rendered
-		setTimeout(() => {
-			this.sync_column_widths();
-		}, 100);
+		tfoot.innerHTML = grandTotalHtml;
 	}
 
-	sync_horizontal_scroll() {
-		const tableWrapper = document.getElementById("table-wrapper");
-		const grandTotalContainer = document.getElementById("grand-total-container");
-
-		if (!tableWrapper || !grandTotalContainer) return;
-
-		// Sync scroll from main table to grand total
-		tableWrapper.addEventListener("scroll", function () {
-			grandTotalContainer.scrollLeft = tableWrapper.scrollLeft;
-		});
-
-		// Sync scroll from grand total to main table
-		grandTotalContainer.addEventListener("scroll", function () {
-			tableWrapper.scrollLeft = grandTotalContainer.scrollLeft;
-		});
-	}
-
-	sync_column_widths() {
-		const mainTable = document.getElementById("pivot-table");
-		const grandTotalTable = document.getElementById("grand-total-table");
-
-		if (!mainTable || !grandTotalTable) return;
-
-		// Get header cells from main table
-		const mainHeaderCells = mainTable.querySelectorAll("thead th");
-		const grandTotalHeaderCells = grandTotalTable.querySelectorAll("thead th");
-
-		// Sync header column widths
-		mainHeaderCells.forEach((cell, index) => {
-			if (grandTotalHeaderCells[index]) {
-				const width = cell.offsetWidth;
-				grandTotalHeaderCells[index].style.width = width + "px";
-				grandTotalHeaderCells[index].style.minWidth = width + "px";
-				grandTotalHeaderCells[index].style.maxWidth = width + "px";
-			}
-		});
-
-		// Sync body cell widths (use first row as reference)
-		const mainBodyCells = mainTable.querySelectorAll("tbody tr:first-child td");
-		const grandTotalBodyCells = grandTotalTable.querySelectorAll("tbody tr:first-child td");
-
-		mainBodyCells.forEach((cell, index) => {
-			if (grandTotalBodyCells[index]) {
-				const width = cell.offsetWidth;
-				grandTotalBodyCells[index].style.width = width + "px";
-				grandTotalBodyCells[index].style.minWidth = width + "px";
-				grandTotalBodyCells[index].style.maxWidth = width + "px";
-			}
-		});
-
-		// Also sync the table widths to ensure they match
-		const mainTableWidth = mainTable.offsetWidth;
-		if (grandTotalTable) {
-			grandTotalTable.style.width = mainTableWidth + "px";
-			grandTotalTable.style.minWidth = mainTableWidth + "px";
-		}
-	}
 
 	show_loading() {
 		const loading = document.getElementById("table-loading");
 		const table = document.getElementById("pivot-table");
 		const tableScrollContainer = document.getElementById("table-scroll-container");
-		const grandTotalContainer = document.getElementById("grand-total-container");
 
 		if (loading) loading.style.display = "flex";
 		if (table) table.style.display = "none";
 		if (tableScrollContainer) tableScrollContainer.style.display = "none";
-		if (grandTotalContainer) grandTotalContainer.style.display = "none";
 	}
 
 	hide_loading() {
