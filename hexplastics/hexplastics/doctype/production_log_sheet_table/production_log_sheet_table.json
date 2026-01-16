@@ -1,0 +1,118 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-16 11:07:09.320188",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_code",
+  "item_name",
+  "column_break_twxf",
+  "source_warehouse",
+  "stock_uom",
+  "section_break_trar",
+  "avl_in_plant",
+  "issued",
+  "column_break_mzge",
+  "consumption",
+  "closing_stock"
+ ],
+ "fields": [
+  {
+   "columns": 1,
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item Code",
+   "options": "Item"
+  },
+  {
+   "columns": 2,
+   "fetch_from": "item_code.item_name",
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Name"
+  },
+  {
+   "fieldname": "column_break_twxf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 2,
+   "default": "Production - Hex",
+   "fieldname": "source_warehouse",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Source Warehouse",
+   "options": "Warehouse",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_trar",
+   "fieldtype": "Section Break"
+  },
+  {
+   "columns": 1,
+   "fieldname": "avl_in_plant",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Avl. In Plant",
+   "precision": "4"
+  },
+  {
+   "columns": 1,
+   "fieldname": "issued",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Issued",
+   "precision": "4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_mzge",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 1,
+   "fieldname": "consumption",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Consumption",
+   "precision": "4",
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "closing_stock",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Closing Stock",
+   "precision": "4"
+  },
+  {
+   "columns": 1,
+   "fetch_from": "item_code.stock_uom",
+   "fieldname": "stock_uom",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Stock UOM",
+   "options": "UOM"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-01-16 12:42:09.668382",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "Production Log Sheet Table",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

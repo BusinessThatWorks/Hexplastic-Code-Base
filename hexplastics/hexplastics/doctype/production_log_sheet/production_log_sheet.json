@@ -1,0 +1,379 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-12 17:12:00.643570",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_7lnm",
+  "production_plan",
+  "production_date",
+  "production_time",
+  "column_break_eoeb",
+  "bom",
+  "bom_name",
+  "manufacturing_item",
+  "column_break_uzrs",
+  "shift_type",
+  "machine_used",
+  "amended_from",
+  "section_break_kjgo",
+  "operator_id",
+  "operator_name",
+  "column_break_iapm",
+  "supervisor_id",
+  "supervisor_name",
+  "column_break_ygjr",
+  "finished_good_details_section",
+  "manufactured_qty",
+  "column_break_sqlw",
+  "gross_weight",
+  "weight_of_fabric_packing",
+  "column_break_dsst",
+  "net_weight",
+  "section_break_urbl",
+  "raw_material_consumption",
+  "section_break_jcgo",
+  "production_details",
+  "section_break_sacl",
+  "remarks",
+  "column_break_hlkp",
+  "process_loss_weight",
+  "column_break_xzlj",
+  "hopper_and_tray_tab",
+  "hopper_item",
+  "column_break_ixuj",
+  "column_break_pmle",
+  "section_break_idht",
+  "qty_added",
+  "qty_used",
+  "column_break_caot",
+  "opening_qty",
+  "closing_qty",
+  "tab_3_tab",
+  "mip_generate_weight",
+  "mip_used",
+  "column_break_gnjl",
+  "opening_qty_for_mip",
+  "closing_qty_for_mip"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_7lnm",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Production Log Sheet",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "production_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Production Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "production_time",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "label": "Production Time",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_eoeb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "bom",
+   "fieldtype": "Link",
+   "label": "BOM",
+   "options": "BOM",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "bom.item",
+   "fieldname": "manufacturing_item",
+   "fieldtype": "Link",
+   "label": "Manufacturing Item",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_uzrs",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "bom.custom_bom_name",
+   "fieldname": "bom_name",
+   "fieldtype": "Data",
+   "label": "BOM Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shift_type",
+   "fieldtype": "Select",
+   "label": "Shift Type",
+   "options": "\nDay\nNight",
+   "reqd": 1
+  },
+  {
+   "fieldname": "machine_used",
+   "fieldtype": "Link",
+   "label": "Machine Used",
+   "options": "Machine Master",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_kjgo",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "operator_id",
+   "fieldtype": "Link",
+   "label": "Operator ID",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "operator_id.employee_name",
+   "fieldname": "operator_name",
+   "fieldtype": "Data",
+   "label": "Operator Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_iapm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "supervisor_id",
+   "fieldtype": "Link",
+   "label": "Supervisor ID",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "operator_id.employee_name",
+   "fieldname": "supervisor_name",
+   "fieldtype": "Data",
+   "label": "Supervisor Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ygjr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "finished_good_details_section",
+   "fieldtype": "Section Break",
+   "label": "Finished Good Details"
+  },
+  {
+   "fieldname": "manufactured_qty",
+   "fieldtype": "Int",
+   "label": "Manufactured Qty",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_sqlw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_dsst",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gross_weight",
+   "fieldtype": "Float",
+   "label": "Gross Weight",
+   "precision": "4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "weight_of_fabric_packing",
+   "fieldtype": "Float",
+   "label": "Weight of Fabric Packing",
+   "precision": "4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "net_weight",
+   "fieldtype": "Float",
+   "label": "Net Weight",
+   "precision": "4"
+  },
+  {
+   "fieldname": "section_break_jcgo",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "production_details",
+   "fieldtype": "Table",
+   "label": "Production Details",
+   "options": "Production Log Sheet FG Table"
+  },
+  {
+   "fieldname": "section_break_urbl",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "raw_material_consumption",
+   "fieldtype": "Table",
+   "label": "Raw Material Consumption",
+   "options": "Production Log Sheet Table"
+  },
+  {
+   "fieldname": "section_break_sacl",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "column_break_hlkp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_xzlj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hopper_and_tray_tab",
+   "fieldtype": "Tab Break",
+   "label": "Hopper and Tray"
+  },
+  {
+   "fieldname": "hopper_item",
+   "fieldtype": "Link",
+   "label": "Hopper Item",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_ixuj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "tab_3_tab",
+   "fieldtype": "Tab Break",
+   "label": "MIP Details"
+  },
+  {
+   "fieldname": "column_break_pmle",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_idht",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "qty_added",
+   "fieldtype": "Float",
+   "label": "Qty Added",
+   "precision": "4"
+  },
+  {
+   "fieldname": "qty_used",
+   "fieldtype": "Float",
+   "label": "Qty Used",
+   "precision": "4"
+  },
+  {
+   "fieldname": "column_break_caot",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "opening_qty",
+   "fieldtype": "Float",
+   "label": "Opening Qty",
+   "precision": "4"
+  },
+  {
+   "fieldname": "closing_qty",
+   "fieldtype": "Float",
+   "label": "Closing Qty",
+   "precision": "4"
+  },
+  {
+   "fieldname": "mip_generate_weight",
+   "fieldtype": "Float",
+   "label": "MIP Generate (Weight)",
+   "precision": "4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "mip_used",
+   "fieldtype": "Float",
+   "label": "MIP Used",
+   "precision": "4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_gnjl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "opening_qty_for_mip",
+   "fieldtype": "Float",
+   "label": "Opening Qty",
+   "precision": "4"
+  },
+  {
+   "fieldname": "closing_qty_for_mip",
+   "fieldtype": "Float",
+   "label": "Closing Qty",
+   "precision": "4"
+  },
+  {
+   "fieldname": "process_loss_weight",
+   "fieldtype": "Float",
+   "label": "Process Loss (Weight)",
+   "precision": "4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "production_plan",
+   "fieldtype": "Link",
+   "label": "Production Plan",
+   "options": "Production Plan",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-01-16 13:35:14.283229",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "Production Log Sheet",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
