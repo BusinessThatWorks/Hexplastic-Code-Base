@@ -1,0 +1,433 @@
+/* Customer Dashboard Styles */
+/* Matching reference design with modern styling */
+/* ALL styles are scoped to only apply on the customer-dashboard page */
+
+/* ===== Base & Container Styles ===== */
+body[data-page-route*="customer-dashboard"] .customer-dashboard,
+body.customer-dashboard-page .customer-dashboard {
+    background: #f4f5f6;
+    min-height: calc(100vh - 60px);
+    padding: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    box-sizing: border-box;
+}
+
+/* Override Frappe's default page container constraints */
+.customer-dashboard .page-container,
+.customer-dashboard .layout-main,
+.customer-dashboard .page-content,
+.customer-dashboard .layout-container,
+.customer-dashboard .page-wrapper,
+.customer-dashboard .page-body,
+.customer-dashboard .form-container {
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
+/* ===== Filter Section Styles (Light Grey Box) ===== */
+.customer-dashboard .filter-section {
+    background: #f0f1f2;
+    padding: 24px 28px;
+    border-radius: 8px;
+    margin: 0 28px 20px 28px;
+    width: calc(100% - 56px);
+    max-width: calc(100% - 56px);
+    box-sizing: border-box;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.customer-dashboard .filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    width: 100%;
+}
+
+.customer-dashboard .filter-group {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    min-width: 180px;
+}
+
+.customer-dashboard .filter-group-wide {
+    flex: 1 1 auto;
+    min-width: 220px;
+    max-width: 350px;
+}
+
+.customer-dashboard .filter-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6c7680;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.customer-dashboard .filter-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #d1d8dd;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1f272e;
+    background: #fff;
+    transition: all 0.15s ease;
+    height: 40px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.customer-dashboard .filter-input:focus {
+    outline: none;
+    border-color: #5e64ff;
+    box-shadow: 0 0 0 3px rgba(94, 100, 255, 0.1), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.customer-dashboard .filter-input:hover {
+    border-color: #b8c0c8;
+}
+
+.customer-dashboard .filter-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236c7680' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+}
+
+/* Autocomplete Styles */
+.customer-dashboard .awesomplete-wrapper {
+    position: relative;
+}
+
+.customer-dashboard .autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #d1d8dd;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 4px;
+}
+
+.customer-dashboard .autocomplete-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #1f272e;
+    transition: background 0.1s ease;
+}
+
+.customer-dashboard .autocomplete-item:hover {
+    background: #f4f5f6;
+}
+
+/* ===== Table Section Styles ===== */
+.customer-dashboard .table-section {
+    padding: 0 28px 28px 28px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.customer-dashboard .table-container {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.customer-dashboard .table-loading {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: #6c7680;
+    font-size: 14px;
+    gap: 16px;
+}
+
+.customer-dashboard .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e8e8e8;
+    border-top-color: #2490ef;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.customer-dashboard .table-scroll-container {
+    max-height: 450px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    border-bottom: 2px solid #e8e8e8;
+    width: 100%;
+}
+
+.customer-dashboard .table-wrapper {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    position: relative;
+}
+
+.customer-dashboard .table-wrapper::-webkit-scrollbar {
+    height: 8px;
+}
+
+.customer-dashboard .table-wrapper::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.customer-dashboard .table-wrapper::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.customer-dashboard .table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.customer-dashboard .grand-total-container {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    background: #f8f9fa;
+    border-top: 2px solid #e8e8e8;
+    position: relative;
+}
+
+.customer-dashboard .grand-total-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.customer-dashboard .grand-total-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.customer-dashboard .grand-total-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.customer-dashboard .grand-total-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.customer-dashboard .pivot-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 800px;
+    table-layout: auto;
+}
+
+.customer-dashboard .pivot-table thead {
+    background: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.customer-dashboard .pivot-table th {
+    padding: 14px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: #1f272e;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e8e8e8;
+    white-space: nowrap;
+    background: #f8f9fa;
+}
+
+.customer-dashboard .pivot-table th.month-col,
+.customer-dashboard .pivot-table th.total-col {
+    text-align: right;
+}
+
+.customer-dashboard .pivot-table th.sticky-col {
+    position: sticky;
+    left: 0;
+    background: #f8f9fa;
+    z-index: 11;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.customer-dashboard .pivot-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e8e8e8;
+    color: #1f272e;
+    background: #fff;
+}
+
+.customer-dashboard .pivot-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.customer-dashboard .pivot-table td.sticky-col {
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 5;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+    font-weight: 500;
+}
+
+.customer-dashboard .pivot-table tbody tr:hover td.sticky-col {
+    background: #f8f9fa;
+}
+
+.customer-dashboard .pivot-table td.month-col,
+.customer-dashboard .pivot-table td.total-col {
+    text-align: right;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+}
+
+.customer-dashboard .pivot-table .customer-name {
+    color: #2490ef;
+    font-weight: 500;
+}
+
+.customer-dashboard .grand-total-table {
+    width: 100%;
+    min-width: 800px;
+    border-collapse: collapse;
+    font-size: 13px;
+    table-layout: auto;
+}
+
+.customer-dashboard .grand-total-table thead {
+    display: none;
+}
+
+.customer-dashboard .grand-total-table tbody tr {
+    background: #f8f9fa;
+    border-top: 2px solid #e8e8e8;
+}
+
+.customer-dashboard .grand-total-table td {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #1f272e;
+    padding: 16px;
+    border-bottom: none;
+}
+
+.customer-dashboard .grand-total-table td.sticky-col {
+    position: sticky;
+    left: 0;
+    background: #f8f9fa;
+    z-index: 5;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.customer-dashboard .grand-total-table td.month-col,
+.customer-dashboard .grand-total-table td.total-col {
+    text-align: right;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+}
+
+/* Legacy support for grand-total-row class (if still used) */
+.customer-dashboard .pivot-table .grand-total-row {
+    background: #f8f9fa;
+    border-top: 2px solid #e8e8e8;
+}
+
+.customer-dashboard .pivot-table .grand-total-row td {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #1f272e;
+    padding: 16px;
+}
+
+.customer-dashboard .pivot-table .grand-total-row td.sticky-col {
+    background: #f8f9fa;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.customer-dashboard .pivot-table .text-right {
+    text-align: right;
+}
+
+/* No Data Message */
+.customer-dashboard .no-data-message {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    color: #6c7680;
+    font-size: 14px;
+    gap: 16px;
+}
+
+.customer-dashboard .no-data-icon {
+    width: 48px;
+    height: 48px;
+    color: #b8c0c8;
+    margin-bottom: 8px;
+}
+
+.customer-dashboard .no-data-message p {
+    margin: 0;
+    font-size: 14px;
+    color: #6c7680;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .customer-dashboard .filter-section {
+        margin: 0 16px 20px 16px;
+        padding: 20px;
+        width: calc(100% - 32px);
+    }
+
+    .customer-dashboard .table-section {
+        padding: 0 16px 20px 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .customer-dashboard .filter-row {
+        flex-wrap: wrap;
+    }
+
+    .customer-dashboard .filter-group {
+        min-width: 100%;
+        flex: 1 1 100%;
+    }
+
+    .customer-dashboard .filter-group-wide {
+        max-width: 100%;
+    }
+}

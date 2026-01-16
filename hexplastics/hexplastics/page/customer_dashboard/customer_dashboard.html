@@ -1,0 +1,90 @@
+<div class="customer-dashboard">
+	<!-- Filter Section -->
+	<div class="filter-section">
+		<div class="filter-row">
+			<div class="filter-group">
+				<label class="filter-label">Statewise Turnover</label>
+				<select class="filter-input filter-select" id="state-filter">
+					<option value="">All</option>
+					<!-- Options will be populated dynamically -->
+				</select>
+			</div>
+			<div class="filter-group filter-group-wide">
+				<label class="filter-label">Partywise Turnover</label>
+				<div class="awesomplete-wrapper" id="customer-filter-wrapper">
+					<input
+						type="text"
+						class="filter-input"
+						id="customer-filter"
+						placeholder="Select Customer..."
+						autocomplete="off"
+					/>
+				</div>
+			</div>
+			<div class="filter-group filter-group-wide">
+				<label class="filter-label">Item</label>
+				<div class="awesomplete-wrapper" id="item-filter-wrapper">
+					<input
+						type="text"
+						class="filter-input"
+						id="item-filter"
+						placeholder="Select Item..."
+						autocomplete="off"
+					/>
+				</div>
+			</div>
+			<div class="filter-group">
+				<label class="filter-label">Mode</label>
+				<select class="filter-input filter-select" id="mode-filter">
+					<option value="Quantity">Quantity</option>
+					<option value="Value">Value</option>
+				</select>
+			</div>
+		</div>
+	</div>
+
+	<!-- Main Table Section -->
+	<div class="table-section">
+		<div class="table-container">
+			<div class="table-loading" id="table-loading">
+				<div class="loading-spinner"></div>
+				<span>Loading customer data...</span>
+			</div>
+			<div class="table-scroll-container" id="table-scroll-container">
+				<div class="table-wrapper" id="table-wrapper">
+					<table class="pivot-table" id="pivot-table">
+						<thead id="table-head">
+							<!-- Headers will be populated dynamically -->
+						</thead>
+						<tbody id="table-body">
+							<!-- Rows will be populated dynamically -->
+						</tbody>
+					</table>
+				</div>
+			</div>
+			<div class="grand-total-container" id="grand-total-container">
+				<table class="pivot-table grand-total-table" id="grand-total-table">
+					<thead id="grand-total-head">
+						<!-- Headers will be populated dynamically (mirror of main table) -->
+					</thead>
+					<tbody id="grand-total-body">
+						<!-- Grand total row will be populated dynamically -->
+					</tbody>
+				</table>
+			</div>
+			<div class="no-data-message" id="no-data-message" style="display: none">
+				<svg
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					class="no-data-icon"
+				>
+					<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+					<polyline points="13 2 13 9 20 9"></polyline>
+				</svg>
+				<p>No data found for the selected filters</p>
+			</div>
+		</div>
+	</div>
+</div>
