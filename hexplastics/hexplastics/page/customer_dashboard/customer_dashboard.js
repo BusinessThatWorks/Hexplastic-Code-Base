@@ -37,6 +37,7 @@ class CustomerDashboard {
 		this.states = [];
 		this.customers = [];
 		this.items = [];
+		this.fiscal_years = [];
 		this.debounce_timer = null;
 		this.current_data = null;
 
@@ -85,7 +86,7 @@ class CustomerDashboard {
 
 		setTimeout(() => {
 			// Auto-refresh on filter changes
-			this.wrapper.on("change", "#state-filter, #mode-filter", function () {
+			this.wrapper.on("change", "#state-filter, #mode-filter, #year-filter", function () {
 				self.refresh_data();
 			});
 
@@ -246,6 +247,7 @@ class CustomerDashboard {
 					self.states = r.message.states || [];
 					self.customers = r.message.customers || [];
 					self.items = r.message.items || [];
+					self.fiscal_years = r.message.fiscal_years || [];
 
 					// Populate state dropdown
 					const stateSelect = document.getElementById("state-filter");
@@ -265,16 +267,48 @@ class CustomerDashboard {
 							stateSelect.appendChild(option);
 						});
 					}
+
+					// Populate year dropdown
+					const yearSelect = document.getElementById("year-filter");
+					if (yearSelect) {
+						yearSelect.innerHTML = "";
+
+						// Add fiscal year options
+						self.fiscal_years.forEach((fy) => {
+							const option = document.createElement("option");
+							option.value = fy.name;
+							option.textContent = fy.name;
+							yearSelect.appendChild(option);
+						});
+
+						// Set current fiscal year as default
+						const currentFiscalYear = r.message.current_fiscal_year;
+						if (currentFiscalYear && yearSelect.querySelector(`option[value="${currentFiscalYear}"]`)) {
+							yearSelect.value = currentFiscalYear;
+						} else if (self.fiscal_years.length > 0) {
+							// Fallback to first fiscal year if current not found
+							yearSelect.value = self.fiscal_years[0].name;
+						}
+						
+						// Refresh data after year is set
+						setTimeout(() => {
+							self.refresh_data();
+						}, 100);
+					}
 				}
 			},
 		});
 	}
 
 	get_filters() {
+		const yearSelect = document.getElementById("year-filter");
+		const yearValue = yearSelect?.value;
+		
 		return {
 			state: document.getElementById("state-filter")?.value || "",
 			customer: document.getElementById("customer-filter")?.value || "",
 			item: document.getElementById("item-filter")?.value || "",
+			year: yearValue || null,
 			mode: document.getElementById("mode-filter")?.value || "Quantity",
 		};
 	}

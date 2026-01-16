@@ -8,7 +8,7 @@ import calendar
 
 
 @frappe.whitelist()
-def get_customer_turnover_data(state=None, customer=None, item=None, mode="Quantity"):
+def get_customer_turnover_data(state=None, customer=None, item=None, year=None, mode="Quantity"):
     """
     Get customer-wise turnover data by financial month.
     
@@ -16,6 +16,7 @@ def get_customer_turnover_data(state=None, customer=None, item=None, mode="Quant
         state: Place of Supply filter
         customer: Customer filter
         item: Item Code filter
+        year: Fiscal Year name (e.g., "25-26")
         mode: "Quantity" or "Value"
         
     Returns:
@@ -30,8 +31,12 @@ def get_customer_turnover_data(state=None, customer=None, item=None, mode="Quant
         }
     """
     try:
-        # Get current financial year
-        fy_start, fy_end = get_current_financial_year()
+        # Get financial year dates - year is now required (no default to "All")
+        if year:
+            fy_start, fy_end = get_fiscal_year_dates(year)
+        else:
+            # If no year provided, use current fiscal year
+            fy_start, fy_end = get_current_financial_year()
         
         # Generate all financial year months
         financial_months = get_financial_year_months(fy_start, fy_end)
@@ -129,7 +134,14 @@ def get_customer_turnover_data(state=None, customer=None, item=None, mode="Quant
             title=_("Error fetching customer turnover data")
         )
         # Return empty structure
-        fy_start, fy_end = get_current_financial_year()
+        try:
+            if year:
+                fy_start, fy_end = get_fiscal_year_dates(year)
+            else:
+                fy_start, fy_end = get_current_financial_year()
+        except Exception:
+            fy_start, fy_end = get_current_financial_year()
+        
         financial_months = get_financial_year_months(fy_start, fy_end)
         month_labels = [m["label"] for m in financial_months]
         month_keys = [m["key"] for m in financial_months]
@@ -187,10 +199,24 @@ def get_filter_options():
             LIMIT 500
         """, as_dict=True)
         
+        # Get fiscal years from Fiscal Year doctype
+        fiscal_years = frappe.db.sql("""
+            SELECT name
+            FROM `tabFiscal Year`
+            WHERE disabled = 0
+            ORDER BY year_start_date DESC
+            LIMIT 20
+        """, as_dict=True)
+        
+        # Get current fiscal year name
+        current_fiscal_year_name = get_current_fiscal_year_name()
+        
         return {
             "states": [s.get("place_of_supply") for s in states if s.get("place_of_supply")],
             "customers": [c.get("name") for c in customers if c.get("name")],
-            "items": [i.get("item_code") for i in items if i.get("item_code")]
+            "items": [i.get("item_code") for i in items if i.get("item_code")],
+            "fiscal_years": [{"name": fy.get("name")} for fy in fiscal_years if fy.get("name")],
+            "current_fiscal_year": current_fiscal_year_name
         }
         
     except Exception:
@@ -198,7 +224,7 @@ def get_filter_options():
             message=frappe.get_traceback(),
             title=_("Error fetching filter options")
         )
-        return {"states": [], "customers": [], "items": []}
+        return {"states": [], "customers": [], "items": [], "fiscal_years": [], "current_fiscal_year": None}
 
 
 def get_current_financial_year():
@@ -310,3 +336,75 @@ def get_item_filter_sql(item):
     
     item_safe = frappe.db.escape(item)
     return f" AND sii.item_code = {item_safe}"
+
+
+def get_fiscal_year_dates(fiscal_year_name):
+    """
+    Get start and end dates for a given fiscal year name.
+    
+    Args:
+        fiscal_year_name: Name of the fiscal year (e.g., "25-26")
+        
+    Returns:
+        tuple: (start_date, end_date) for the fiscal year
+        
+    Raises:
+        frappe.DoesNotExistError: If fiscal year not found
+    """
+    try:
+        fiscal_year = frappe.get_doc("Fiscal Year", fiscal_year_name)
+        return getdate(fiscal_year.year_start_date), getdate(fiscal_year.year_end_date)
+    except frappe.DoesNotExistError:
+        # If fiscal year not found, fall back to current financial year
+        frappe.log_error(
+            message=f"Fiscal Year '{fiscal_year_name}' not found. Falling back to current financial year.",
+            title=_("Fiscal Year Not Found")
+        )
+        return get_current_financial_year()
+
+
+def get_current_fiscal_year_name():
+    """
+    Get the name of the current fiscal year from Fiscal Year doctype.
+    
+    Returns:
+        str: Name of current fiscal year (e.g., "25-26") or None if not found
+    """
+    try:
+        fy_start, fy_end = get_current_financial_year()
+        
+        # Find fiscal year that matches current dates
+        fiscal_year = frappe.db.sql("""
+            SELECT name
+            FROM `tabFiscal Year`
+            WHERE disabled = 0
+                AND year_start_date = %s
+                AND year_end_date = %s
+            LIMIT 1
+        """, (fy_start, fy_end), as_dict=True)
+        
+        if fiscal_year and len(fiscal_year) > 0:
+            return fiscal_year[0].get("name")
+        
+        # If exact match not found, find fiscal year that contains today's date
+        today = getdate()
+        fiscal_year = frappe.db.sql("""
+            SELECT name
+            FROM `tabFiscal Year`
+            WHERE disabled = 0
+                AND year_start_date <= %s
+                AND year_end_date >= %s
+            ORDER BY year_start_date DESC
+            LIMIT 1
+        """, (today, today), as_dict=True)
+        
+        if fiscal_year and len(fiscal_year) > 0:
+            return fiscal_year[0].get("name")
+        
+        return None
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching current fiscal year name")
+        )
+        return None
