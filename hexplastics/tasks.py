@@ -13,7 +13,7 @@ def check_stock_levels_and_send_alert():
 	Check all items' stock quantity against safety_stock in a specific warehouse.
 	Currently we only check: Raw Material - HEX
 	Send red alert email if total stock < safety_stock, else send green alert.
-	Runs at 9:00 AM daily.
+	Runs at 9:00 AM daily.ss
 	"""
 	print("\n>>> Starting stock alert check...\n")
 	sys.stdout.flush()
