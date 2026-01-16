@@ -27,9 +27,9 @@ body.customer-dashboard-page .customer-dashboard {
     width: 100% !important;
 }
 
-/* ===== Filter Section Styles (Light Grey Box) ===== */
+/* ===== Filter Section Styles (Light Blue Box) ===== */
 .customer-dashboard .filter-section {
-    background: #f0f1f2;
+    background: #c3e2f8;
     padding: 24px 28px;
     border-radius: 8px;
     margin: 0 28px 20px 28px;
@@ -64,7 +64,7 @@ body.customer-dashboard-page .customer-dashboard {
 .customer-dashboard .filter-label {
     font-size: 11px;
     font-weight: 600;
-    color: #6c7680;
+    color: #2c5aa0;
     margin-bottom: 8px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -222,7 +222,7 @@ body.customer-dashboard-page .customer-dashboard {
 }
 
 .customer-dashboard .pivot-table thead {
-    background: #f0f2f5;
+    background: #c3e2f8;
     position: sticky;
     top: 0;
     z-index: 10;
@@ -234,14 +234,14 @@ body.customer-dashboard-page .customer-dashboard {
     padding: 14px 16px;
     text-align: left;
     font-weight: 600;
-    color: #1f272e;
+    color: #2c5aa0;
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 2px solid #d1d8dd;
     border-right: 1px solid #e8e9ea;
     white-space: nowrap;
-    background: #f0f2f5;
+    background: #c3e2f8;
     position: sticky;
     top: 0;
     z-index: 11;
@@ -256,7 +256,7 @@ body.customer-dashboard-page .customer-dashboard {
     position: sticky;
     left: 0;
     top: 0;
-    background: #f0f2f5;
+    background: #c3e2f8;
     z-index: 12;
     box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
     border-right: 2px solid #d1d8dd;
@@ -307,6 +307,7 @@ body.customer-dashboard-page .customer-dashboard {
 .customer-dashboard .pivot-table td.total-col {
     font-weight: 600;
     background: transparent;
+    color: #2c5aa0;
 }
 
 .customer-dashboard .pivot-table tbody tr:nth-child(even) td.total-col {
@@ -318,12 +319,12 @@ body.customer-dashboard-page .customer-dashboard {
 }
 
 .customer-dashboard .pivot-table .customer-name {
-    color: #2490ef;
+    color: #2c5aa0;
     font-weight: 600;
 }
 
 .customer-dashboard .pivot-table tbody tr:nth-child(even) .customer-name {
-    color: #2490ef;
+    color: #2c5aa0;
 }
 
 .customer-dashboard .pivot-table tfoot {
@@ -342,7 +343,7 @@ body.customer-dashboard-page .customer-dashboard {
 .customer-dashboard .pivot-table tfoot td {
     background: #e8ecf0;
     font-weight: 700;
-    color: #1f272e;
+    color: #2c5aa0;
     padding: 16px;
     border-bottom: none;
     border-top: 2px solid #d1d8dd;
@@ -367,17 +368,22 @@ body.customer-dashboard-page .customer-dashboard {
     text-align: right;
     font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
     font-size: 14px;
-    color: #1a1a1a;
+    color: #2c5aa0;
 }
 
 .customer-dashboard .pivot-table tfoot td.total-col {
     background: inherit;
-    color: #1a1a1a;
+    color: #2c5aa0;
 }
 
 
 .customer-dashboard .pivot-table .text-right {
     text-align: right;
+}
+
+.customer-dashboard .pivot-table strong {
+    color: #2c5aa0;
+    font-weight: 700;
 }
 
 /* No Data Message */

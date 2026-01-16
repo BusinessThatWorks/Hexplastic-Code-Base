@@ -134,12 +134,11 @@ class CustomerDashboard {
 			wrapper.appendChild(dropdown);
 		}
 
-		input.addEventListener("input", function () {
-			const value = this.value.toLowerCase();
-			const filtered = self.customers.filter((c) => c.toLowerCase().includes(value));
-
-			if (filtered.length > 0 && value.length > 0) {
-				dropdown.innerHTML = filtered
+		// Helper function to show suggestions
+		const showSuggestions = function (filteredList = null) {
+			const listToShow = filteredList !== null ? filteredList : self.customers;
+			if (listToShow.length > 0) {
+				dropdown.innerHTML = listToShow
 					.slice(0, 10)
 					.map((c) => `<div class="autocomplete-item">${c}</div>`)
 					.join("");
@@ -147,18 +146,56 @@ class CustomerDashboard {
 			} else {
 				dropdown.style.display = "none";
 			}
+		};
+
+		// Handle input changes
+		input.addEventListener("input", function () {
+			const value = this.value.trim().toLowerCase();
+			
+			// If field is cleared, show all suggestions immediately
+			if (value.length === 0) {
+				showSuggestions();
+				return;
+			}
+
+			// Filter suggestions based on input
+			const filtered = self.customers.filter((c) => c.toLowerCase().includes(value));
+			showSuggestions(filtered);
 		});
 
+		// Handle focus - show suggestions if field is empty
 		input.addEventListener("focus", function () {
-			if (self.customers.length > 0 && this.value.length === 0) {
-				dropdown.innerHTML = self.customers
-					.slice(0, 10)
-					.map((c) => `<div class="autocomplete-item">${c}</div>`)
-					.join("");
-				dropdown.style.display = "block";
+			if (self.customers.length > 0) {
+				const value = this.value.trim();
+				if (value.length === 0) {
+					showSuggestions();
+				} else {
+					// If there's a value, filter and show matching suggestions
+					const filtered = self.customers.filter((c) => 
+						c.toLowerCase().includes(value.toLowerCase())
+					);
+					showSuggestions(filtered);
+				}
 			}
 		});
 
+		// Handle click on input field - show suggestions immediately
+		input.addEventListener("click", function () {
+			if (self.customers.length > 0) {
+				const value = this.value.trim();
+				if (value.length === 0) {
+					showSuggestions();
+				} else {
+					// Show filtered suggestions
+					const filtered = self.customers.filter((c) => 
+						c.toLowerCase().includes(value.toLowerCase())
+					);
+					showSuggestions(filtered);
+				}
+			}
+		});
+
+		// Handle selection from dropdown
 		wrapper.addEventListener("click", function (e) {
 			if (e.target.classList.contains("autocomplete-item")) {
 				input.value = e.target.textContent;
@@ -169,6 +206,7 @@ class CustomerDashboard {
 			}
 		});
 
+		// Close dropdown when clicking outside
 		document.addEventListener("click", function (e) {
 			if (!wrapper.contains(e.target)) {
 				dropdown.style.display = "none";
@@ -194,12 +232,11 @@ class CustomerDashboard {
 			wrapper.appendChild(dropdown);
 		}
 
-		input.addEventListener("input", function () {
-			const value = this.value.toLowerCase();
-			const filtered = self.items.filter((item) => item.toLowerCase().includes(value));
-
-			if (filtered.length > 0 && value.length > 0) {
-				dropdown.innerHTML = filtered
+		// Helper function to show suggestions
+		const showSuggestions = function (filteredList = null) {
+			const listToShow = filteredList !== null ? filteredList : self.items;
+			if (listToShow.length > 0) {
+				dropdown.innerHTML = listToShow
 					.slice(0, 10)
 					.map((item) => `<div class="autocomplete-item">${item}</div>`)
 					.join("");
@@ -207,18 +244,56 @@ class CustomerDashboard {
 			} else {
 				dropdown.style.display = "none";
 			}
+		};
+
+		// Handle input changes
+		input.addEventListener("input", function () {
+			const value = this.value.trim().toLowerCase();
+			
+			// If field is cleared, show all suggestions immediately
+			if (value.length === 0) {
+				showSuggestions();
+				return;
+			}
+
+			// Filter suggestions based on input
+			const filtered = self.items.filter((item) => item.toLowerCase().includes(value));
+			showSuggestions(filtered);
 		});
 
+		// Handle focus - show suggestions if field is empty
 		input.addEventListener("focus", function () {
-			if (self.items.length > 0 && this.value.length === 0) {
-				dropdown.innerHTML = self.items
-					.slice(0, 10)
-					.map((item) => `<div class="autocomplete-item">${item}</div>`)
-					.join("");
-				dropdown.style.display = "block";
+			if (self.items.length > 0) {
+				const value = this.value.trim();
+				if (value.length === 0) {
+					showSuggestions();
+				} else {
+					// If there's a value, filter and show matching suggestions
+					const filtered = self.items.filter((item) => 
+						item.toLowerCase().includes(value.toLowerCase())
+					);
+					showSuggestions(filtered);
+				}
 			}
 		});
 
+		// Handle click on input field - show suggestions immediately
+		input.addEventListener("click", function () {
+			if (self.items.length > 0) {
+				const value = this.value.trim();
+				if (value.length === 0) {
+					showSuggestions();
+				} else {
+					// Show filtered suggestions
+					const filtered = self.items.filter((item) => 
+						item.toLowerCase().includes(value.toLowerCase())
+					);
+					showSuggestions(filtered);
+				}
+			}
+		});
+
+		// Handle selection from dropdown
 		wrapper.addEventListener("click", function (e) {
 			if (e.target.classList.contains("autocomplete-item")) {
 				input.value = e.target.textContent;
@@ -229,6 +304,7 @@ class CustomerDashboard {
 			}
 		});
 
+		// Close dropdown when clicking outside
 		document.addEventListener("click", function (e) {
 			if (!wrapper.contains(e.target)) {
 				dropdown.style.display = "none";
