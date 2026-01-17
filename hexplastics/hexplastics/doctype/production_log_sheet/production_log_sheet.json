@@ -28,8 +28,9 @@
   "manufactured_qty",
   "column_break_sqlw",
   "gross_weight",
-  "weight_of_fabric_packing",
   "column_break_dsst",
+  "weight_of_fabric_packing",
+  "column_break_ldqt",
   "net_weight",
   "section_break_urbl",
   "raw_material_consumption",
@@ -40,21 +41,11 @@
   "column_break_hlkp",
   "process_loss_weight",
   "column_break_xzlj",
-  "hopper_and_tray_tab",
-  "hopper_item",
-  "column_break_ixuj",
-  "column_break_pmle",
-  "section_break_idht",
-  "qty_added",
-  "qty_used",
-  "column_break_caot",
-  "opening_qty",
-  "closing_qty",
   "tab_3_tab",
-  "mip_generate_weight",
-  "mip_used",
-  "column_break_gnjl",
   "opening_qty_for_mip",
+  "mip_generate_weight",
+  "column_break_gnjl",
+  "mip_used",
   "closing_qty_for_mip"
  ],
  "fields": [
@@ -247,61 +238,9 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "hopper_and_tray_tab",
-   "fieldtype": "Tab Break",
-   "label": "Hopper and Tray"
-  },
-  {
-   "fieldname": "hopper_item",
-   "fieldtype": "Link",
-   "label": "Hopper Item",
-   "options": "Item",
-   "reqd": 1
-  },
-  {
-   "fieldname": "column_break_ixuj",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "tab_3_tab",
    "fieldtype": "Tab Break",
-   "label": "MIP Details"
-  },
-  {
-   "fieldname": "column_break_pmle",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "section_break_idht",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "qty_added",
-   "fieldtype": "Float",
-   "label": "Qty Added",
-   "precision": "4"
-  },
-  {
-   "fieldname": "qty_used",
-   "fieldtype": "Float",
-   "label": "Qty Used",
-   "precision": "4"
-  },
-  {
-   "fieldname": "column_break_caot",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "opening_qty",
-   "fieldtype": "Float",
-   "label": "Opening Qty",
-   "precision": "4"
-  },
-  {
-   "fieldname": "closing_qty",
-   "fieldtype": "Float",
-   "label": "Closing Qty",
-   "precision": "4"
+   "label": "Grinding MIP Details"
   },
   {
    "fieldname": "mip_generate_weight",
@@ -346,13 +285,17 @@
    "label": "Production Plan",
    "options": "Production Plan",
    "reqd": 1
+  },
+  {
+   "fieldname": "column_break_ldqt",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-16 13:35:14.283229",
+ "modified": "2026-01-17 13:00:44.422336",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Production Log Sheet",
