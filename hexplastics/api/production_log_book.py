@@ -705,3 +705,57 @@ def get_stock_entry_no(docname: str) -> str | None:
             title=_("Error fetching stock_entry_no"),
         )
         return None
+
+
+@frappe.whitelist()
+def get_boms_from_production_plan(production_plan: str) -> list:
+    """
+    Fetch all BOM names from a Production Plan's Production Plan Item child table.
+
+    This is used to filter the BOM field in Production Log Sheet based on
+    the selected Production Plan.
+
+    Args:
+        production_plan: Name of the Production Plan document
+
+    Returns:
+        list: List of BOM names present in the Production Plan
+    """
+    try:
+        if not production_plan:
+            return []
+
+        # Validate that Production Plan exists
+        if not frappe.db.exists("Production Plan", production_plan):
+            frappe.throw(_("Production Plan {0} does not exist").format(production_plan))
+
+        # Fetch BOM names from Production Plan Item child table
+        # Try different possible field names for the child table
+        bom_names = []
+
+        # Standard field name is 'po_items' for Production Plan Item
+        plan_items = frappe.get_all(
+            "Production Plan Item",
+            filters={"parent": production_plan},
+            fields=["bom_no"],
+            distinct=True,
+        )
+
+        # Extract BOM names, filtering out None/empty values
+        bom_names = [
+            item["bom_no"]
+            for item in plan_items
+            if item.get("bom_no")
+        ]
+
+        # Remove duplicates and return
+        return list(set(bom_names)) if bom_names else []
+
+    except frappe.DoesNotExistError:
+        frappe.throw(_("Production Plan {0} does not exist").format(production_plan))
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching BOMs from Production Plan"),
+        )
+        frappe.throw(_("Error fetching BOMs from Production Plan"))
