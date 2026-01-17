@@ -39,6 +39,11 @@ frappe.ui.form.on("Production Log Sheet", {
 		calculate_net_weight(frm);
 	},
 
+	manufactured_qty(frm) {
+		// Update manufactured_qty in Production Details table when main form manufactured_qty changes
+		update_production_details_manufactured_qty(frm);
+	},
+
 	bom(frm) {
 		// When BOM is selected, fetch and populate raw material items and manufacturing item
 		if (frm.doc.bom) {
@@ -153,6 +158,28 @@ function calculate_net_weight(frm) {
 }
 
 /**
+ * Update manufactured_qty in all rows of production_details table
+ * @param {Object} frm - The form object
+ */
+function update_production_details_manufactured_qty(frm) {
+	if (!frm.doc.production_details || frm.doc.production_details.length === 0) {
+		return;
+	}
+	
+	const manufactured_qty = flt(frm.doc.manufactured_qty) || 0;
+	
+	// Update manufactured_qty for all rows in production_details table
+	frm.doc.production_details.forEach(function(row) {
+		if (row.item_code) {
+			frappe.model.set_value(row.doctype, row.name, "manufactured_qty", manufactured_qty);
+		}
+	});
+	
+	// Refresh the child table to show updated values
+	frm.refresh_field("production_details");
+}
+
+/**
  * Fetch manufacturing item from BOM and add it to production_details table
  * @param {Object} frm - The form object
  */
@@ -197,7 +224,10 @@ function fetch_and_add_manufacturing_item(frm) {
 								frappe.model.set_value(row.doctype, row.name, "target_warehouse", "Finished Good - Hex");
 							}
 							
-							// Note: manufactured_qty is left blank for manual entry by user
+							// Set manufactured_qty from main form if available
+							if (frm.doc.manufactured_qty) {
+								frappe.model.set_value(row.doctype, row.name, "manufactured_qty", flt(frm.doc.manufactured_qty) || 0);
+							}
 							
 							// Refresh the child table to show new row
 							frm.refresh_field("production_details");
