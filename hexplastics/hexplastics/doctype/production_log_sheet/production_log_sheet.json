@@ -132,17 +132,16 @@
   },
   {
    "fieldname": "operator_id",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Operator ID",
-   "options": "Employee",
    "reqd": 1
   },
   {
-   "fetch_from": "operator_id.employee_name",
    "fieldname": "operator_name",
    "fieldtype": "Data",
    "label": "Operator Name",
-   "read_only": 1
+   "read_only": 1,
+   "hidden": 1
   },
   {
    "fieldname": "column_break_iapm",
@@ -150,17 +149,16 @@
   },
   {
    "fieldname": "supervisor_id",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Supervisor ID",
-   "options": "Employee",
    "reqd": 1
   },
   {
-   "fetch_from": "operator_id.employee_name",
    "fieldname": "supervisor_name",
    "fieldtype": "Data",
    "label": "Supervisor Name",
-   "read_only": 1
+   "read_only": 1,
+   "hidden": 1
   },
   {
    "fieldname": "column_break_ygjr",
