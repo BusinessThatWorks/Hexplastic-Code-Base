@@ -27,6 +27,16 @@ frappe.ui.form.on("Production Log Sheet", {
 				frm.set_value("bom", "");
 			}
 		}
+	},
+
+	gross_weight(frm) {
+		// Recalculate net_weight when gross_weight changes
+		calculate_net_weight(frm);
+	},
+
+	weight_of_fabric_packing(frm) {
+		// Recalculate net_weight when weight_of_fabric_packing changes
+		calculate_net_weight(frm);
 	}
 });
 
@@ -80,4 +90,27 @@ function fetch_and_cache_production_plan_boms(frm) {
 			}
 		}
 	});
+}
+
+/**
+ * Calculate net_weight from gross_weight and weight_of_fabric_packing
+ * Formula: net_weight = gross_weight - weight_of_fabric_packing
+ * Safely handles empty, null, undefined, or invalid values
+ * @param {Object} frm - The form object
+ */
+function calculate_net_weight(frm) {
+	// Safely parse values, treating null/undefined/empty string as 0
+	let gross_weight = flt(frm.doc.gross_weight) || 0;
+	let weight_of_fabric_packing = flt(frm.doc.weight_of_fabric_packing) || 0;
+	
+	// Calculate net_weight
+	let net_weight = gross_weight - weight_of_fabric_packing;
+	
+	// Ensure non-negative result (or set to 0 if calculation results in negative)
+	net_weight = Math.max(0, net_weight);
+	
+	// Update the field value (only if it's different to avoid unnecessary triggers)
+	if (flt(frm.doc.net_weight) !== net_weight) {
+		frm.set_value("net_weight", net_weight);
+	}
 }
