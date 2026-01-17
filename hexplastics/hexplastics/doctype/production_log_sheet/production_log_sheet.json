@@ -34,6 +34,11 @@
   "net_weight",
   "section_break_urbl",
   "raw_material_consumption",
+  "section_break_rquc",
+  "total_rm_consumption",
+  "column_break_icit",
+  "column_break_mjjd",
+  "column_break_psoi",
   "section_break_jcgo",
   "production_details",
   "section_break_sacl",
@@ -198,7 +203,8 @@
    "fieldname": "net_weight",
    "fieldtype": "Float",
    "label": "Net Weight",
-   "precision": "4"
+   "precision": "4",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_jcgo",
@@ -289,13 +295,36 @@
   {
    "fieldname": "column_break_ldqt",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_rquc",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "total_rm_consumption",
+   "fieldtype": "Float",
+   "label": "Total RM Consumption",
+   "precision": "4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_icit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_mjjd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_psoi",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-17 13:00:44.422336",
+ "modified": "2026-01-17 13:20:04.855440",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Production Log Sheet",
