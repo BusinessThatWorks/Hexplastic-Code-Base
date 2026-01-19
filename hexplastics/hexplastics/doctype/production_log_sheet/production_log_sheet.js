@@ -8,6 +8,9 @@ frappe.ui.form.on("Production Log Sheet", {
 		
 		// Set up employee search for Operator ID and Supervisor ID
 		setup_employee_search(frm);
+		
+		// Calculate total RM consumption on refresh
+		calculate_total_rm_consumption(frm);
 	},
 
 	production_plan(frm) {
@@ -69,6 +72,9 @@ frappe.ui.form.on("Production Log Sheet", {
 						
 						// Refresh the child table to show new rows
 						frm.refresh_field("raw_material_consumption");
+						
+						// Recalculate total RM consumption after adding rows
+						calculate_total_rm_consumption(frm);
 					}
 				}
 			});
@@ -81,6 +87,9 @@ frappe.ui.form.on("Production Log Sheet", {
 			frm.refresh_field("raw_material_consumption");
 			frm.clear_table("production_details");
 			frm.refresh_field("production_details");
+			
+			// Recalculate total RM consumption (should be 0 after clearing)
+			calculate_total_rm_consumption(frm);
 		}
 	},
 
@@ -102,7 +111,7 @@ frappe.ui.form.on("Production Log Sheet", {
 		}
 	},
 
-	supervisor_id(frm) {
+		supervisor_id(frm) {
 		// When Supervisor ID value changes, check if it's an employee ID and convert to name
 		if (frm.doc.supervisor_id) {
 			// Check if the value looks like an employee ID (alphanumeric, typically)
@@ -117,6 +126,18 @@ frappe.ui.form.on("Production Log Sheet", {
 		} else {
 			frm.set_value("supervisor_name", "");
 		}
+	},
+
+	// When a row is added to raw_material_consumption table
+	raw_material_consumption_add(frm) {
+		// Recalculate total RM consumption
+		calculate_total_rm_consumption(frm);
+	},
+
+	// When a row is removed from raw_material_consumption table
+	raw_material_consumption_remove(frm) {
+		// Recalculate total RM consumption
+		calculate_total_rm_consumption(frm);
 	}
 });
 
@@ -489,3 +510,38 @@ function fetch_employee_name(frm, fieldname) {
 		}
 	});
 }
+
+/**
+ * Calculate total_rm_consumption as the sum of consumption values from raw_material_consumption table
+ * Updates the field in real time
+ * @param {Object} frm - The form object
+ */
+function calculate_total_rm_consumption(frm) {
+	if (!frm.doc.raw_material_consumption || frm.doc.raw_material_consumption.length === 0) {
+		// If table is empty, set total to 0
+		frm.set_value("total_rm_consumption", 0);
+		return;
+	}
+	
+	// Sum all consumption values from the child table
+	let total = 0;
+	frm.doc.raw_material_consumption.forEach(function(row) {
+		// Safely parse consumption value, treating null/undefined/empty as 0
+		const consumption = flt(row.consumption) || 0;
+		total += consumption;
+	});
+	
+	// Update the total_rm_consumption field
+	frm.set_value("total_rm_consumption", total);
+}
+
+// Handle child table field changes for Production Log Sheet Table
+// Note: In Frappe, when handling child table events, 'frm' refers to the parent form
+frappe.ui.form.on("Production Log Sheet Table", {
+	// When consumption value changes in any row
+	consumption(frm, cdt, cdn) {
+		// Recalculate total RM consumption
+		// frm here is the parent form (Production Log Sheet)
+		calculate_total_rm_consumption(frm);
+	}
+});
