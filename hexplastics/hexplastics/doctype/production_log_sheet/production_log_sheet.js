@@ -11,6 +11,9 @@ frappe.ui.form.on("Production Log Sheet", {
 		
 		// Calculate total RM consumption on refresh
 		calculate_total_rm_consumption(frm);
+		
+		// Calculate closing qty for MIP on refresh
+		calculate_closing_qty_for_mip(frm);
 	},
 
 	production_plan(frm) {
@@ -38,11 +41,15 @@ frappe.ui.form.on("Production Log Sheet", {
 	gross_weight(frm) {
 		// Recalculate net_weight when gross_weight changes
 		calculate_net_weight(frm);
+		// Recalculate closing_qty_for_mip since net_weight changes
+		calculate_closing_qty_for_mip(frm);
 	},
 
 	weight_of_fabric_packing(frm) {
 		// Recalculate net_weight when weight_of_fabric_packing changes
 		calculate_net_weight(frm);
+		// Recalculate closing_qty_for_mip since net_weight changes
+		calculate_closing_qty_for_mip(frm);
 	},
 
 	manufactured_qty(frm) {
@@ -131,6 +138,7 @@ frappe.ui.form.on("Production Log Sheet", {
 	// When a row is added to raw_material_consumption table
 	raw_material_consumption_add(frm) {
 		// Recalculate total RM consumption
+		// Note: calculate_total_rm_consumption will also trigger calculate_closing_qty_for_mip
 		calculate_total_rm_consumption(frm);
 	},
 
@@ -138,6 +146,26 @@ frappe.ui.form.on("Production Log Sheet", {
 	raw_material_consumption_remove(frm) {
 		// Recalculate total RM consumption
 		calculate_total_rm_consumption(frm);
+		// Recalculate closing_qty_for_mip since total_rm_consumption changes
+		calculate_closing_qty_for_mip(frm);
+	},
+
+	// When total_rm_consumption changes (manually or via calculation)
+	total_rm_consumption(frm) {
+		// Recalculate closing_qty_for_mip
+		calculate_closing_qty_for_mip(frm);
+	},
+
+	// When mip_used changes
+	mip_used(frm) {
+		// Recalculate closing_qty_for_mip
+		calculate_closing_qty_for_mip(frm);
+	},
+
+	// When process_loss_weight changes
+	process_loss_weight(frm) {
+		// Recalculate closing_qty_for_mip
+		calculate_closing_qty_for_mip(frm);
 	}
 });
 
@@ -213,6 +241,7 @@ function calculate_net_weight(frm) {
 	// Update the field value (only if it's different to avoid unnecessary triggers)
 	if (flt(frm.doc.net_weight) !== net_weight) {
 		frm.set_value("net_weight", net_weight);
+		// Note: closing_qty_for_mip will be recalculated by the gross_weight/weight_of_fabric_packing handlers
 	}
 }
 
@@ -520,6 +549,8 @@ function calculate_total_rm_consumption(frm) {
 	if (!frm.doc.raw_material_consumption || frm.doc.raw_material_consumption.length === 0) {
 		// If table is empty, set total to 0
 		frm.set_value("total_rm_consumption", 0);
+		// Trigger recalculation of closing_qty_for_mip
+		calculate_closing_qty_for_mip(frm);
 		return;
 	}
 	
@@ -533,6 +564,29 @@ function calculate_total_rm_consumption(frm) {
 	
 	// Update the total_rm_consumption field
 	frm.set_value("total_rm_consumption", total);
+	// Trigger recalculation of closing_qty_for_mip
+	calculate_closing_qty_for_mip(frm);
+}
+
+/**
+ * Calculate closing_qty_for_mip using the formula:
+ * closing_qty_for_mip = total_rm_consumption + mip_used - net_weight - process_loss_weight
+ * Updates the field in real time
+ * @param {Object} frm - The form object
+ */
+function calculate_closing_qty_for_mip(frm) {
+	// Safely parse all values, treating null/undefined/empty as 0
+	const total_rm_consumption = flt(frm.doc.total_rm_consumption) || 0;
+	const mip_used = flt(frm.doc.mip_used) || 0;
+	const net_weight = flt(frm.doc.net_weight) || 0;
+	const process_loss_weight = flt(frm.doc.process_loss_weight) || 0;
+	
+	// Calculate closing_qty_for_mip
+	// Formula: total_rm_consumption + mip_used - net_weight - process_loss_weight
+	const closing_qty = total_rm_consumption + mip_used - net_weight - process_loss_weight;
+	
+	// Update the closing_qty_for_mip field
+	frm.set_value("closing_qty_for_mip", closing_qty);
 }
 
 // Handle child table field changes for Production Log Sheet Table
