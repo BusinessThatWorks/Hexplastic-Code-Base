@@ -11,6 +11,11 @@ frappe.ui.form.on("Production Log Sheet", {
 		
 		// Calculate closing qty for MIP on refresh
 		calculate_closing_qty_for_mip(frm);
+		
+		// Auto-fill avl_in_plant on refresh if date and shift are set
+		if (frm.doc.production_date && frm.doc.shift_type) {
+			fill_avl_in_plant_for_items(frm);
+		}
 	},
 
 	production_plan(frm) {
@@ -32,6 +37,20 @@ frappe.ui.form.on("Production Log Sheet", {
 			if (frm.doc.bom) {
 				frm.set_value("bom", "");
 			}
+		}
+	},
+
+	production_date(frm) {
+		// Auto-fill avl_in_plant when production date changes
+		if (frm.doc.production_date && frm.doc.shift_type) {
+			fill_avl_in_plant_for_items(frm);
+		}
+	},
+
+	shift_type(frm) {
+		// Auto-fill avl_in_plant when shift type changes
+		if (frm.doc.production_date && frm.doc.shift_type) {
+			fill_avl_in_plant_for_items(frm);
 		}
 	},
 
@@ -79,6 +98,11 @@ frappe.ui.form.on("Production Log Sheet", {
 						
 						// Recalculate total RM consumption after adding rows
 						calculate_total_rm_consumption(frm);
+						
+						// Auto-fill avl_in_plant after adding BOM items
+						if (frm.doc.production_date && frm.doc.shift_type) {
+							fill_avl_in_plant_for_items(frm);
+						}
 					}
 				}
 			});
@@ -102,6 +126,14 @@ frappe.ui.form.on("Production Log Sheet", {
 		// Recalculate total RM consumption
 		// Note: calculate_total_rm_consumption will also trigger calculate_closing_qty_for_mip
 		calculate_total_rm_consumption(frm);
+		
+		// Auto-fill avl_in_plant for the newly added row
+		if (frm.doc.production_date && frm.doc.shift_type) {
+			// Use a small delay to ensure the row is fully added
+			setTimeout(function() {
+				fill_avl_in_plant_for_items(frm);
+			}, 100);
+		}
 	},
 
 	// When a row is removed from raw_material_consumption table
@@ -451,6 +483,17 @@ frappe.ui.form.on("Production Log Sheet Table", {
 		
 		// Recalculate closing_stock for this row
 		calculate_closing_stock(frm, cdt, cdn);
+	},
+
+	// When item_code is set in a row, auto-fill avl_in_plant if date and shift are available
+	item_code(frm, cdt, cdn) {
+		// Auto-fill avl_in_plant when item_code is set
+		if (frm.doc.production_date && frm.doc.shift_type) {
+			// Use a small delay to ensure item_code is fully set
+			setTimeout(function() {
+				fill_avl_in_plant_for_items(frm);
+			}, 100);
+		}
 	}
 });
 
@@ -479,4 +522,78 @@ function calculate_closing_stock(frm, cdt, cdn) {
 	
 	// Update the closing_stock field in the same row
 	frappe.model.set_value(cdt, cdn, "closing_stock", closing_stock);
+}
+
+/**
+ * Auto-fill avl_in_plant field for all rows in raw_material_consumption table
+ * based on previous shift closing stock.
+ * 
+ * Logic:
+ * - If current entry is Night shift → use Day shift closing stock of the same date
+ * - If Day shift data not found → fetch closest previous shift's closing stock
+ * 
+ * @param {Object} frm - The form object
+ */
+function fill_avl_in_plant_for_items(frm) {
+	// Check if required fields are present
+	if (!frm.doc.production_date || !frm.doc.shift_type) {
+		return;
+	}
+
+	// Get all item codes from raw_material_consumption table
+	const raw_material_consumption = frm.doc.raw_material_consumption || [];
+	if (raw_material_consumption.length === 0) {
+		return;
+	}
+
+	// Collect unique item codes
+	const item_codes = [];
+	raw_material_consumption.forEach(function(row) {
+		if (row.item_code && !item_codes.includes(row.item_code)) {
+			item_codes.push(row.item_code);
+		}
+	});
+
+	if (item_codes.length === 0) {
+		return;
+	}
+
+	// Call server-side API to get opening stock (previous closing stock) for all items at once
+	frappe.call({
+		method: "hexplastics.api.production_log_book.get_opening_stock_for_items_production_log_sheet",
+		args: {
+			item_codes: item_codes,
+			current_date: frm.doc.production_date,
+			current_shift: frm.doc.shift_type,
+			exclude_docname: frm.doc.name || null, // Exclude current document if it exists
+		},
+		callback: function(r) {
+			if (r.message && typeof r.message === "object") {
+				const opening_stock_map = r.message;
+
+				// Update avl_in_plant for each row
+				raw_material_consumption.forEach(function(row) {
+					if (row.item_code && opening_stock_map[row.item_code] !== undefined) {
+						// Only set if value exists in the map
+						const opening_stock = flt(opening_stock_map[row.item_code]) || 0;
+
+						// Use frappe.model.set_value to update the field
+						frappe.model.set_value(
+							row.doctype,
+							row.name,
+							"avl_in_plant",
+							opening_stock
+						);
+					}
+				});
+
+				// Refresh the field to show updated values
+				frm.refresh_field("raw_material_consumption");
+			}
+		},
+		error: function(r) {
+			// Log error but don't break the form
+			console.error("Error fetching opening stock for Production Log Sheet:", r);
+		},
+	});
 }

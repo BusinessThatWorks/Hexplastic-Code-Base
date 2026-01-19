@@ -759,3 +759,171 @@ def get_boms_from_production_plan(production_plan: str) -> list:
             title=_("Error fetching BOMs from Production Plan"),
         )
         frappe.throw(_("Error fetching BOMs from Production Plan"))
+
+
+@frappe.whitelist()
+def get_previous_closing_stock_for_production_log_sheet(
+    item_code, current_date, current_shift, exclude_docname=None
+):
+    """
+    Get the previous closing_stock for an item_code from Production Log Sheet
+    based on shift-based priority logic.
+
+    Priority Rules:
+    - If current_shift = NIGHT:
+        1. Check SAME DATE → DAY shift
+        2. If not found, go to PREVIOUS DATE (NIGHT → then DAY), continue backwards
+    - If current_shift = DAY:
+        1. Go to PREVIOUS DATE (NIGHT → then DAY), continue backwards
+
+    Args:
+        item_code (str): Item code to search for
+        current_date (str): Current production date (YYYY-MM-DD format)
+        current_shift (str): Current shift type ("Day" or "Night")
+        exclude_docname (str, optional): Document name to exclude from search (current document)
+
+    Returns:
+        float: closing_stock value from previous entry, or 0 if not found
+    """
+    try:
+        if not item_code or not current_date or not current_shift:
+            return 0.0
+
+        # Normalize shift values
+        current_shift = current_shift.strip()
+        if current_shift.lower() not in ["day", "night"]:
+            return 0.0
+
+        # Parse current date
+        try:
+            current_date_obj = frappe.utils.getdate(current_date)
+        except Exception:
+            frappe.throw(_("Invalid date format: {0}").format(current_date))
+
+        # Convert shift to match database values (Day, Night)
+        shift_map = {"day": "Day", "night": "Night"}
+        current_shift_db = shift_map.get(current_shift.lower(), "Day")
+
+        # Build list of date-shift combinations to check in priority order
+        search_sequence = []
+
+        if current_shift.lower() == "night":
+            # Step 1: Same date, DAY shift
+            search_sequence.append((current_date_obj, "Day"))
+
+            # Step 2: Previous dates (NIGHT → DAY)
+            check_date = current_date_obj - timedelta(days=1)
+            # Limit search to last 30 days to avoid infinite loops
+            max_days_back = 30
+            days_checked = 0
+
+            while days_checked < max_days_back:
+                search_sequence.append((check_date, "Night"))
+                search_sequence.append((check_date, "Day"))
+                check_date = check_date - timedelta(days=1)
+                days_checked += 1
+        else:  # current_shift == "day"
+            # Go directly to previous dates (NIGHT → DAY)
+            check_date = current_date_obj - timedelta(days=1)
+            max_days_back = 30
+            days_checked = 0
+
+            while days_checked < max_days_back:
+                search_sequence.append((check_date, "Night"))
+                search_sequence.append((check_date, "Day"))
+                check_date = check_date - timedelta(days=1)
+                days_checked += 1
+
+        # Search through the sequence
+        for check_date_obj, check_shift in search_sequence:
+            # Build filters for Production Log Sheet
+            filters = {
+                "production_date": check_date_obj,
+                "shift_type": check_shift,
+                "docstatus": 1,  # Only submitted documents
+            }
+
+            # Exclude current document if provided
+            if exclude_docname:
+                filters["name"] = ["!=", exclude_docname]
+
+            # Find Production Log Sheet documents matching date and shift
+            pls_docs = frappe.get_all(
+                "Production Log Sheet",
+                filters=filters,
+                fields=["name"],
+                order_by="creation desc",  # Get most recent first
+                limit=1,
+            )
+
+            if pls_docs:
+                pls_name = pls_docs[0].name
+
+                # Search in child table for matching item_code
+                child_rows = frappe.get_all(
+                    "Production Log Sheet Table",
+                    filters={"parent": pls_name, "item_code": item_code},
+                    fields=["closing_stock"],
+                    limit=1,
+                )
+
+                if child_rows and child_rows[0].closing_stock is not None:
+                    closing_stock = flt(child_rows[0].closing_stock) or 0.0
+                    return closing_stock
+
+        # Nothing found, return 0
+        return 0.0
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching previous closing stock for Production Log Sheet"),
+        )
+        # Return 0 on error to avoid breaking the form
+        return 0.0
+
+
+@frappe.whitelist()
+def get_opening_stock_for_items_production_log_sheet(
+    item_codes, current_date, current_shift, exclude_docname=None
+):
+    """
+    Get opening stock (previous closing_stock) for multiple items at once from Production Log Sheet.
+    This is more efficient than calling get_previous_closing_stock_for_production_log_sheet multiple times.
+
+    Args:
+        item_codes (list | str): List of item codes (may be JSON string from JS)
+        current_date (str): Current production date (YYYY-MM-DD format)
+        current_shift (str): Current shift type ("Day" or "Night")
+        exclude_docname (str, optional): Document name to exclude from search
+
+    Returns:
+        dict: {item_code: closing_stock_value, ...}
+    """
+    try:
+        # Normalize item_codes
+        if isinstance(item_codes, str):
+            item_codes = frappe.parse_json(item_codes)
+
+        item_codes = item_codes or []
+
+        if not item_codes:
+            return {}
+
+        result = {}
+
+        # Call get_previous_closing_stock_for_production_log_sheet for each item
+        for item_code in item_codes:
+            if item_code:
+                result[item_code] = get_previous_closing_stock_for_production_log_sheet(
+                    item_code, current_date, current_shift, exclude_docname
+                )
+
+        return result
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching opening stock for items in Production Log Sheet"),
+        )
+        return {}
