@@ -393,10 +393,52 @@ function calculate_closing_qty_for_mip(frm) {
 // Handle child table field changes for Production Log Sheet Table
 // Note: In Frappe, when handling child table events, 'frm' refers to the parent form
 frappe.ui.form.on("Production Log Sheet Table", {
+	// When avl_in_plant value changes in any row
+	avl_in_plant(frm, cdt, cdn) {
+		// Recalculate closing_stock for this row
+		calculate_closing_stock(frm, cdt, cdn);
+	},
+	
+	// When issued value changes in any row
+	issued(frm, cdt, cdn) {
+		// Recalculate closing_stock for this row
+		calculate_closing_stock(frm, cdt, cdn);
+	},
+	
 	// When consumption value changes in any row
 	consumption(frm, cdt, cdn) {
 		// Recalculate total RM consumption
 		// frm here is the parent form (Production Log Sheet)
 		calculate_total_rm_consumption(frm);
+		
+		// Recalculate closing_stock for this row
+		calculate_closing_stock(frm, cdt, cdn);
 	}
 });
+
+/**
+ * Calculate closing_stock for a specific row in Raw Material Consumption table
+ * Formula: closing_stock = (avl_in_plant + issued) - consumption
+ * @param {Object} frm - The parent form object (Production Log Sheet)
+ * @param {String} cdt - Child doctype name (Production Log Sheet Table)
+ * @param {String} cdn - Child document name (row name)
+ */
+function calculate_closing_stock(frm, cdt, cdn) {
+	// Get the child row
+	let row = locals[cdt][cdn];
+	
+	if (!row) {
+		return;
+	}
+	
+	// Safely parse values, treating null/undefined/empty string as 0
+	let avl_in_plant = flt(row.avl_in_plant) || 0;
+	let issued = flt(row.issued) || 0;
+	let consumption = flt(row.consumption) || 0;
+	
+	// Calculate closing_stock: (avl_in_plant + issued) - consumption
+	let closing_stock = (avl_in_plant + issued) - consumption;
+	
+	// Update the closing_stock field in the same row
+	frappe.model.set_value(cdt, cdn, "closing_stock", closing_stock);
+}
