@@ -128,6 +128,44 @@ frappe.ui.form.on("Production Log Sheet", {
 	process_loss_weight(frm) {
 		// Recalculate closing_qty_for_mip
 		calculate_closing_qty_for_mip(frm);
+	},
+
+	// When operator_id is selected, fetch and populate ONLY operator_name
+	operator_id(frm) {
+		if (frm.doc.operator_id) {
+			// Fetch employee name from Employee doctype
+			frappe.db.get_value("Employee", { name: frm.doc.operator_id }, "employee_name", function(r) {
+				if (r && r.employee_name) {
+					// Update ONLY operator_name, do NOT touch supervisor_name
+					frm.set_value("operator_name", r.employee_name);
+				} else {
+					// Clear operator_name if employee not found
+					frm.set_value("operator_name", "");
+				}
+			});
+		} else {
+			// Clear operator_name when operator_id is cleared
+			frm.set_value("operator_name", "");
+		}
+	},
+
+	// When supervisor_id is selected, fetch and populate ONLY supervisor_name
+	supervisor_id(frm) {
+		if (frm.doc.supervisor_id) {
+			// Fetch employee name from Employee doctype
+			frappe.db.get_value("Employee", { name: frm.doc.supervisor_id }, "employee_name", function(r) {
+				if (r && r.employee_name) {
+					// Update ONLY supervisor_name, do NOT touch operator_name
+					frm.set_value("supervisor_name", r.employee_name);
+				} else {
+					// Clear supervisor_name if employee not found
+					frm.set_value("supervisor_name", "");
+				}
+			});
+		} else {
+			// Clear supervisor_name when supervisor_id is cleared
+			frm.set_value("supervisor_name", "");
+		}
 	}
 });
 

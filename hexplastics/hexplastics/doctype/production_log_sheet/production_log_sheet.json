@@ -132,16 +132,16 @@
   },
   {
    "fieldname": "operator_id",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "label": "Operator ID",
+   "options": "Employee",
    "reqd": 1
   },
   {
    "fieldname": "operator_name",
    "fieldtype": "Data",
    "label": "Operator Name",
-   "read_only": 1,
-   "hidden": 1
+   "read_only": 1
   },
   {
    "fieldname": "column_break_iapm",
@@ -149,16 +149,16 @@
   },
   {
    "fieldname": "supervisor_id",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "label": "Supervisor ID",
+   "options": "Employee",
    "reqd": 1
   },
   {
    "fieldname": "supervisor_name",
    "fieldtype": "Data",
    "label": "Supervisor Name",
-   "read_only": 1,
-   "hidden": 1
+   "read_only": 1
   },
   {
    "fieldname": "column_break_ygjr",
@@ -322,7 +322,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-17 13:20:04.855440",
+ "modified": "2026-01-19 12:42:48.937702",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Production Log Sheet",

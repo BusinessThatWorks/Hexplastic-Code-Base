@@ -59,7 +59,8 @@
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Avl. In Plant",
-   "precision": "4"
+   "precision": "4",
+   "read_only": 1
   },
   {
    "columns": 1,
@@ -89,7 +90,8 @@
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Closing Stock",
-   "precision": "4"
+   "precision": "4",
+   "read_only": 1
   },
   {
    "columns": 1,
@@ -105,7 +107,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-16 12:42:09.668382",
+ "modified": "2026-01-19 12:47:50.505693",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Production Log Sheet Table",
