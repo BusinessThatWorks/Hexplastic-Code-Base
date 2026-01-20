@@ -16,6 +16,12 @@ frappe.ui.form.on("Production Log Sheet", {
 		if (frm.doc.production_date && frm.doc.shift_type) {
 			fill_avl_in_plant_for_items(frm);
 		}
+
+		// Initialize manual edit tracking for opening_qty_for_mip.
+		// If the document already has a value, treat it as user-provided and do not auto-override.
+		if (frm.doc.docstatus !== 1) {
+			frm._opening_mip_manually_edited = !!frm.doc.opening_qty_for_mip;
+		}
 	},
 
 	production_plan(frm) {
@@ -45,6 +51,9 @@ frappe.ui.form.on("Production Log Sheet", {
 		if (frm.doc.production_date && frm.doc.shift_type) {
 			fill_avl_in_plant_for_items(frm);
 		}
+
+		// Auto-fill opening_qty_for_mip when production date changes
+		maybe_set_opening_qty_for_mip(frm);
 	},
 
 	shift_type(frm) {
@@ -52,6 +61,9 @@ frappe.ui.form.on("Production Log Sheet", {
 		if (frm.doc.production_date && frm.doc.shift_type) {
 			fill_avl_in_plant_for_items(frm);
 		}
+
+		// Auto-fill opening_qty_for_mip when shift type changes
+		maybe_set_opening_qty_for_mip(frm);
 	},
 
 	gross_weight(frm) {
@@ -160,6 +172,13 @@ frappe.ui.form.on("Production Log Sheet", {
 	process_loss_weight(frm) {
 		// Recalculate closing_qty_for_mip
 		calculate_closing_qty_for_mip(frm);
+	},
+
+	// Track manual edits for opening_qty_for_mip so auto-logic does not override user input
+	opening_qty_for_mip(frm) {
+		if (frm.doc.docstatus !== 1) {
+			frm._opening_mip_manually_edited = true;
+		}
 	},
 
 	// When operator_id is selected, fetch and populate ONLY operator_name
@@ -458,6 +477,83 @@ function calculate_closing_qty_for_mip(frm) {
 	
 	// Update the closing_qty_for_mip field
 	frm.set_value("closing_qty_for_mip", closing_qty);
+}
+
+/**
+ * Decide whether the system is allowed to auto-set opening_qty_for_mip.
+ *
+ * Rules:
+ * - Never auto-set on submitted documents.
+ * - Never auto-override if the user has manually edited opening_qty_for_mip.
+ * - Only auto-set when the current value is empty/null/undefined.
+ *
+ * @param {Object} frm - The form object
+ * @returns {boolean}
+ */
+function should_auto_set_opening_mip(frm) {
+	// Do not touch submitted records
+	if (frm.doc.docstatus === 1) {
+		return false;
+	}
+
+	// Respect manual edits
+	if (frm._opening_mip_manually_edited) {
+		return false;
+	}
+
+	// Allow auto-set only when value is effectively empty
+	const current = frm.doc.opening_qty_for_mip;
+	return current === null || current === undefined || current === "" ;
+}
+
+/**
+ * Auto-populate opening_qty_for_mip using previous Production Log Sheet
+ * closing_qty_for_mip based on shift/date continuity logic.
+ *
+ * This mirrors the avl_in_plant shift logic:
+ * - For Night shift: same date Day → previous dates (Night then Day)
+ * - For Day shift: previous dates (Night then Day)
+ *
+ * It:
+ * - Runs when date/shift are selected.
+ * - Does NOT override if user manually edited opening_qty_for_mip.
+ * - Never modifies submitted records.
+ *
+ * @param {Object} frm - The form object
+ */
+function maybe_set_opening_qty_for_mip(frm) {
+	// Require date and shift
+	if (!frm.doc.production_date || !frm.doc.shift_type) {
+		return;
+	}
+
+	if (!should_auto_set_opening_mip(frm)) {
+		return;
+	}
+
+	frappe.call({
+		method: "hexplastics.api.production_log_book.get_previous_mip_opening_qty_production_log_sheet",
+		args: {
+			current_date: frm.doc.production_date,
+			current_shift: frm.doc.shift_type,
+			exclude_docname: frm.doc.name || null,
+		},
+		callback: function (r) {
+			// Re-check conditions to avoid race conditions or late overrides
+			if (!should_auto_set_opening_mip(frm)) {
+				return;
+			}
+
+			if (r && typeof r.message !== "undefined" && r.message !== null) {
+				const opening_qty = flt(r.message) || 0;
+				frm.set_value("opening_qty_for_mip", opening_qty);
+			}
+		},
+		error: function (err) {
+			// Log but don't interrupt user flow
+			console.error("Error fetching MIP opening quantity for Production Log Sheet:", err);
+		},
+	});
 }
 
 // Handle child table field changes for Production Log Sheet Table

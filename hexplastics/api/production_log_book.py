@@ -672,6 +672,115 @@ def get_previous_mip_opening_qty(
 
 
 @frappe.whitelist()
+def get_previous_mip_opening_qty_production_log_sheet(
+    current_date: str, current_shift: str, exclude_docname: str | None = None
+) -> float:
+    """
+    Get the previous Production Log Sheet MIP closing quantity
+    (used as opening_qty_for_mip for current doc) using the same
+    shift/date priority rules as avl_in_plant / closing_stock logic.
+
+    Source field:
+        - Doctype: Production Log Sheet
+        - Field:   closing_qty_for_mip
+
+    Priority Rules:
+    - If current_shift = NIGHT:
+        1. Check SAME DATE → DAY shift
+        2. If not found, go to PREVIOUS DATE (NIGHT → then DAY), continue backwards
+    - If current_shift = DAY:
+        1. Go to PREVIOUS DATE (NIGHT → then DAY), continue backwards
+
+    Only submitted (docstatus = 1) Production Log Sheet records are considered.
+    The current document (exclude_docname) is ignored in the search.
+
+    Args:
+        current_date: Current production date (YYYY-MM-DD format)
+        current_shift: Current shift type ("Day" or "Night")
+        exclude_docname: Document name to exclude from search (current document)
+
+    Returns:
+        float: closing_qty_for_mip from previous entry, or 0 if not found
+    """
+    try:
+        if not current_date or not current_shift:
+            return 0.0
+
+        # Normalize shift values
+        shift_normalized = current_shift.strip().lower()
+        if shift_normalized not in {"day", "night"}:
+            return 0.0
+
+        # Parse current date
+        try:
+            current_date_obj = frappe.utils.getdate(current_date)
+        except Exception:
+            frappe.throw(_("Invalid date format: {0}").format(current_date))
+
+        # Build list of date-shift combinations to check in priority order
+        search_sequence: list[tuple] = []
+
+        if shift_normalized == "night":
+            # Step 1: Same date, DAY shift
+            search_sequence.append((current_date_obj, "Day"))
+
+            # Step 2: Previous dates (NIGHT → DAY)
+            check_date = current_date_obj - timedelta(days=1)
+            max_days_back = 30
+            days_checked = 0
+
+            while days_checked < max_days_back:
+                search_sequence.append((check_date, "Night"))
+                search_sequence.append((check_date, "Day"))
+                check_date = check_date - timedelta(days=1)
+                days_checked += 1
+        else:
+            # Go directly to previous dates (NIGHT → DAY)
+            check_date = current_date_obj - timedelta(days=1)
+            max_days_back = 30
+            days_checked = 0
+
+            while days_checked < max_days_back:
+                search_sequence.append((check_date, "Night"))
+                search_sequence.append((check_date, "Day"))
+                check_date = check_date - timedelta(days=1)
+                days_checked += 1
+
+        # Search through the sequence
+        for check_date_obj, check_shift in search_sequence:
+            filters: dict = {
+                "production_date": check_date_obj,
+                "shift_type": check_shift,
+                "docstatus": 1,
+            }
+
+            # Exclude current document if provided
+            if exclude_docname:
+                filters["name"] = ["!=", exclude_docname]
+
+            pls_docs = frappe.get_all(
+                "Production Log Sheet",
+                filters=filters,
+                fields=["name", "closing_qty_for_mip"],
+                order_by="creation desc",
+                limit=1,
+            )
+
+            if pls_docs:
+                closing_qty_for_mip = pls_docs[0].get("closing_qty_for_mip")
+                return flt(closing_qty_for_mip) or 0.0
+
+        return 0.0
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching previous MIP opening qty for Production Log Sheet"),
+        )
+        return 0.0
+
+
+@frappe.whitelist()
 def get_stock_entry_no(docname: str) -> str | None:
     """
     Fetch the stock_entry_no from the Production Log Book document.
