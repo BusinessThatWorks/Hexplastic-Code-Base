@@ -16,6 +16,7 @@
   "column_break_uzrs",
   "shift_type",
   "machine_used",
+  "stock_entry_no",
   "amended_from",
   "section_break_kjgo",
   "operator_id",
@@ -316,13 +317,19 @@
   {
    "fieldname": "column_break_psoi",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "stock_entry_no",
+   "fieldtype": "Link",
+   "label": "Stock Entry No",
+   "options": "Stock Entry"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-19 12:42:48.937702",
+ "modified": "2026-01-20 11:05:37.260901",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Production Log Sheet",
