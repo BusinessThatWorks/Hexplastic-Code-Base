@@ -230,8 +230,13 @@ class ProductionLogSheet(Document):
             # Submit the Stock Entry
             stock_entry.submit()
 
+            # Populate stock_entry_no field after successful Stock Entry creation and submission
+            # Use db_set to update the field without changing the document's submitted status
+            self.db_set("stock_entry_no", stock_entry.name, update_modified=False)
+
         except Exception as e:
             # Prevent submit and show clear error
+            # Do NOT populate stock_entry_no if Stock Entry creation fails
             frappe.throw(
                 f"Failed to create Manufacture Stock Entry for Production Log Sheet: {frappe.utils.cstr(e)}"
             )
