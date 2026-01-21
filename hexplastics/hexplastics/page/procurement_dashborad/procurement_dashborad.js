@@ -830,10 +830,7 @@ class ProcurementDashboard {
 		const self = this;
 		const filters = this.get_global_filters();
 
-		// Clear previous overview data
-		this.clear_overview_data();
-
-		// Show loading state
+		// Show loading state (keep previous values visible to avoid flashing 0s)
 		this.show_loading();
 
 		frappe.call({
