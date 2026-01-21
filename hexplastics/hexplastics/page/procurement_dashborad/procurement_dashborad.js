@@ -91,19 +91,27 @@ class ProcurementDashboard {
 		const sevenDaysAgo = new Date(today);
 		sevenDaysAgo.setDate(today.getDate() - 7);
 
-		const formatDate = (date) => {
-			return date.toISOString().split("T")[0];
-		};
+		const formatDate = (date) => date.toISOString().split("T")[0];
 
-		setTimeout(() => {
+		// Robustly wait for inputs to exist, then set defaults and load data once
+		let attempts = 0;
+		const maxAttempts = 20;
+		const applyDefaults = () => {
 			const fromDateInput = document.getElementById("from-date");
 			const toDateInput = document.getElementById("to-date");
 
-			if (fromDateInput) fromDateInput.value = formatDate(sevenDaysAgo);
-			if (toDateInput) toDateInput.value = formatDate(today);
-			// After setting default dates, load the dashboard data once with correct filters
-			this.refresh_data();
-		}, 100);
+			if (fromDateInput && toDateInput) {
+				fromDateInput.value = formatDate(sevenDaysAgo);
+				toDateInput.value = formatDate(today);
+				// After setting default dates, load the dashboard data once with correct filters
+				this.refresh_data();
+			} else if (attempts < maxAttempts) {
+				attempts += 1;
+				setTimeout(applyDefaults, 50);
+			}
+		};
+
+		applyDefaults();
 	}
 
 	bind_events() {
