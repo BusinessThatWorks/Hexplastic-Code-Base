@@ -49,17 +49,22 @@ class SalesSummaryDashboard {
 	init() {
 		// Add body class to ensure CSS only applies on this page
 		document.body.classList.add("sales-summary-dashboard-page");
-		this.load_html();
 		this.setup_styles();
-		this.set_default_dates();
-		this.bind_events();
-		this.load_filter_options();
-		// Note: refresh_data() is called in set_default_dates() after dates are set
+		// Ensure HTML is loaded before setting dates, binding events, and loading filters
+		this.load_html(() => {
+			this.set_default_dates();
+			this.bind_events();
+			this.load_filter_options();
+			// Note: refresh_data() is called in set_default_dates() after dates are set
+		});
 	}
 
-	load_html() {
+	load_html(callback) {
 		frappe.require("/assets/hexplastics/css/sales_summary_dashboard.css", () => {
 			this.wrapper.html(frappe.render_template("sales_summary_dashboard"));
+			if (typeof callback === "function") {
+				callback();
+			}
 		});
 	}
 
@@ -113,18 +118,9 @@ class SalesSummaryDashboard {
 				self.switch_tab(tabId);
 			});
 
-			// Global Refresh button
+			// Global Refresh button - single unified refresh to avoid duplicate calls
 			this.wrapper.on("click", "#refresh-btn", function () {
 				self.refresh_data();
-				// Also refresh the current tab if not overview
-				const activeTab = self.wrapper.find(".tab-btn.active").data("tab");
-				if (activeTab === "sales-order") {
-					self.update_so_cards_visibility();
-					self.refresh_sales_orders();
-				} else if (activeTab === "sales-invoice") {
-					self.update_si_cards_visibility();
-					self.refresh_sales_invoices();
-				}
 			});
 
 			// Enter key on filters
@@ -143,14 +139,6 @@ class SalesSummaryDashboard {
 				self.refresh_data();
 			});
 
-			this.wrapper.on("change", "#customer-filter", function () {
-				if (self.debounce_timer) {
-					clearTimeout(self.debounce_timer);
-					self.debounce_timer = null;
-				}
-				self.refresh_data();
-			});
-
 			this.wrapper.on("input", "#customer-filter", function () {
 				if (self.debounce_timer) {
 					clearTimeout(self.debounce_timer);
@@ -166,10 +154,6 @@ class SalesSummaryDashboard {
 				self.refresh_sales_orders();
 			});
 
-			this.wrapper.on("change", "#so-id-filter, #so-item-filter", function () {
-				self.refresh_sales_orders();
-			});
-
 			this.wrapper.on("input", "#so-id-filter, #so-item-filter", function () {
 				if (self.debounce_timer) {
 					clearTimeout(self.debounce_timer);
@@ -182,10 +166,6 @@ class SalesSummaryDashboard {
 			// Sales Invoice tab filter changes
 			this.wrapper.on("change", "#si-status-filter", function () {
 				self.update_si_cards_visibility();
-				self.refresh_sales_invoices();
-			});
-
-			this.wrapper.on("change", "#si-id-filter, #si-item-filter", function () {
 				self.refresh_sales_invoices();
 			});
 

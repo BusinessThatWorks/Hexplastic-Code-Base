@@ -49,17 +49,21 @@ class ProcurementDashboard {
 	init() {
 		// Add body class to ensure CSS only applies on this page
 		document.body.classList.add("procurement-dashboard-page");
-		this.load_html();
 		this.setup_styles();
-		this.set_default_dates();
-		this.bind_events();
-		this.load_filter_options();
-		this.refresh_data();
+		// Ensure HTML is loaded before setting dates, binding events, loading filters and refreshing
+		this.load_html(() => {
+			this.bind_events();
+			this.load_filter_options();
+			this.set_default_dates();
+		});
 	}
 
-	load_html() {
+	load_html(callback) {
 		frappe.require("/assets/hexplastics/css/procurement_dashboard.css", () => {
 			this.wrapper.html(frappe.render_template("procurement_dashboard"));
+			if (typeof callback === "function") {
+				callback();
+			}
 		});
 	}
 
@@ -97,6 +101,8 @@ class ProcurementDashboard {
 
 			if (fromDateInput) fromDateInput.value = formatDate(sevenDaysAgo);
 			if (toDateInput) toDateInput.value = formatDate(today);
+			// After setting default dates, load the dashboard data once with correct filters
+			this.refresh_data();
 		}, 100);
 	}
 
