@@ -91,8 +91,36 @@ frappe.ui.form.on("Production Log Sheet", {
 			// Clear existing rows in raw_material_consumption table
 			frm.clear_table("raw_material_consumption");
 			
-			// Clear existing rows in production_details table
+			// Clear only BOM-generated rows in production_details table, preserve manually added items (like MIP items)
+			// Identify rows that were NOT manually added (they have no manual_entry flag)
+			const rows_to_keep = [];
+			(frm.doc.production_details || []).forEach(function(row) {
+				// Keep rows that were manually added (marked with manual_entry = 1)
+				if (row.manual_entry === 1 || row.manual_entry === "1" || row.manual_entry === true) {
+					rows_to_keep.push({
+						item_code: row.item_code,
+						item_name: row.item_name,
+						target_warehouse: row.target_warehouse,
+						manufactured_qty: row.manufactured_qty,
+						stock_uom: row.stock_uom,
+						manual_entry: 1
+					});
+				}
+			});
+			
+			// Clear production_details table
 			frm.clear_table("production_details");
+			
+			// Restore manually added rows
+			rows_to_keep.forEach(function(row_data) {
+				let new_row = frm.add_child("production_details");
+				new_row.item_code = row_data.item_code;
+				new_row.item_name = row_data.item_name;
+				new_row.target_warehouse = row_data.target_warehouse;
+				new_row.manufactured_qty = row_data.manufactured_qty;
+				new_row.stock_uom = row_data.stock_uom;
+				new_row.manual_entry = 1;
+			});
 			
 			// Fetch BOM items from server
 			frappe.call({
@@ -122,10 +150,40 @@ frappe.ui.form.on("Production Log Sheet", {
 			// Fetch manufacturing item (main item) from BOM
 			fetch_and_add_manufacturing_item(frm);
 		} else {
-			// Clear tables if BOM is cleared
+			// Clear raw_material_consumption table if BOM is cleared
 			frm.clear_table("raw_material_consumption");
 			frm.refresh_field("raw_material_consumption");
+			
+			// For production_details, preserve manually added items (like MIP items)
+			const manual_rows_to_keep = [];
+			(frm.doc.production_details || []).forEach(function(row) {
+				// Keep rows that were manually added (marked with manual_entry = 1)
+				if (row.manual_entry === 1 || row.manual_entry === "1" || row.manual_entry === true) {
+					manual_rows_to_keep.push({
+						item_code: row.item_code,
+						item_name: row.item_name,
+						target_warehouse: row.target_warehouse,
+						manufactured_qty: row.manufactured_qty,
+						stock_uom: row.stock_uom,
+						manual_entry: 1
+					});
+				}
+			});
+			
+			// Clear production_details table
 			frm.clear_table("production_details");
+			
+			// Restore manually added rows
+			manual_rows_to_keep.forEach(function(row_data) {
+				let new_row = frm.add_child("production_details");
+				new_row.item_code = row_data.item_code;
+				new_row.item_name = row_data.item_name;
+				new_row.target_warehouse = row_data.target_warehouse;
+				new_row.manufactured_qty = row_data.manufactured_qty;
+				new_row.stock_uom = row_data.stock_uom;
+				new_row.manual_entry = 1;
+			});
+			
 			frm.refresh_field("production_details");
 			
 			// Recalculate total RM consumption (should be 0 after clearing)
@@ -590,6 +648,52 @@ frappe.ui.form.on("Production Log Sheet Table", {
 				fill_avl_in_plant_for_items(frm);
 			}, 100);
 		}
+	}
+});
+
+// Handle child table field changes for Production Log Sheet FG Table (Production Details)
+// This enables manual item addition including MIP items
+frappe.ui.form.on("Production Log Sheet FG Table", {
+	// When a row is manually added, mark it as manual entry
+	production_details_add(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (row) {
+			// Mark this row as manually added so it won't be cleared when BOM changes
+			frappe.model.set_value(cdt, cdn, "manual_entry", 1);
+		}
+	},
+
+	// When item_code is set in a row, auto-fetch item details
+	item_code(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row || !row.item_code) {
+			return;
+		}
+
+		// Fetch item details from Item master
+		frappe.db.get_value("Item", { name: row.item_code }, ["item_name", "stock_uom"], function(r) {
+			if (r) {
+				// Set item_name if not already set
+				if (r.item_name && !row.item_name) {
+					frappe.model.set_value(cdt, cdn, "item_name", r.item_name);
+				}
+				// Set stock_uom if not already set
+				if (r.stock_uom && !row.stock_uom) {
+					frappe.model.set_value(cdt, cdn, "stock_uom", r.stock_uom);
+				}
+			}
+		});
+
+		// Set default target_warehouse if not already set
+		if (!row.target_warehouse) {
+			frappe.model.set_value(cdt, cdn, "target_warehouse", "Finished Good - Hex");
+		}
+	},
+
+	// When manufactured_qty is manually set in a row
+	manufactured_qty(frm, cdt, cdn) {
+		// No additional logic needed - just allow manual entry
+		frm.refresh_field("production_details");
 	}
 });
 

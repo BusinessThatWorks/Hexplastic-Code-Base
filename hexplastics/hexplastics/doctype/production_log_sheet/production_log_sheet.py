@@ -116,6 +116,8 @@ class ProductionLogSheet(Document):
             added_finished_items = set()
 
             # Map finished goods / scrap rows from production_details table (Target)
+            # Only the main manufacturing_item should be marked as is_finished_item = 1
+            # Other items (like MIP items) are treated as additional output without the finished item flag
             if self.production_details:
                 for row in self.production_details:
                     if not row.item_code:
@@ -141,6 +143,10 @@ class ProductionLogSheet(Document):
                                 f"Stock UOM not found for item {row.item_code}."
                             )
 
+                    # Only mark the main manufacturing item as is_finished_item
+                    # Other items (like MIP items added manually) are not marked as finished items
+                    is_main_item = row.item_code == self.manufacturing_item
+
                     stock_entry.append(
                         "items",
                         {
@@ -151,7 +157,7 @@ class ProductionLogSheet(Document):
                             "uom": item_uom,
                             "stock_uom": item_uom,
                             "conversion_factor": 1,
-                            "is_finished_item": 1,
+                            "is_finished_item": 1 if is_main_item else 0,
                         },
                     )
                     added_finished_items.add(row.item_code)

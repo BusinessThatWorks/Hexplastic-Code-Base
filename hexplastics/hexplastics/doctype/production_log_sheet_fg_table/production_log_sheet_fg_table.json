@@ -13,7 +13,8 @@
   "section_break_ixki",
   "manufactured_qty",
   "stock_uom",
-  "column_break_ivnj"
+  "column_break_ivnj",
+  "manual_entry"
  ],
  "fields": [
   {
@@ -71,13 +72,20 @@
   {
    "fieldname": "column_break_ivnj",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "manual_entry",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Manual Entry"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-16 11:49:24.807002",
+ "modified": "2026-01-21 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Production Log Sheet FG Table",
