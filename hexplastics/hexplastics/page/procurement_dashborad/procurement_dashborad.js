@@ -42,6 +42,7 @@ class ProcurementDashboard {
 		this.suppliers = [];
 		this.items = [];
 		this.debounce_timers = {};
+		this.initialized = false;
 
 		this.init();
 	}
@@ -50,21 +51,69 @@ class ProcurementDashboard {
 		// Add body class to ensure CSS only applies on this page
 		document.body.classList.add("procurement-dashboard-page");
 		this.setup_styles();
-		// Ensure HTML is loaded before setting dates, binding events, loading filters and refreshing
-		this.load_html(() => {
-			this.bind_events();
-			this.load_filter_options();
-			this.set_default_dates();
+		// Ensure HTML is loaded before any further initialization
+		this.load_html();
+	}
+
+	load_html() {
+		const self = this;
+		
+		// Load CSS first, then render template
+		frappe.require("/assets/hexplastics/css/procurement_dashboard.css", () => {
+			// Render template synchronously
+			self.wrapper.html(frappe.render_template("procurement_dashboard"));
+			
+			// Use requestAnimationFrame to ensure DOM is painted, then initialize
+			requestAnimationFrame(() => {
+				self.wait_for_elements_and_initialize();
+			});
 		});
 	}
 
-	load_html(callback) {
-		frappe.require("/assets/hexplastics/css/procurement_dashboard.css", () => {
-			this.wrapper.html(frappe.render_template("procurement_dashboard"));
-			if (typeof callback === "function") {
-				callback();
+	wait_for_elements_and_initialize() {
+		const self = this;
+		let attempts = 0;
+		const maxAttempts = 50; // 50 * 50ms = 2.5s max wait
+		
+		const tryInitialize = () => {
+			const fromDateInput = document.getElementById("from-date");
+			const toDateInput = document.getElementById("to-date");
+			
+			if (fromDateInput && toDateInput) {
+				// Elements exist - proceed with initialization
+				self.complete_initialization(fromDateInput, toDateInput);
+			} else if (attempts < maxAttempts) {
+				attempts++;
+				setTimeout(tryInitialize, 50);
+			} else {
+				console.error("Procurement Dashboard: Could not find date inputs after max attempts");
 			}
-		});
+		};
+		
+		tryInitialize();
+	}
+
+	complete_initialization(fromDateInput, toDateInput) {
+		if (this.initialized) return; // Prevent double initialization
+		this.initialized = true;
+		
+		// 1. Set default dates FIRST (synchronously)
+		const today = new Date();
+		const sevenDaysAgo = new Date(today);
+		sevenDaysAgo.setDate(today.getDate() - 7);
+		const formatDate = (date) => date.toISOString().split("T")[0];
+		
+		fromDateInput.value = formatDate(sevenDaysAgo);
+		toDateInput.value = formatDate(today);
+		
+		// 2. Bind events (no setTimeout wrapper needed now)
+		this.bindEventsImmediate();
+		
+		// 3. Load filter options
+		this.load_filter_options();
+		
+		// 4. Fetch data with correct default dates
+		this.refresh_data();
 	}
 
 	setup_styles() {
@@ -85,259 +134,228 @@ class ProcurementDashboard {
 		}
 	}
 
-	set_default_dates() {
-		const today = new Date();
-		// Set from date to 7 days ago
-		const sevenDaysAgo = new Date(today);
-		sevenDaysAgo.setDate(today.getDate() - 7);
-
-		const formatDate = (date) => date.toISOString().split("T")[0];
-
-		// Robustly wait for inputs to exist, then set defaults and load data once
-		let attempts = 0;
-		const maxAttempts = 20;
-		const applyDefaults = () => {
-			const fromDateInput = document.getElementById("from-date");
-			const toDateInput = document.getElementById("to-date");
-
-			if (fromDateInput && toDateInput) {
-				fromDateInput.value = formatDate(sevenDaysAgo);
-				toDateInput.value = formatDate(today);
-				// After setting default dates, load the dashboard data once with correct filters
-				this.refresh_data();
-			} else if (attempts < maxAttempts) {
-				attempts += 1;
-				setTimeout(applyDefaults, 50);
-			}
-		};
-
-		applyDefaults();
-	}
-
-	bind_events() {
+	bindEventsImmediate() {
 		const self = this;
 
-		setTimeout(() => {
-			// Tab switching
-			this.wrapper.on("click", ".tab-btn", function () {
-				const tabId = $(this).data("tab");
-				self.switch_tab(tabId);
-			});
+		// Tab switching
+		this.wrapper.on("click", ".tab-btn", function () {
+			const tabId = $(this).data("tab");
+			self.switch_tab(tabId);
+		});
 
-			// Global Refresh button
-			this.wrapper.on("click", "#refresh-btn", function () {
+		// Global Refresh button
+		this.wrapper.on("click", "#refresh-btn", function () {
+			self.refresh_data();
+		});
+
+		// Enter key on filters
+		this.wrapper.on("keypress", ".filter-input", function (e) {
+			if (e.which === 13) {
 				self.refresh_data();
-			});
+			}
+		});
 
-			// Enter key on filters
-			this.wrapper.on("keypress", ".filter-input", function (e) {
-				if (e.which === 13) {
-					self.refresh_data();
-				}
-			});
+		// Auto-refresh on global filter changes
+		this.wrapper.on("change", "#from-date", function () {
+			// Clear and refresh autocomplete suggestions when date changes
+			self.refresh_autocomplete_suggestions();
+			self.refresh_data();
+		});
 
-			// Auto-refresh on global filter changes
-			this.wrapper.on("change", "#from-date", function () {
-				// Clear and refresh autocomplete suggestions when date changes
-				self.refresh_autocomplete_suggestions();
+		this.wrapper.on("change", "#to-date", function () {
+			// Clear and refresh autocomplete suggestions when date changes
+			self.refresh_autocomplete_suggestions();
+			self.refresh_data();
+		});
+
+		this.wrapper.on("change", "#supplier-filter", function () {
+			// Refresh data when supplier is selected or cleared
+			self.refresh_data();
+		});
+
+		// Handle clearing supplier filter
+		this.wrapper.on("input", "#supplier-filter", function () {
+			if (this.value.trim() === "") {
+				// Field was cleared, refresh data immediately
 				self.refresh_data();
-			});
+			}
+		});
 
-			this.wrapper.on("change", "#to-date", function () {
-				// Clear and refresh autocomplete suggestions when date changes
-				self.refresh_autocomplete_suggestions();
-				self.refresh_data();
-			});
+		// Material Request tab filter changes
+		this.wrapper.on("change", "#mr-status-filter", function () {
+			self.update_mr_cards_visibility();
+			self.refresh_material_requests();
+		});
 
-			this.wrapper.on("change", "#supplier-filter", function () {
-				// Refresh data when supplier is selected or cleared
-				self.refresh_data();
-			});
+		// Material Request ID and Item filters - debounced input only
+		this.wrapper.on("input", "#mr-id-filter, #mr-item-filter", function () {
+			const fieldId = this.id;
+			const value = this.value.trim();
 
-			// Handle clearing supplier filter
-			this.wrapper.on("input", "#supplier-filter", function () {
-				if (this.value.trim() === "") {
-					// Field was cleared, refresh data immediately
-					self.refresh_data();
-				}
-			});
+			// Clear existing timer for this field
+			if (self.debounce_timers[fieldId]) {
+				clearTimeout(self.debounce_timers[fieldId]);
+				delete self.debounce_timers[fieldId];
+			}
 
-			// Material Request tab filter changes
-			this.wrapper.on("change", "#mr-status-filter", function () {
-				self.update_mr_cards_visibility();
+			if (value === "") {
+				// Field was cleared, refresh immediately
 				self.refresh_material_requests();
-			});
-
-			// Material Request ID and Item filters - debounced input only
-			this.wrapper.on("input", "#mr-id-filter, #mr-item-filter", function () {
-				const fieldId = this.id;
-				const value = this.value.trim();
-
-				// Clear existing timer for this field
-				if (self.debounce_timers[fieldId]) {
-					clearTimeout(self.debounce_timers[fieldId]);
+			} else {
+				// Debounce the refresh - wait 800ms after user stops typing
+				self.debounce_timers[fieldId] = setTimeout(function () {
 					delete self.debounce_timers[fieldId];
-				}
-
-				if (value === "") {
-					// Field was cleared, refresh immediately
 					self.refresh_material_requests();
-				} else {
-					// Debounce the refresh - wait 800ms after user stops typing
-					self.debounce_timers[fieldId] = setTimeout(function () {
-						delete self.debounce_timers[fieldId];
-						self.refresh_material_requests();
-					}, 800);
-				}
-			});
+				}, 800);
+			}
+		});
 
-			// Purchase Order tab filter changes
-			this.wrapper.on("change", "#po-status-filter", function () {
-				self.update_po_cards_visibility();
+		// Purchase Order tab filter changes
+		this.wrapper.on("change", "#po-status-filter", function () {
+			self.update_po_cards_visibility();
+			self.refresh_purchase_orders();
+		});
+
+		// Purchase Order ID and Item filters - debounced input only
+		this.wrapper.on("input", "#po-id-filter, #po-item-filter", function () {
+			const fieldId = this.id;
+			const value = this.value.trim();
+
+			// Clear existing timer for this field
+			if (self.debounce_timers[fieldId]) {
+				clearTimeout(self.debounce_timers[fieldId]);
+				delete self.debounce_timers[fieldId];
+			}
+
+			if (value === "") {
+				// Field was cleared, refresh immediately
 				self.refresh_purchase_orders();
-			});
-
-			// Purchase Order ID and Item filters - debounced input only
-			this.wrapper.on("input", "#po-id-filter, #po-item-filter", function () {
-				const fieldId = this.id;
-				const value = this.value.trim();
-
-				// Clear existing timer for this field
-				if (self.debounce_timers[fieldId]) {
-					clearTimeout(self.debounce_timers[fieldId]);
+			} else {
+				// Debounce the refresh - wait 800ms after user stops typing
+				self.debounce_timers[fieldId] = setTimeout(function () {
 					delete self.debounce_timers[fieldId];
-				}
-
-				if (value === "") {
-					// Field was cleared, refresh immediately
 					self.refresh_purchase_orders();
-				} else {
-					// Debounce the refresh - wait 800ms after user stops typing
-					self.debounce_timers[fieldId] = setTimeout(function () {
-						delete self.debounce_timers[fieldId];
-						self.refresh_purchase_orders();
-					}, 800);
-				}
-			});
+				}, 800);
+			}
+		});
 
-			// Purchase Receipt tab filter changes
-			this.wrapper.on("change", "#pr-status-filter", function () {
-				self.update_pr_cards_visibility();
+		// Purchase Receipt tab filter changes
+		this.wrapper.on("change", "#pr-status-filter", function () {
+			self.update_pr_cards_visibility();
+			self.refresh_purchase_receipts();
+		});
+
+		// Purchase Receipt ID and Item filters - debounced input only
+		this.wrapper.on("input", "#pr-id-filter, #pr-item-filter", function () {
+			const fieldId = this.id;
+			const value = this.value.trim();
+
+			// Clear existing timer for this field
+			if (self.debounce_timers[fieldId]) {
+				clearTimeout(self.debounce_timers[fieldId]);
+				delete self.debounce_timers[fieldId];
+			}
+
+			if (value === "") {
+				// Field was cleared, refresh immediately
 				self.refresh_purchase_receipts();
-			});
-
-			// Purchase Receipt ID and Item filters - debounced input only
-			this.wrapper.on("input", "#pr-id-filter, #pr-item-filter", function () {
-				const fieldId = this.id;
-				const value = this.value.trim();
-
-				// Clear existing timer for this field
-				if (self.debounce_timers[fieldId]) {
-					clearTimeout(self.debounce_timers[fieldId]);
+			} else {
+				// Debounce the refresh - wait 800ms after user stops typing
+				self.debounce_timers[fieldId] = setTimeout(function () {
 					delete self.debounce_timers[fieldId];
-				}
-
-				if (value === "") {
-					// Field was cleared, refresh immediately
 					self.refresh_purchase_receipts();
-				} else {
-					// Debounce the refresh - wait 800ms after user stops typing
-					self.debounce_timers[fieldId] = setTimeout(function () {
-						delete self.debounce_timers[fieldId];
-						self.refresh_purchase_receipts();
-					}, 800);
-				}
-			});
+				}, 800);
+			}
+		});
 
-			// Purchase Invoice tab filter changes
-			this.wrapper.on("change", "#pi-status-filter", function () {
-				self.update_pi_cards_visibility();
+		// Purchase Invoice tab filter changes
+		this.wrapper.on("change", "#pi-status-filter", function () {
+			self.update_pi_cards_visibility();
+			self.refresh_purchase_invoices();
+		});
+
+		// Purchase Invoice ID and Item filters - debounced input only
+		this.wrapper.on("input", "#pi-id-filter, #pi-item-filter", function () {
+			const fieldId = this.id;
+			const value = this.value.trim();
+
+			// Clear existing timer for this field
+			if (self.debounce_timers[fieldId]) {
+				clearTimeout(self.debounce_timers[fieldId]);
+				delete self.debounce_timers[fieldId];
+			}
+
+			if (value === "") {
+				// Field was cleared, refresh immediately
 				self.refresh_purchase_invoices();
-			});
-
-			// Purchase Invoice ID and Item filters - debounced input only
-			this.wrapper.on("input", "#pi-id-filter, #pi-item-filter", function () {
-				const fieldId = this.id;
-				const value = this.value.trim();
-
-				// Clear existing timer for this field
-				if (self.debounce_timers[fieldId]) {
-					clearTimeout(self.debounce_timers[fieldId]);
+			} else {
+				// Debounce the refresh - wait 800ms after user stops typing
+				self.debounce_timers[fieldId] = setTimeout(function () {
 					delete self.debounce_timers[fieldId];
-				}
-
-				if (value === "") {
-					// Field was cleared, refresh immediately
 					self.refresh_purchase_invoices();
-				} else {
-					// Debounce the refresh - wait 800ms after user stops typing
-					self.debounce_timers[fieldId] = setTimeout(function () {
-						delete self.debounce_timers[fieldId];
-						self.refresh_purchase_invoices();
-					}, 800);
-				}
-			});
+				}, 800);
+			}
+		});
 
-			// Item Wise Tracker PO No and Item filters - debounced input only
-			this.wrapper.on("input", "#tracker-po-filter, #tracker-item-filter", function () {
-				const fieldId = this.id;
-				const value = this.value.trim();
+		// Item Wise Tracker PO No and Item filters - debounced input only
+		this.wrapper.on("input", "#tracker-po-filter, #tracker-item-filter", function () {
+			const fieldId = this.id;
+			const value = this.value.trim();
 
-				// Clear existing timer for this field
-				if (self.debounce_timers[fieldId]) {
-					clearTimeout(self.debounce_timers[fieldId]);
+			// Clear existing timer for this field
+			if (self.debounce_timers[fieldId]) {
+				clearTimeout(self.debounce_timers[fieldId]);
+				delete self.debounce_timers[fieldId];
+			}
+
+			if (value === "") {
+				// Field was cleared, refresh immediately
+				self.refresh_item_wise_tracker();
+			} else {
+				// Debounce the refresh - wait 800ms after user stops typing
+				self.debounce_timers[fieldId] = setTimeout(function () {
 					delete self.debounce_timers[fieldId];
-				}
-
-				if (value === "") {
-					// Field was cleared, refresh immediately
 					self.refresh_item_wise_tracker();
-				} else {
-					// Debounce the refresh - wait 800ms after user stops typing
-					self.debounce_timers[fieldId] = setTimeout(function () {
-						delete self.debounce_timers[fieldId];
-						self.refresh_item_wise_tracker();
-					}, 800);
-				}
-			});
+				}, 800);
+			}
+		});
 
-			// Setup autocomplete for filters
-			this.setup_supplier_autocomplete();
-			this.setup_item_autocomplete(
-				"mr-item-filter",
-				"mr-item-filter-wrapper",
-				"Material Request"
-			);
-			this.setup_item_autocomplete(
-				"po-item-filter",
-				"po-item-filter-wrapper",
-				"Purchase Order"
-			);
-			this.setup_item_autocomplete(
-				"pr-item-filter",
-				"pr-item-filter-wrapper",
-				"Purchase Receipt"
-			);
-			this.setup_item_autocomplete(
-				"pi-item-filter",
-				"pi-item-filter-wrapper",
-				"Purchase Invoice"
-			);
-			this.setup_item_autocomplete(
-				"tracker-item-filter",
-				"tracker-item-filter-wrapper",
-				"Purchase Order"
-			);
+		// Setup autocomplete for filters
+		this.setup_supplier_autocomplete();
+		this.setup_item_autocomplete(
+			"mr-item-filter",
+			"mr-item-filter-wrapper",
+			"Material Request"
+		);
+		this.setup_item_autocomplete(
+			"po-item-filter",
+			"po-item-filter-wrapper",
+			"Purchase Order"
+		);
+		this.setup_item_autocomplete(
+			"pr-item-filter",
+			"pr-item-filter-wrapper",
+			"Purchase Receipt"
+		);
+		this.setup_item_autocomplete(
+			"pi-item-filter",
+			"pi-item-filter-wrapper",
+			"Purchase Invoice"
+		);
+		this.setup_item_autocomplete(
+			"tracker-item-filter",
+			"tracker-item-filter-wrapper",
+			"Purchase Order"
+		);
 
-			// Setup autocomplete for ID fields
-			this.setup_id_autocomplete("mr-id-filter", "Material Request");
-			this.setup_id_autocomplete("po-id-filter", "Purchase Order");
-			this.setup_id_autocomplete("pr-id-filter", "Purchase Receipt");
-			this.setup_id_autocomplete("pi-id-filter", "Purchase Invoice");
+		// Setup autocomplete for ID fields
+		this.setup_id_autocomplete("mr-id-filter", "Material Request");
+		this.setup_id_autocomplete("po-id-filter", "Purchase Order");
+		this.setup_id_autocomplete("pr-id-filter", "Purchase Receipt");
+		this.setup_id_autocomplete("pi-id-filter", "Purchase Invoice");
 
-			// Setup autocomplete for PO No field
-			this.setup_po_autocomplete("tracker-po-filter");
-		}, 200);
+		// Setup autocomplete for PO No field
+		this.setup_po_autocomplete("tracker-po-filter");
 	}
 
 	setup_supplier_autocomplete() {

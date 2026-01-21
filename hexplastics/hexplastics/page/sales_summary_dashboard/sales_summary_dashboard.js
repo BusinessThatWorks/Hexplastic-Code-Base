@@ -42,6 +42,7 @@ class SalesSummaryDashboard {
 		this.sales_order_ids = [];
 		this.sales_invoice_ids = [];
 		this.debounce_timer = null;
+		this.initialized = false;
 
 		this.init();
 	}
@@ -50,22 +51,69 @@ class SalesSummaryDashboard {
 		// Add body class to ensure CSS only applies on this page
 		document.body.classList.add("sales-summary-dashboard-page");
 		this.setup_styles();
-		// Ensure HTML is loaded before setting dates, binding events, and loading filters
-		this.load_html(() => {
-			this.set_default_dates();
-			this.bind_events();
-			this.load_filter_options();
-			// Note: refresh_data() is called in set_default_dates() after dates are set
+		// Ensure HTML is loaded before any further initialization
+		this.load_html();
+	}
+
+	load_html() {
+		const self = this;
+		
+		// Load CSS first, then render template
+		frappe.require("/assets/hexplastics/css/sales_summary_dashboard.css", () => {
+			// Render template synchronously
+			self.wrapper.html(frappe.render_template("sales_summary_dashboard"));
+			
+			// Use requestAnimationFrame to ensure DOM is painted, then initialize
+			requestAnimationFrame(() => {
+				self.wait_for_elements_and_initialize();
+			});
 		});
 	}
 
-	load_html(callback) {
-		frappe.require("/assets/hexplastics/css/sales_summary_dashboard.css", () => {
-			this.wrapper.html(frappe.render_template("sales_summary_dashboard"));
-			if (typeof callback === "function") {
-				callback();
+	wait_for_elements_and_initialize() {
+		const self = this;
+		let attempts = 0;
+		const maxAttempts = 50; // 50 * 50ms = 2.5s max wait
+		
+		const tryInitialize = () => {
+			const fromDateInput = document.getElementById("from-date");
+			const toDateInput = document.getElementById("to-date");
+			
+			if (fromDateInput && toDateInput) {
+				// Elements exist - proceed with initialization
+				self.complete_initialization(fromDateInput, toDateInput);
+			} else if (attempts < maxAttempts) {
+				attempts++;
+				setTimeout(tryInitialize, 50);
+			} else {
+				console.error("Sales Summary Dashboard: Could not find date inputs after max attempts");
 			}
-		});
+		};
+		
+		tryInitialize();
+	}
+
+	complete_initialization(fromDateInput, toDateInput) {
+		if (this.initialized) return; // Prevent double initialization
+		this.initialized = true;
+		
+		// 1. Set default dates FIRST (synchronously)
+		const today = new Date();
+		const sevenDaysAgo = new Date(today);
+		sevenDaysAgo.setDate(today.getDate() - 7);
+		const formatDate = (date) => date.toISOString().split("T")[0];
+		
+		fromDateInput.value = formatDate(sevenDaysAgo);
+		toDateInput.value = formatDate(today);
+		
+		// 2. Bind events (no setTimeout wrapper needed now)
+		this.bindEventsImmediate();
+		
+		// 3. Load filter options
+		this.load_filter_options();
+		
+		// 4. Fetch data with correct default dates
+		this.refresh_data();
 	}
 
 	setup_styles() {
@@ -86,101 +134,77 @@ class SalesSummaryDashboard {
 		}
 	}
 
-	set_default_dates() {
-		const today = new Date();
-		const sevenDaysAgo = new Date(today);
-		sevenDaysAgo.setDate(today.getDate() - 7);
-
-		const formatDate = (date) => {
-			return date.toISOString().split("T")[0];
-		};
-
+	bindEventsImmediate() {
 		const self = this;
-		setTimeout(() => {
-			const fromDateInput = document.getElementById("from-date");
-			const toDateInput = document.getElementById("to-date");
 
-			if (fromDateInput) fromDateInput.value = formatDate(sevenDaysAgo);
-			if (toDateInput) toDateInput.value = formatDate(today);
-			
-			// Trigger refresh after dates are set to ensure data is fetched with default dates
+		// Tab switching
+		this.wrapper.on("click", ".tab-btn", function () {
+			const tabId = $(this).data("tab");
+			self.switch_tab(tabId);
+		});
+
+		// Global Refresh button - single unified refresh to avoid duplicate calls
+		this.wrapper.on("click", "#refresh-btn", function () {
 			self.refresh_data();
-		}, 100);
-	}
+		});
 
-	bind_events() {
-		const self = this;
-
-		setTimeout(() => {
-			// Tab switching
-			this.wrapper.on("click", ".tab-btn", function () {
-				const tabId = $(this).data("tab");
-				self.switch_tab(tabId);
-			});
-
-			// Global Refresh button - single unified refresh to avoid duplicate calls
-			this.wrapper.on("click", "#refresh-btn", function () {
+		// Enter key on filters
+		this.wrapper.on("keypress", ".filter-input", function (e) {
+			if (e.which === 13) {
 				self.refresh_data();
-			});
+			}
+		});
 
-			// Enter key on filters
-			this.wrapper.on("keypress", ".filter-input", function (e) {
-				if (e.which === 13) {
-					self.refresh_data();
-				}
-			});
+		// Auto-refresh on global filter changes
+		this.wrapper.on("change", "#from-date", function () {
+			self.refresh_data();
+		});
 
-			// Auto-refresh on global filter changes
-			this.wrapper.on("change", "#from-date", function () {
+		this.wrapper.on("change", "#to-date", function () {
+			self.refresh_data();
+		});
+
+		this.wrapper.on("input", "#customer-filter", function () {
+			if (self.debounce_timer) {
+				clearTimeout(self.debounce_timer);
+			}
+			self.debounce_timer = setTimeout(function () {
 				self.refresh_data();
-			});
+			}, 500);
+		});
 
-			this.wrapper.on("change", "#to-date", function () {
-				self.refresh_data();
-			});
+		// Sales Order tab filter changes
+		this.wrapper.on("change", "#so-status-filter", function () {
+			self.update_so_cards_visibility();
+			self.refresh_sales_orders();
+		});
 
-			this.wrapper.on("input", "#customer-filter", function () {
-				if (self.debounce_timer) {
-					clearTimeout(self.debounce_timer);
-				}
-				self.debounce_timer = setTimeout(function () {
-					self.refresh_data();
-				}, 500);
-			});
-
-			// Sales Order tab filter changes
-			this.wrapper.on("change", "#so-status-filter", function () {
-				self.update_so_cards_visibility();
+		this.wrapper.on("input", "#so-id-filter, #so-item-filter", function () {
+			if (self.debounce_timer) {
+				clearTimeout(self.debounce_timer);
+			}
+			self.debounce_timer = setTimeout(function () {
 				self.refresh_sales_orders();
-			});
+			}, 500);
+		});
 
-			this.wrapper.on("input", "#so-id-filter, #so-item-filter", function () {
-				if (self.debounce_timer) {
-					clearTimeout(self.debounce_timer);
-				}
-				self.debounce_timer = setTimeout(function () {
-					self.refresh_sales_orders();
-				}, 500);
-			});
+		// Sales Invoice tab filter changes
+		this.wrapper.on("change", "#si-status-filter", function () {
+			self.update_si_cards_visibility();
+			self.refresh_sales_invoices();
+		});
 
-			// Sales Invoice tab filter changes
-			this.wrapper.on("change", "#si-status-filter", function () {
-				self.update_si_cards_visibility();
+		this.wrapper.on("input", "#si-id-filter, #si-item-filter", function () {
+			if (self.debounce_timer) {
+				clearTimeout(self.debounce_timer);
+			}
+			self.debounce_timer = setTimeout(function () {
 				self.refresh_sales_invoices();
-			});
+			}, 500);
+		});
 
-			this.wrapper.on("input", "#si-id-filter, #si-item-filter", function () {
-				if (self.debounce_timer) {
-					clearTimeout(self.debounce_timer);
-				}
-				self.debounce_timer = setTimeout(function () {
-					self.refresh_sales_invoices();
-				}, 500);
-			});
-
-			// Note: Autocomplete setup is now done in load_filter_options callback
-			// to ensure data is loaded before setting up autocomplete
-		}, 200);
+		// Note: Autocomplete setup is now done in load_filter_options callback
+		// to ensure data is loaded before setting up autocomplete
 	}
 
 	setup_customer_autocomplete() {
