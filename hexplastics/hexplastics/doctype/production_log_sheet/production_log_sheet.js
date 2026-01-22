@@ -220,12 +220,6 @@ frappe.ui.form.on("Production Log Sheet", {
 		calculate_closing_qty_for_mip(frm);
 	},
 
-	// When mip_used changes
-	mip_used(frm) {
-		// Recalculate closing_qty_for_mip
-		calculate_closing_qty_for_mip(frm);
-	},
-
 	// When process_loss_weight changes
 	process_loss_weight(frm) {
 		// Recalculate closing_qty_for_mip
@@ -518,20 +512,19 @@ function calculate_total_rm_consumption(frm) {
 
 /**
  * Calculate closing_qty_for_mip using the formula:
- * closing_qty_for_mip = total_rm_consumption + mip_used - net_weight - process_loss_weight
+ * closing_qty_for_mip = total_rm_consumption - net_weight - process_loss_weight
  * Updates the field in real time
  * @param {Object} frm - The form object
  */
 function calculate_closing_qty_for_mip(frm) {
 	// Safely parse all values, treating null/undefined/empty as 0
 	const total_rm_consumption = flt(frm.doc.total_rm_consumption) || 0;
-	const mip_used = flt(frm.doc.mip_used) || 0;
 	const net_weight = flt(frm.doc.net_weight) || 0;
 	const process_loss_weight = flt(frm.doc.process_loss_weight) || 0;
 	
 	// Calculate closing_qty_for_mip
-	// Formula: total_rm_consumption + mip_used - net_weight - process_loss_weight
-	const closing_qty = total_rm_consumption + mip_used - net_weight - process_loss_weight;
+	// Formula: total_rm_consumption - net_weight - process_loss_weight
+	const closing_qty = total_rm_consumption - net_weight - process_loss_weight;
 	
 	// Update the closing_qty_for_mip field
 	frm.set_value("closing_qty_for_mip", closing_qty);
