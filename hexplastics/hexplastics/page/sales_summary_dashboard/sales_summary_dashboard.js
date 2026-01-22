@@ -41,7 +41,7 @@ class SalesSummaryDashboard {
 		this.items = [];
 		this.sales_order_ids = [];
 		this.sales_invoice_ids = [];
-		this.debounce_timer = null;
+		this.debounce_timers = {};
 		this.initialized = false;
 
 		this.init();
@@ -97,14 +97,12 @@ class SalesSummaryDashboard {
 		if (this.initialized) return; // Prevent double initialization
 		this.initialized = true;
 		
-		// 1. Set default dates FIRST (synchronously)
-		const today = new Date();
-		const sevenDaysAgo = new Date(today);
-		sevenDaysAgo.setDate(today.getDate() - 7);
-		const formatDate = (date) => date.toISOString().split("T")[0];
+		// 1. Set default dates FIRST using Frappe's datetime functions for consistency
+		const today = frappe.datetime.get_today();
+		const sevenDaysAgo = frappe.datetime.add_days(today, -7);
 		
-		fromDateInput.value = formatDate(sevenDaysAgo);
-		toDateInput.value = formatDate(today);
+		fromDateInput.value = sevenDaysAgo;
+		toDateInput.value = today;
 		
 		// 2. Bind events (no setTimeout wrapper needed now)
 		this.bindEventsImmediate();
@@ -155,7 +153,7 @@ class SalesSummaryDashboard {
 			}
 		});
 
-		// Auto-refresh on global filter changes
+		// Auto-refresh on global filter changes - immediate updates
 		this.wrapper.on("change", "#from-date", function () {
 			self.refresh_data();
 		});
@@ -164,47 +162,112 @@ class SalesSummaryDashboard {
 			self.refresh_data();
 		});
 
+		// Customer filter - debounced input for typing, immediate change for autocomplete/blur
 		this.wrapper.on("input", "#customer-filter", function () {
-			if (self.debounce_timer) {
-				clearTimeout(self.debounce_timer);
+			const timerKey = "customer-filter";
+			if (self.debounce_timers[timerKey]) {
+				clearTimeout(self.debounce_timers[timerKey]);
 			}
-			self.debounce_timer = setTimeout(function () {
+			self.debounce_timers[timerKey] = setTimeout(function () {
 				self.refresh_data();
+				delete self.debounce_timers[timerKey];
 			}, 500);
 		});
 
-		// Sales Order tab filter changes
+		this.wrapper.on("change", "#customer-filter", function () {
+			const timerKey = "customer-filter";
+			if (self.debounce_timers[timerKey]) {
+				clearTimeout(self.debounce_timers[timerKey]);
+				delete self.debounce_timers[timerKey];
+			}
+			self.refresh_data();
+		});
+
+		// Sales Order tab filter changes - immediate updates
 		this.wrapper.on("change", "#so-status-filter", function () {
 			self.update_so_cards_visibility();
 			self.refresh_sales_orders();
 		});
 
+		// Sales Order ID and Item filters - debounced input for typing, immediate change for autocomplete/blur
 		this.wrapper.on("input", "#so-id-filter, #so-item-filter", function () {
-			if (self.debounce_timer) {
-				clearTimeout(self.debounce_timer);
+			const filterId = this.id;
+			const timerKey = filterId;
+			if (self.debounce_timers[timerKey]) {
+				clearTimeout(self.debounce_timers[timerKey]);
 			}
-			self.debounce_timer = setTimeout(function () {
+			self.debounce_timers[timerKey] = setTimeout(function () {
 				self.refresh_sales_orders();
+				delete self.debounce_timers[timerKey];
 			}, 500);
 		});
 
-		// Sales Invoice tab filter changes
+		this.wrapper.on("change", "#so-id-filter, #so-item-filter", function () {
+			const filterId = this.id;
+			const timerKey = filterId;
+			if (self.debounce_timers[timerKey]) {
+				clearTimeout(self.debounce_timers[timerKey]);
+				delete self.debounce_timers[timerKey];
+			}
+			self.refresh_sales_orders();
+		});
+
+		// Handle blur event for item filters to refresh when cleared
+		this.wrapper.on("blur", "#so-item-filter", function () {
+			const timerKey = this.id;
+			if (self.debounce_timers[timerKey]) {
+				clearTimeout(self.debounce_timers[timerKey]);
+				delete self.debounce_timers[timerKey];
+			}
+			// Trim the value
+			this.value = this.value.trim();
+			self.refresh_sales_orders();
+		});
+
+		// Sales Invoice tab filter changes - immediate updates
 		this.wrapper.on("change", "#si-status-filter", function () {
 			self.update_si_cards_visibility();
 			self.refresh_sales_invoices();
 		});
 
+		// Sales Invoice ID and Item filters - debounced input for typing, immediate change for autocomplete/blur
 		this.wrapper.on("input", "#si-id-filter, #si-item-filter", function () {
-			if (self.debounce_timer) {
-				clearTimeout(self.debounce_timer);
+			const filterId = this.id;
+			const timerKey = filterId;
+			if (self.debounce_timers[timerKey]) {
+				clearTimeout(self.debounce_timers[timerKey]);
 			}
-			self.debounce_timer = setTimeout(function () {
+			self.debounce_timers[timerKey] = setTimeout(function () {
 				self.refresh_sales_invoices();
+				delete self.debounce_timers[timerKey];
 			}, 500);
+		});
+
+		this.wrapper.on("change", "#si-id-filter, #si-item-filter", function () {
+			const filterId = this.id;
+			const timerKey = filterId;
+			if (self.debounce_timers[timerKey]) {
+				clearTimeout(self.debounce_timers[timerKey]);
+				delete self.debounce_timers[timerKey];
+			}
+			self.refresh_sales_invoices();
+		});
+
+		// Handle blur event for item filters to refresh when cleared
+		this.wrapper.on("blur", "#si-item-filter", function () {
+			const timerKey = this.id;
+			if (self.debounce_timers[timerKey]) {
+				clearTimeout(self.debounce_timers[timerKey]);
+				delete self.debounce_timers[timerKey];
+			}
+			// Trim the value
+			this.value = this.value.trim();
+			self.refresh_sales_invoices();
 		});
 
 		// Note: Autocomplete setup is now done in load_filter_options callback
 		// to ensure data is loaded before setting up autocomplete
+
 	}
 
 	setup_customer_autocomplete() {
@@ -226,10 +289,29 @@ class SalesSummaryDashboard {
 		}
 
 		input.addEventListener("input", function () {
-			const value = this.value.toLowerCase();
-			const filtered = self.customers.filter((c) => c.toLowerCase().includes(value));
+			const value = this.value.trim().toLowerCase();
+			
+			// If value is empty, show all suggestions
+			if (value.length === 0) {
+				if (self.customers.length > 0) {
+					dropdown.innerHTML = self.customers
+						.slice(0, 10)
+						.map((c) => `<div class="autocomplete-item">${c}</div>`)
+						.join("");
+					dropdown.style.display = "block";
+				} else {
+					dropdown.style.display = "none";
+				}
+				return;
+			}
+			
+			// Filter suggestions based on input
+			const filtered = self.customers.filter((c) => {
+				if (!c) return false;
+				return c.toLowerCase().includes(value);
+			});
 
-			if (filtered.length > 0 && value.length > 0) {
+			if (filtered.length > 0) {
 				dropdown.innerHTML = filtered
 					.slice(0, 10)
 					.map((c) => `<div class="autocomplete-item">${c}</div>`)
@@ -241,12 +323,21 @@ class SalesSummaryDashboard {
 		});
 
 		input.addEventListener("focus", function () {
-			if (self.customers.length > 0 && this.value.length === 0) {
-				dropdown.innerHTML = self.customers
-					.slice(0, 10)
-					.map((c) => `<div class="autocomplete-item">${c}</div>`)
-					.join("");
-				dropdown.style.display = "block";
+			// Always show suggestions on focus if we have data
+			if (self.customers.length > 0) {
+				const value = this.value.trim().toLowerCase();
+				if (value.length === 0) {
+					// Show all suggestions when empty
+					dropdown.innerHTML = self.customers
+						.slice(0, 10)
+						.map((c) => `<div class="autocomplete-item">${c}</div>`)
+						.join("");
+					dropdown.style.display = "block";
+				} else {
+					// Re-trigger input to show filtered results
+					const inputEvent = new Event("input", { bubbles: true });
+					this.dispatchEvent(inputEvent);
+				}
 			}
 		});
 
@@ -286,12 +377,31 @@ class SalesSummaryDashboard {
 		}
 
 		input.addEventListener("input", function () {
-			const value = this.value.toLowerCase();
-			const filtered = self.items.filter((item) => item.toLowerCase().includes(value));
+			const value = this.value.trim().toLowerCase();
+			
+			// If value is empty, show all suggestions
+			if (value.length === 0) {
+				if (self.items.length > 0) {
+					dropdown.innerHTML = self.items
+						.slice(0, 15)
+						.map((item) => `<div class="autocomplete-item">${item || ""}</div>`)
+						.join("");
+					dropdown.style.display = "block";
+				} else {
+					dropdown.style.display = "none";
+				}
+				return;
+			}
+			
+			// Filter suggestions based on input
+			const filtered = self.items.filter((item) => {
+				if (!item) return false;
+				return item.toLowerCase().includes(value);
+			});
 
-			if (filtered.length > 0 && value.length > 0) {
+			if (filtered.length > 0) {
 				dropdown.innerHTML = filtered
-					.slice(0, 10)
+					.slice(0, 15)
 					.map((item) => `<div class="autocomplete-item">${item}</div>`)
 					.join("");
 				dropdown.style.display = "block";
@@ -301,12 +411,21 @@ class SalesSummaryDashboard {
 		});
 
 		input.addEventListener("focus", function () {
-			if (self.items.length > 0 && this.value.length === 0) {
-				dropdown.innerHTML = self.items
-					.slice(0, 10)
-					.map((item) => `<div class="autocomplete-item">${item}</div>`)
-					.join("");
-				dropdown.style.display = "block";
+			// Always show suggestions on focus if we have data
+			if (self.items.length > 0) {
+				const value = this.value.trim().toLowerCase();
+				if (value.length === 0) {
+					// Show all suggestions when empty
+					dropdown.innerHTML = self.items
+						.slice(0, 15)
+						.map((item) => `<div class="autocomplete-item">${item || ""}</div>`)
+						.join("");
+					dropdown.style.display = "block";
+				} else {
+					// Re-trigger input to show filtered results
+					const inputEvent = new Event("input", { bubbles: true });
+					this.dispatchEvent(inputEvent);
+				}
 			}
 		});
 
@@ -363,10 +482,29 @@ class SalesSummaryDashboard {
 		const idList = filterType === "so-id-filter" ? self.sales_order_ids : self.sales_invoice_ids;
 
 		input.addEventListener("input", function () {
-			const value = this.value.toLowerCase();
-			const filtered = idList.filter((id) => id.toLowerCase().includes(value));
+			const value = this.value.trim().toLowerCase();
+			
+			// If value is empty, show all suggestions
+			if (value.length === 0) {
+				if (idList.length > 0) {
+					dropdown.innerHTML = idList
+						.slice(0, 10)
+						.map((id) => `<div class="autocomplete-item">${id}</div>`)
+						.join("");
+					dropdown.style.display = "block";
+				} else {
+					dropdown.style.display = "none";
+				}
+				return;
+			}
+			
+			// Filter suggestions based on input
+			const filtered = idList.filter((id) => {
+				if (!id) return false;
+				return id.toLowerCase().includes(value);
+			});
 
-			if (filtered.length > 0 && value.length > 0) {
+			if (filtered.length > 0) {
 				dropdown.innerHTML = filtered
 					.slice(0, 10)
 					.map((id) => `<div class="autocomplete-item">${id}</div>`)
@@ -378,12 +516,21 @@ class SalesSummaryDashboard {
 		});
 
 		input.addEventListener("focus", function () {
-			if (idList.length > 0 && this.value.length === 0) {
-				dropdown.innerHTML = idList
-					.slice(0, 10)
-					.map((id) => `<div class="autocomplete-item">${id}</div>`)
-					.join("");
-				dropdown.style.display = "block";
+			// Always show suggestions on focus if we have data
+			if (idList.length > 0) {
+				const value = this.value.trim().toLowerCase();
+				if (value.length === 0) {
+					// Show all suggestions when empty
+					dropdown.innerHTML = idList
+						.slice(0, 10)
+						.map((id) => `<div class="autocomplete-item">${id}</div>`)
+						.join("");
+					dropdown.style.display = "block";
+				} else {
+					// Re-trigger input to show filtered results
+					const inputEvent = new Event("input", { bubbles: true });
+					this.dispatchEvent(inputEvent);
+				}
 			}
 		});
 
@@ -447,6 +594,7 @@ class SalesSummaryDashboard {
 			this.update_si_cards_visibility();
 			this.refresh_sales_invoices();
 		}
+		// Overview tab data is already loaded, just adjust font sizes
 	}
 
 	get_global_filters() {
@@ -459,30 +607,33 @@ class SalesSummaryDashboard {
 
 	get_sales_order_filters() {
 		const global = this.get_global_filters();
+		const itemValue = document.getElementById("so-item-filter")?.value?.trim() || "";
 		return {
 			...global,
 			status: document.getElementById("so-status-filter")?.value || "",
 			order_id: document.getElementById("so-id-filter")?.value || "",
-			item: document.getElementById("so-item-filter")?.value || "",
+			item: itemValue,
 		};
 	}
 
 	get_sales_invoice_filters() {
 		const global = this.get_global_filters();
+		const itemValue = document.getElementById("si-item-filter")?.value?.trim() || "";
 		return {
 			...global,
 			status: document.getElementById("si-status-filter")?.value || "",
 			invoice_id: document.getElementById("si-id-filter")?.value || "",
-			item: document.getElementById("si-item-filter")?.value || "",
+			item: itemValue,
 		};
 	}
 
 	refresh_data() {
+		// Prevent duplicate refreshes
+		if (this.refreshing) return;
+		this.refreshing = true;
+
 		const self = this;
 		const filters = this.get_global_filters();
-
-		// Show loading state
-		this.show_loading();
 
 		frappe.call({
 			method: "hexplastics.api.sales_summary_dashboard.get_overview_data",
@@ -491,15 +642,15 @@ class SalesSummaryDashboard {
 				if (r.message) {
 					self.update_overview(r.message);
 				}
-				self.hide_loading();
+				self.refreshing = false;
 			},
 			error: function () {
 				frappe.msgprint(__("Error loading dashboard data"));
-				self.hide_loading();
+				self.refreshing = false;
 			},
 		});
 
-		// Also refresh the current tab if not overview
+		// Also refresh the current tab if not overview (but don't duplicate if already refreshing)
 		const activeTab = this.wrapper.find(".tab-btn.active").data("tab");
 		if (activeTab === "sales-order") {
 			this.refresh_sales_orders();
@@ -512,8 +663,6 @@ class SalesSummaryDashboard {
 		const self = this;
 		const filters = this.get_sales_order_filters();
 
-		this.show_so_loading();
-
 		frappe.call({
 			method: "hexplastics.api.sales_summary_dashboard.get_sales_order_data",
 			args: filters,
@@ -522,11 +671,9 @@ class SalesSummaryDashboard {
 					self.update_sales_order_metrics(r.message.metrics);
 					self.update_sales_order_table(r.message.orders);
 				}
-				self.hide_so_loading();
 			},
 			error: function () {
 				frappe.msgprint(__("Error loading sales order data"));
-				self.hide_so_loading();
 			},
 		});
 	}
@@ -535,7 +682,6 @@ class SalesSummaryDashboard {
 		const self = this;
 		const filters = this.get_sales_invoice_filters();
 
-		this.show_si_loading();
 		this.update_si_cards_visibility();
 
 		frappe.call({
@@ -546,41 +692,11 @@ class SalesSummaryDashboard {
 					self.update_sales_invoice_metrics(r.message.metrics);
 					self.update_sales_invoice_table(r.message.invoices);
 				}
-				self.hide_si_loading();
 			},
 			error: function () {
 				frappe.msgprint(__("Error loading sales invoice data"));
-				self.hide_si_loading();
 			},
 		});
-	}
-
-	show_loading() {
-		this.wrapper.find(".kpi-value").addClass("loading-pulse");
-	}
-
-	hide_loading() {
-		this.wrapper.find(".kpi-value").removeClass("loading-pulse");
-	}
-
-	show_so_loading() {
-		this.wrapper.find("#so-loading").show();
-		this.wrapper.find("#so-table").hide();
-	}
-
-	hide_so_loading() {
-		this.wrapper.find("#so-loading").hide();
-		this.wrapper.find("#so-table").show();
-	}
-
-	show_si_loading() {
-		this.wrapper.find("#si-loading").show();
-		this.wrapper.find("#si-table").hide();
-	}
-
-	hide_si_loading() {
-		this.wrapper.find("#si-loading").hide();
-		this.wrapper.find("#si-table").show();
 	}
 
 	format_currency(value) {
@@ -618,32 +734,57 @@ class SalesSummaryDashboard {
 		});
 	}
 
+	/**
+	 * Calculate font size based on text length - simple, deterministic, no DOM measurement needed
+	 * This prevents flickering and jitter by using a fixed formula
+	 */
+	calculate_font_size(text) {
+		if (!text) return 36;
+		const len = text.length;
+		
+		// Deterministic font size based on character count
+		// Currency values like "₹1,23,45,678.00" are ~16 chars
+		if (len <= 6) return 36;       // "₹1,234" or "12,345"
+		if (len <= 10) return 32;      // "₹12,34,567" 
+		if (len <= 14) return 26;      // "₹1,23,45,678"
+		if (len <= 18) return 22;      // "₹12,34,56,789.00"
+		if (len <= 22) return 18;      // Very large values
+		return 14;                      // Extremely large values
+	}
+
+	/**
+	 * Set value with automatic font sizing - applies immediately, no timers
+	 */
+	set_value_with_font_size(elementId, value) {
+		const el = document.getElementById(elementId);
+		if (!el) return;
+		
+		// Calculate font size BEFORE setting the value
+		const fontSize = this.calculate_font_size(value);
+		
+		// Apply both at once - no flickering
+		el.style.fontSize = fontSize + "px";
+		el.textContent = value;
+	}
+
 	update_overview(data) {
 		if (!data) return;
 
-		const setEl = (id, value) => {
-			const el = document.getElementById(id);
-			if (el) el.textContent = value;
-		};
-
-		setEl("total-sales-orders", this.format_number(data.total_sales_orders));
-		setEl("total-sales-invoices", this.format_number(data.total_sales_invoices));
-		setEl("total-order-value", this.format_currency(data.total_order_value));
-		setEl("total-invoice-value", this.format_currency(data.total_invoice_value));
+		// Use set_value_with_font_size for immediate, stable updates without flickering
+		this.set_value_with_font_size("total-sales-orders", this.format_number(data.total_sales_orders));
+		this.set_value_with_font_size("total-sales-invoices", this.format_number(data.total_sales_invoices));
+		this.set_value_with_font_size("total-order-value", this.format_currency(data.total_order_value));
+		this.set_value_with_font_size("total-invoice-value", this.format_currency(data.total_invoice_value));
 	}
 
 	update_sales_order_metrics(metrics) {
 		if (!metrics) return;
 
-		const setEl = (id, value) => {
-			const el = document.getElementById(id);
-			if (el) el.textContent = value;
-		};
-
-		setEl("total-so-count", this.format_number(metrics.total_so_count || 0));
-		setEl("to-deliver-bill-orders", this.format_number(metrics.to_deliver_and_bill_count || 0));
-		setEl("partly-delivered-orders", this.format_number(metrics.partly_delivered_count || 0));
-		setEl("so-total-value", this.format_currency(metrics.total_value || 0));
+		// Use set_value_with_font_size for immediate, stable updates without flickering
+		this.set_value_with_font_size("total-so-count", this.format_number(metrics.total_so_count || 0));
+		this.set_value_with_font_size("to-deliver-bill-orders", this.format_number(metrics.to_deliver_and_bill_count || 0));
+		this.set_value_with_font_size("partly-delivered-orders", this.format_number(metrics.partly_delivered_count || 0));
+		this.set_value_with_font_size("so-total-value", this.format_currency(metrics.total_value || 0));
 	}
 
 	update_sales_order_table(orders) {
@@ -692,16 +833,12 @@ class SalesSummaryDashboard {
 	update_sales_invoice_metrics(metrics) {
 		if (!metrics) return;
 
-		const setEl = (id, value) => {
-			const el = document.getElementById(id);
-			if (el) el.textContent = value;
-		};
-
-		setEl("total-sales-invoices-count", this.format_number(metrics.total_invoice_count || 0));
-		setEl("paid-sales-invoices", this.format_number(metrics.paid_count || 0));
-		setEl("unpaid-sales-invoices", this.format_number(metrics.unpaid_count || 0));
-		setEl("overdue-sales-invoices", this.format_number(metrics.overdue_count || 0));
-		setEl("si-total-value", this.format_currency(metrics.total_value || 0));
+		// Use set_value_with_font_size for immediate, stable updates without flickering
+		this.set_value_with_font_size("total-sales-invoices-count", this.format_number(metrics.total_invoice_count || 0));
+		this.set_value_with_font_size("paid-sales-invoices", this.format_number(metrics.paid_count || 0));
+		this.set_value_with_font_size("unpaid-sales-invoices", this.format_number(metrics.unpaid_count || 0));
+		this.set_value_with_font_size("overdue-sales-invoices", this.format_number(metrics.overdue_count || 0));
+		this.set_value_with_font_size("si-total-value", this.format_currency(metrics.total_value || 0));
 	}
 
 	update_so_cards_visibility() {

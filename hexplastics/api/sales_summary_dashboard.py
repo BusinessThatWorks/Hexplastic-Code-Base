@@ -464,12 +464,23 @@ def get_filter_options():
             LIMIT 200
         """, as_dict=True)
         
-        # Get unique items
+        # Get unique items from actual Sales Orders and Sales Invoices (more relevant)
         items = frappe.db.sql("""
             SELECT DISTINCT item_code
-            FROM `tabItem`
-            WHERE disabled = 0
-                AND is_sales_item = 1
+            FROM (
+                SELECT DISTINCT item_code
+                FROM `tabSales Order Item`
+                WHERE parent IN (
+                    SELECT name FROM `tabSales Order` WHERE docstatus != 2
+                )
+                UNION
+                SELECT DISTINCT item_code
+                FROM `tabSales Invoice Item`
+                WHERE parent IN (
+                    SELECT name FROM `tabSales Invoice` WHERE docstatus != 2
+                )
+            ) AS combined_items
+            WHERE item_code IS NOT NULL
             ORDER BY item_code
             LIMIT 200
         """, as_dict=True)
@@ -579,11 +590,12 @@ def get_id_filter_sql(doc_id, field_name):
 
 def get_item_filter_sql(item, doctype):
     """Generate SQL item filter clause using subquery."""
-    if not item:
+    if not item or not item.strip():
         return ""
     
     child_table = f"tab{doctype} Item"
-    item_safe = frappe.db.escape(f"%{item}%")
+    item_clean = item.strip()
+    item_safe = frappe.db.escape(f"%{item_clean}%")
     
     return f""" AND name IN (
         SELECT DISTINCT parent 

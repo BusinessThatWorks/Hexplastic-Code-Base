@@ -348,6 +348,9 @@ body.sales-summary-dashboard-page .sales-summary-dashboard {
     position: relative;
     transition: none !important;
     transform: none !important;
+    /* Ensure card doesn't overflow but allows value scrolling */
+    min-width: 0;
+    max-width: 100%;
 }
 
 .sales-summary-dashboard .kpi-card:hover,
@@ -391,6 +394,9 @@ body.sales-summary-dashboard-page .sales-summary-dashboard {
 .sales-summary-dashboard .kpi-card-content {
     padding: 24px;
     text-align: center;
+    /* Prevent content from breaking card layout */
+    overflow: visible;
+    min-width: 0;
 }
 
 .sales-summary-dashboard .kpi-value {
@@ -400,15 +406,13 @@ body.sales-summary-dashboard-page .sales-summary-dashboard {
     line-height: 1.2;
     margin-bottom: 8px;
     letter-spacing: -0.5px;
-}
-
-.sales-summary-dashboard .kpi-value.loading-pulse {
-    animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
+    /* Allow text to be visible, font size will be adjusted dynamically */
+    overflow: visible;
+    white-space: nowrap;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    /* No transition - font size is set deterministically with value */
 }
 
 .sales-summary-dashboard .kpi-title {
@@ -490,9 +494,11 @@ body.sales-summary-dashboard-page .sales-summary-dashboard {
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     overflow-x: auto;
-    overflow-y: visible;
+    overflow-y: auto;
     width: 100%;
+    max-height: 500px;
     -webkit-overflow-scrolling: touch;
+    position: relative;
 }
 
 .sales-summary-dashboard .entries-table {
@@ -515,6 +521,11 @@ body.sales-summary-dashboard-page .sales-summary-dashboard {
     letter-spacing: 0.3px;
     border-bottom: 1px solid #e8e8e8;
     white-space: nowrap;
+    background: #f9f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
 }
 
 .sales-summary-dashboard .entries-table td {
@@ -617,30 +628,6 @@ body.sales-summary-dashboard-page .sales-summary-dashboard {
     color: #6b7280;
 }
 
-/* ===== Loading States ===== */
-.sales-summary-dashboard .table-loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 48px;
-    color: #6c7680;
-    font-size: 14px;
-}
-
-.sales-summary-dashboard .loading-spinner {
-    width: 24px;
-    height: 24px;
-    border: 3px solid #e8e8e8;
-    border-top-color: #2490ef;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
 /* ===== No Data Message ===== */
 .sales-summary-dashboard .no-data-message {
     display: flex;
@@ -706,13 +693,17 @@ body.sales-summary-dashboard-page .sales-summary-dashboard {
     }
 
     .sales-summary-dashboard .kpi-value {
-        font-size: 28px;
+        /* Font size managed by JavaScript based on content length */
     }
 
     .sales-summary-dashboard .entries-table {
         display: block;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+    }
+
+    .sales-summary-dashboard .entries-table-container {
+        max-height: 400px;
     }
 
     .sales-summary-dashboard .tab-btn {
@@ -746,6 +737,7 @@ body.sales-summary-dashboard-page .sales-summary-dashboard {
 }
 
 .sales-summary-dashboard .entries-table-container::-webkit-scrollbar {
+    width: 8px;
     height: 8px;
 }
 
