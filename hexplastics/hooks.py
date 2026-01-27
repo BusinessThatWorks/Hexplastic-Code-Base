@@ -49,6 +49,9 @@ doctype_js = {
     "Leave Application": "public/js/leave_application.js",
     "Employee": "public/js/employee.js",
     "Purchase Order": "public/js/purchase_order.js",
+    # Hide/neutralize Total Value Difference display for Stock Entries created
+    # from Production Log Sheet while leaving other Stock Entries untouched.
+    "Stock Entry": "public/js/stock_entry.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
