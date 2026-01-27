@@ -490,9 +490,11 @@ body.procurement-dashboard-page .procurement-dashboard {
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     overflow-x: auto;
-    overflow-y: visible;
+    overflow-y: auto;
     width: 100%;
     -webkit-overflow-scrolling: touch;
+    max-height: 600px;
+    position: relative;
 }
 
 .procurement-dashboard .entries-table {
@@ -503,6 +505,9 @@ body.procurement-dashboard-page .procurement-dashboard {
 
 .procurement-dashboard .entries-table thead {
     background: #f9f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .procurement-dashboard .entries-table th {
@@ -515,6 +520,11 @@ body.procurement-dashboard-page .procurement-dashboard {
     letter-spacing: 0.3px;
     border-bottom: 1px solid #e8e8e8;
     white-space: nowrap;
+    background: #f9f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
 }
 
 .procurement-dashboard .entries-table td {

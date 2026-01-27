@@ -400,19 +400,27 @@ body.sales-summary-dashboard-page .sales-summary-dashboard {
 }
 
 .sales-summary-dashboard .kpi-value {
+    /* Default font size - will be overridden by inline style */
     font-size: 36px;
     font-weight: 700;
     color: #1f272e;
     line-height: 1.2;
     margin-bottom: 8px;
     letter-spacing: -0.5px;
-    /* Allow text to be visible, font size will be adjusted dynamically */
-    overflow: visible;
-    white-space: nowrap;
+    /* Prevent any overflow, ellipsis, or text clipping */
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
     max-width: 100%;
     width: 100%;
     box-sizing: border-box;
-    /* No transition - font size is set deterministically with value */
+    /* Prevent transitions that cause flickering */
+    transition: none !important;
+    /* Prevent text from wrapping or being cut off */
+    word-wrap: normal;
+    word-break: keep-all;
+    /* Ensure inline font-size takes precedence */
+    min-height: 0;
 }
 
 .sales-summary-dashboard .kpi-title {

@@ -43,6 +43,7 @@ class ProcurementDashboard {
 		this.items = [];
 		this.debounce_timers = {};
 		this.initialized = false;
+		this.is_initializing = false;
 
 		this.init();
 	}
@@ -95,25 +96,23 @@ class ProcurementDashboard {
 
 	complete_initialization(fromDateInput, toDateInput) {
 		if (this.initialized) return; // Prevent double initialization
-		this.initialized = true;
+		this.is_initializing = true; // Prevent event handlers from firing during init
 		
-		// 1. Set default dates FIRST (synchronously)
-		const today = new Date();
-		const sevenDaysAgo = new Date(today);
-		sevenDaysAgo.setDate(today.getDate() - 7);
-		const formatDate = (date) => date.toISOString().split("T")[0];
-		
-		fromDateInput.value = formatDate(sevenDaysAgo);
-		toDateInput.value = formatDate(today);
-		
-		// 2. Bind events (no setTimeout wrapper needed now)
+		// 1. Bind events (no setTimeout wrapper needed now)
 		this.bindEventsImmediate();
 		
-		// 3. Load filter options
+		// 2. Load filter options
 		this.load_filter_options();
 		
-		// 4. Fetch data with correct default dates
-		this.refresh_data();
+		// 3. Fetch data on initial load (without date filters - will show all data)
+		// Use requestAnimationFrame to ensure DOM is ready
+		requestAnimationFrame(() => {
+			this.refresh_data();
+		});
+		
+		// Mark initialization as complete
+		this.initialized = true;
+		this.is_initializing = false;
 	}
 
 	setup_styles() {
@@ -157,27 +156,51 @@ class ProcurementDashboard {
 
 		// Auto-refresh on global filter changes
 		this.wrapper.on("change", "#from-date", function () {
+			// Prevent duplicate calls during initialization
+			if (self.is_initializing) return;
 			// Clear and refresh autocomplete suggestions when date changes
 			self.refresh_autocomplete_suggestions();
 			self.refresh_data();
 		});
 
 		this.wrapper.on("change", "#to-date", function () {
+			// Prevent duplicate calls during initialization
+			if (self.is_initializing) return;
 			// Clear and refresh autocomplete suggestions when date changes
 			self.refresh_autocomplete_suggestions();
 			self.refresh_data();
 		});
 
+		// Supplier filter - handle both change (autocomplete selection) and input (typing)
 		this.wrapper.on("change", "#supplier-filter", function () {
-			// Refresh data when supplier is selected or cleared
+			// Prevent duplicate calls during initialization
+			if (self.is_initializing) return;
+			// Refresh data when supplier is selected from autocomplete
 			self.refresh_data();
 		});
 
-		// Handle clearing supplier filter
+		// Handle supplier filter input with debounce for smooth typing
 		this.wrapper.on("input", "#supplier-filter", function () {
-			if (this.value.trim() === "") {
+			// Prevent duplicate calls during initialization
+			if (self.is_initializing) return;
+			const fieldId = this.id;
+			const value = this.value.trim();
+
+			// Clear existing timer for this field
+			if (self.debounce_timers[fieldId]) {
+				clearTimeout(self.debounce_timers[fieldId]);
+				delete self.debounce_timers[fieldId];
+			}
+
+			if (value === "") {
 				// Field was cleared, refresh data immediately
 				self.refresh_data();
+			} else {
+				// Debounce the refresh - wait 300ms after user stops typing
+				self.debounce_timers[fieldId] = setTimeout(function () {
+					delete self.debounce_timers[fieldId];
+					self.refresh_data();
+				}, 300);
 			}
 		});
 
@@ -187,7 +210,12 @@ class ProcurementDashboard {
 			self.refresh_material_requests();
 		});
 
-		// Material Request ID and Item filters - debounced input only
+		// Material Request ID and Item filters - handle change (autocomplete selection) and input (typing)
+		this.wrapper.on("change", "#mr-id-filter, #mr-item-filter", function () {
+			// Refresh when autocomplete selection is made
+			self.refresh_material_requests();
+		});
+
 		this.wrapper.on("input", "#mr-id-filter, #mr-item-filter", function () {
 			const fieldId = this.id;
 			const value = this.value.trim();
@@ -202,11 +230,11 @@ class ProcurementDashboard {
 				// Field was cleared, refresh immediately
 				self.refresh_material_requests();
 			} else {
-				// Debounce the refresh - wait 800ms after user stops typing
+				// Debounce the refresh - wait 300ms after user stops typing for better responsiveness
 				self.debounce_timers[fieldId] = setTimeout(function () {
 					delete self.debounce_timers[fieldId];
 					self.refresh_material_requests();
-				}, 800);
+				}, 300);
 			}
 		});
 
@@ -216,7 +244,12 @@ class ProcurementDashboard {
 			self.refresh_purchase_orders();
 		});
 
-		// Purchase Order ID and Item filters - debounced input only
+		// Purchase Order ID and Item filters - handle change (autocomplete selection) and input (typing)
+		this.wrapper.on("change", "#po-id-filter, #po-item-filter", function () {
+			// Refresh when autocomplete selection is made
+			self.refresh_purchase_orders();
+		});
+
 		this.wrapper.on("input", "#po-id-filter, #po-item-filter", function () {
 			const fieldId = this.id;
 			const value = this.value.trim();
@@ -231,11 +264,11 @@ class ProcurementDashboard {
 				// Field was cleared, refresh immediately
 				self.refresh_purchase_orders();
 			} else {
-				// Debounce the refresh - wait 800ms after user stops typing
+				// Debounce the refresh - wait 300ms after user stops typing for better responsiveness
 				self.debounce_timers[fieldId] = setTimeout(function () {
 					delete self.debounce_timers[fieldId];
 					self.refresh_purchase_orders();
-				}, 800);
+				}, 300);
 			}
 		});
 
@@ -245,7 +278,12 @@ class ProcurementDashboard {
 			self.refresh_purchase_receipts();
 		});
 
-		// Purchase Receipt ID and Item filters - debounced input only
+		// Purchase Receipt ID and Item filters - handle change (autocomplete selection) and input (typing)
+		this.wrapper.on("change", "#pr-id-filter, #pr-item-filter", function () {
+			// Refresh when autocomplete selection is made
+			self.refresh_purchase_receipts();
+		});
+
 		this.wrapper.on("input", "#pr-id-filter, #pr-item-filter", function () {
 			const fieldId = this.id;
 			const value = this.value.trim();
@@ -260,11 +298,11 @@ class ProcurementDashboard {
 				// Field was cleared, refresh immediately
 				self.refresh_purchase_receipts();
 			} else {
-				// Debounce the refresh - wait 800ms after user stops typing
+				// Debounce the refresh - wait 300ms after user stops typing for better responsiveness
 				self.debounce_timers[fieldId] = setTimeout(function () {
 					delete self.debounce_timers[fieldId];
 					self.refresh_purchase_receipts();
-				}, 800);
+				}, 300);
 			}
 		});
 
@@ -274,7 +312,12 @@ class ProcurementDashboard {
 			self.refresh_purchase_invoices();
 		});
 
-		// Purchase Invoice ID and Item filters - debounced input only
+		// Purchase Invoice ID and Item filters - handle change (autocomplete selection) and input (typing)
+		this.wrapper.on("change", "#pi-id-filter, #pi-item-filter", function () {
+			// Refresh when autocomplete selection is made
+			self.refresh_purchase_invoices();
+		});
+
 		this.wrapper.on("input", "#pi-id-filter, #pi-item-filter", function () {
 			const fieldId = this.id;
 			const value = this.value.trim();
@@ -289,15 +332,20 @@ class ProcurementDashboard {
 				// Field was cleared, refresh immediately
 				self.refresh_purchase_invoices();
 			} else {
-				// Debounce the refresh - wait 800ms after user stops typing
+				// Debounce the refresh - wait 300ms after user stops typing for better responsiveness
 				self.debounce_timers[fieldId] = setTimeout(function () {
 					delete self.debounce_timers[fieldId];
 					self.refresh_purchase_invoices();
-				}, 800);
+				}, 300);
 			}
 		});
 
-		// Item Wise Tracker PO No and Item filters - debounced input only
+		// Item Wise Tracker PO No and Item filters - handle change (autocomplete selection) and input (typing)
+		this.wrapper.on("change", "#tracker-po-filter, #tracker-item-filter", function () {
+			// Refresh when autocomplete selection is made
+			self.refresh_item_wise_tracker();
+		});
+
 		this.wrapper.on("input", "#tracker-po-filter, #tracker-item-filter", function () {
 			const fieldId = this.id;
 			const value = this.value.trim();
@@ -312,11 +360,11 @@ class ProcurementDashboard {
 				// Field was cleared, refresh immediately
 				self.refresh_item_wise_tracker();
 			} else {
-				// Debounce the refresh - wait 800ms after user stops typing
+				// Debounce the refresh - wait 300ms after user stops typing for better responsiveness
 				self.debounce_timers[fieldId] = setTimeout(function () {
 					delete self.debounce_timers[fieldId];
 					self.refresh_item_wise_tracker();
-				}, 800);
+				}, 300);
 			}
 		});
 
@@ -407,20 +455,14 @@ class ProcurementDashboard {
 
 		input.addEventListener("input", function () {
 			const value = this.value.trim();
-			if (value.length > 0) {
-				fetchSuggestions(value);
-			} else {
-				dropdown.style.display = "none";
-			}
+			// Always fetch suggestions - show all when empty, filtered when typing
+			fetchSuggestions(value);
 		});
 
 		input.addEventListener("focus", function () {
 			const value = this.value.trim();
-			if (value.length === 0) {
-				fetchSuggestions("");
-			} else {
-				fetchSuggestions(value);
-			}
+			// Always fetch suggestions on focus to ensure dropdown appears
+			fetchSuggestions(value);
 		});
 
 		wrapper.addEventListener("click", function (e) {
@@ -489,20 +531,14 @@ class ProcurementDashboard {
 
 		input.addEventListener("input", function () {
 			const value = this.value.trim();
-			if (value.length > 0) {
-				fetchSuggestions(value);
-			} else {
-				dropdown.style.display = "none";
-			}
+			// Always fetch suggestions - show all when empty, filtered when typing
+			fetchSuggestions(value);
 		});
 
 		input.addEventListener("focus", function () {
 			const value = this.value.trim();
-			if (value.length === 0) {
-				fetchSuggestions("");
-			} else {
-				fetchSuggestions(value);
-			}
+			// Always fetch suggestions on focus to ensure dropdown appears
+			fetchSuggestions(value);
 		});
 
 		wrapper.addEventListener("click", function (e) {
@@ -596,20 +632,14 @@ class ProcurementDashboard {
 
 		input.addEventListener("input", function () {
 			const value = this.value.trim();
-			if (value.length > 0) {
-				fetchSuggestions(value);
-			} else {
-				dropdown.style.display = "none";
-			}
+			// Always fetch suggestions - show all when empty, filtered when typing
+			fetchSuggestions(value);
 		});
 
 		input.addEventListener("focus", function () {
 			const value = this.value.trim();
-			if (value.length === 0) {
-				fetchSuggestions("");
-			} else {
-				fetchSuggestions(value);
-			}
+			// Always fetch suggestions on focus to ensure dropdown appears
+			fetchSuggestions(value);
 		});
 
 		wrapper.addEventListener("click", function (e) {
@@ -687,20 +717,14 @@ class ProcurementDashboard {
 
 		input.addEventListener("input", function () {
 			const value = this.value.trim();
-			if (value.length > 0) {
-				fetchSuggestions(value);
-			} else {
-				dropdown.style.display = "none";
-			}
+			// Always fetch suggestions - show all when empty, filtered when typing
+			fetchSuggestions(value);
 		});
 
 		input.addEventListener("focus", function () {
 			const value = this.value.trim();
-			if (value.length === 0) {
-				fetchSuggestions("");
-			} else {
-				fetchSuggestions(value);
-			}
+			// Always fetch suggestions on focus to ensure dropdown appears
+			fetchSuggestions(value);
 		});
 
 		wrapper.addEventListener("click", function (e) {
@@ -771,9 +795,12 @@ class ProcurementDashboard {
 		const toDateEl = document.getElementById("to-date");
 		const supplierEl = document.getElementById("supplier-filter");
 
+		const fromDate = fromDateEl?.value?.trim() || null;
+		const toDate = toDateEl?.value?.trim() || null;
+
 		return {
-			from_date: fromDateEl?.value?.trim() || null,
-			to_date: toDateEl?.value?.trim() || null,
+			from_date: fromDate,
+			to_date: toDate,
 			supplier: supplierEl?.value?.trim() || null,
 		};
 	}

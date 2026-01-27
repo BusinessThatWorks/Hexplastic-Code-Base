@@ -303,7 +303,7 @@ def get_material_request_data(
                 {item_filter}
             GROUP BY mr.name, mr.transaction_date, mr.schedule_date, mr.status
             ORDER BY mr.transaction_date DESC, mr.creation DESC
-            LIMIT 100
+            LIMIT 25
         """.format(
                 date_filter=mr_date_filter_join,
                 supplier_filter=mr_supplier_filter_join,
@@ -524,7 +524,7 @@ def get_purchase_order_data(
                 {id_filter}
                 {item_filter}
             ORDER BY transaction_date DESC, creation DESC
-            LIMIT 100
+            LIMIT 25
         """.format(
                 status_field=status_field,
                 table_condition=table_condition,
@@ -682,7 +682,7 @@ def get_purchase_receipt_data(
                 {id_filter}
                 {item_filter}
             ORDER BY posting_date DESC, creation DESC
-            LIMIT 100
+            LIMIT 25
         """.format(
                 date_filter=date_filter,
                 supplier_filter=supplier_filter,
@@ -869,7 +869,7 @@ def get_purchase_invoice_data(
                 {id_filter}
                 {item_filter}
             ORDER BY posting_date DESC, creation DESC
-            LIMIT 100
+            LIMIT 25
         """.format(
                 table_condition=table_condition,
                 date_filter=date_filter,
@@ -986,7 +986,7 @@ def get_item_wise_tracker_data(
                 {item_filter}
             GROUP BY poi.name, po.name, poi.item_code, po.schedule_date, poi.qty, poi.uom
             ORDER BY po.name DESC, poi.idx
-            LIMIT 200
+            LIMIT 25
         """.format(
             date_filter=date_filter,
             supplier_filter=supplier_filter,

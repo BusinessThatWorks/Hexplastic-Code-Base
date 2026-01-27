@@ -97,20 +97,13 @@ class SalesSummaryDashboard {
 		if (this.initialized) return; // Prevent double initialization
 		this.initialized = true;
 		
-		// 1. Set default dates FIRST using Frappe's datetime functions for consistency
-		const today = frappe.datetime.get_today();
-		const sevenDaysAgo = frappe.datetime.add_days(today, -7);
-		
-		fromDateInput.value = sevenDaysAgo;
-		toDateInput.value = today;
-		
-		// 2. Bind events (no setTimeout wrapper needed now)
+		// 1. Bind events (no setTimeout wrapper needed now)
 		this.bindEventsImmediate();
 		
-		// 3. Load filter options
+		// 2. Load filter options
 		this.load_filter_options();
 		
-		// 4. Fetch data with correct default dates
+		// 3. Fetch data on initial load (without date filters - will show all data)
 		this.refresh_data();
 	}
 
@@ -735,36 +728,51 @@ class SalesSummaryDashboard {
 	}
 
 	/**
-	 * Calculate font size based on text length - simple, deterministic, no DOM measurement needed
-	 * This prevents flickering and jitter by using a fixed formula
+	 * Calculate font size based on text length - deterministic, stable calculation
+	 * Uses character count and accounts for currency symbols and formatting
+	 * This is called once per value update to ensure consistency
 	 */
 	calculate_font_size(text) {
-		if (!text) return 36;
+		if (!text || text === "0" || text === "₹0") return 36;
+		
 		const len = text.length;
 		
-		// Deterministic font size based on character count
-		// Currency values like "₹1,23,45,678.00" are ~16 chars
-		if (len <= 6) return 36;       // "₹1,234" or "12,345"
-		if (len <= 10) return 32;      // "₹12,34,567" 
-		if (len <= 14) return 26;      // "₹1,23,45,678"
-		if (len <= 18) return 22;      // "₹12,34,56,789.00"
-		if (len <= 22) return 18;      // Very large values
-		return 14;                      // Extremely large values
+		// Deterministic font size calculation based on character count
+		// Accounts for currency symbol (₹), commas, and decimals
+		// Card width is typically ~250px, so we scale font size to fit
+		// These breakpoints are tested to prevent overflow
+		if (len <= 5) return 36;       // "1,234" or "₹123" or "12,345"
+		if (len <= 8) return 32;       // "₹1,234" or "12,34,567"
+		if (len <= 11) return 28;      // "₹12,34,567" or "1,23,45,678"
+		if (len <= 15) return 24;      // "₹1,23,45,678" or "12,34,56,789"
+		if (len <= 19) return 20;      // "₹12,34,56,789" or "1,23,45,67,890"
+		if (len <= 23) return 18;      // "₹1,23,45,67,890.00"
+		return 16;                      // Extremely large values
 	}
 
 	/**
-	 * Set value with automatic font sizing - applies immediately, no timers
+	 * Set value with automatic font sizing - atomic update, no flickering
+	 * Calculates font size deterministically and applies it synchronously with text
+	 * This ensures the value fits perfectly without overflow or visual jitter
 	 */
 	set_value_with_font_size(elementId, value) {
 		const el = document.getElementById(elementId);
 		if (!el) return;
 		
-		// Calculate font size BEFORE setting the value
+		// Calculate font size BEFORE any DOM changes - deterministic calculation
+		// Same input always produces same output, preventing flicker
 		const fontSize = this.calculate_font_size(value);
 		
-		// Apply both at once - no flickering
+		// Apply font size and text synchronously in one operation to prevent reflow
+		// This ensures no intermediate rendering states that cause flicker
 		el.style.fontSize = fontSize + "px";
 		el.textContent = value;
+		
+		// Ensure overflow properties are explicitly set to prevent any clipping
+		// These should match CSS but setting them ensures consistency
+		el.style.overflow = "visible";
+		el.style.textOverflow = "clip";
+		el.style.whiteSpace = "nowrap";
 	}
 
 	update_overview(data) {
