@@ -348,6 +348,8 @@ body.procurement-dashboard-page .procurement-dashboard {
     position: relative;
     transition: none !important;
     transform: none !important;
+    /* Allow the grid to shrink cards while keeping contents responsive */
+    min-width: 0;
 }
 
 .procurement-dashboard .kpi-card:hover,
@@ -391,15 +393,26 @@ body.procurement-dashboard-page .procurement-dashboard {
 .procurement-dashboard .kpi-card-content {
     padding: 24px;
     text-align: center;
+    /* Ensure long values can wrap instead of overflowing the card */
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 .procurement-dashboard .kpi-value {
-    font-size: 36px;
+    /* Responsive font-size: large by default, scales down on tighter layouts */
+    font-size: clamp(22px, 2.1vw, 36px);
     font-weight: 700;
     color: #1f272e;
     line-height: 1.2;
-    margin-bottom: 8px;
+    margin: 0 0 8px 0;
     letter-spacing: -0.5px;
+    /* Prevent clipping and keep the full currency string visible */
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .procurement-dashboard .kpi-value.loading-pulse {
