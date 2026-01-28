@@ -9,6 +9,30 @@ from frappe.utils import flt
 class ProductionLogSheet(Document):
     """Custom logic for Production Log Sheet."""
 
+    def validate(self):
+        """Round calculated fields to their defined precision before save/submit.
+        
+        This prevents floating-point precision drift that causes "Cannot Update After Submit" errors.
+        All fields with precision 4 are rounded to 4 decimal places.
+        """
+        # Round total_rm_consumption to 4 decimal places (precision: 4)
+        if self.get("total_rm_consumption") is not None:
+            self.total_rm_consumption = round(flt(self.total_rm_consumption), 4)
+        
+        # Round closing_qty_for_mip to 4 decimal places (precision: 4)
+        if self.get("closing_qty_for_mip") is not None:
+            self.closing_qty_for_mip = round(flt(self.closing_qty_for_mip), 4)
+        
+        # Round net_weight to 4 decimal places (precision: 4)
+        if self.get("net_weight") is not None:
+            self.net_weight = round(flt(self.net_weight), 4)
+        
+        # Round closing_stock in raw_material_consumption child table rows (precision: 4)
+        if self.get("raw_material_consumption"):
+            for row in self.raw_material_consumption:
+                if row.get("closing_stock") is not None:
+                    row.closing_stock = round(flt(row.closing_stock), 4)
+
     def on_submit(self):
         """Create and submit Manufacture Stock Entry on submit.
 

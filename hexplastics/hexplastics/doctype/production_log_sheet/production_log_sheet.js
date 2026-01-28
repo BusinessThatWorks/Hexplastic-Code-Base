@@ -341,6 +341,9 @@ function calculate_net_weight(frm) {
 	// Ensure non-negative result (or set to 0 if calculation results in negative)
 	net_weight = Math.max(0, net_weight);
 	
+	// Round to 4 decimal places to match field precision and prevent floating-point drift
+	net_weight = Math.round(net_weight * 10000) / 10000;
+	
 	// Update the field value (only if it's different to avoid unnecessary triggers)
 	if (flt(frm.doc.net_weight) !== net_weight) {
 		frm.set_value("net_weight", net_weight);
@@ -504,6 +507,9 @@ function calculate_total_rm_consumption(frm) {
 		total += consumption;
 	});
 	
+	// Round to 4 decimal places to match field precision and prevent floating-point drift
+	total = Math.round(total * 10000) / 10000;
+	
 	// Update the total_rm_consumption field
 	frm.set_value("total_rm_consumption", total);
 	// Trigger recalculation of closing_qty_for_mip
@@ -524,7 +530,10 @@ function calculate_closing_qty_for_mip(frm) {
 	
 	// Calculate closing_qty_for_mip
 	// Formula: total_rm_consumption - net_weight - process_loss_weight
-	const closing_qty = total_rm_consumption - net_weight - process_loss_weight;
+	let closing_qty = total_rm_consumption - net_weight - process_loss_weight;
+	
+	// Round to 4 decimal places to match field precision and prevent floating-point drift
+	closing_qty = Math.round(closing_qty * 10000) / 10000;
 	
 	// Update the closing_qty_for_mip field
 	frm.set_value("closing_qty_for_mip", closing_qty);
@@ -712,6 +721,9 @@ function calculate_closing_stock(frm, cdt, cdn) {
 	
 	// Calculate closing_stock: (avl_in_plant + issued) - consumption
 	let closing_stock = (avl_in_plant + issued) - consumption;
+	
+	// Round to 4 decimal places to match field precision and prevent floating-point drift
+	closing_stock = Math.round(closing_stock * 10000) / 10000;
 	
 	// Update the closing_stock field in the same row
 	frappe.model.set_value(cdt, cdn, "closing_stock", closing_stock);
