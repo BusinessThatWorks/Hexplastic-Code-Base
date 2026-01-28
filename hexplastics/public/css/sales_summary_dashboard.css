@@ -397,6 +397,10 @@ body.sales-summary-dashboard-page .sales-summary-dashboard {
     /* Prevent content from breaking card layout */
     overflow: visible;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
 }
 
 .sales-summary-dashboard .kpi-value {
@@ -405,7 +409,8 @@ body.sales-summary-dashboard-page .sales-summary-dashboard {
     font-weight: 700;
     color: #1f272e;
     line-height: 1.2;
-    margin-bottom: 8px;
+    margin: 0 0 8px 0;
+    padding: 0;
     letter-spacing: -0.5px;
     /* Prevent any overflow, ellipsis, or text clipping */
     overflow: visible !important;
@@ -419,21 +424,39 @@ body.sales-summary-dashboard-page .sales-summary-dashboard {
     /* Prevent text from wrapping or being cut off */
     word-wrap: normal;
     word-break: keep-all;
-    /* Ensure inline font-size takes precedence */
-    min-height: 0;
+    /* Ensure consistent alignment */
+    min-height: 43.2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .sales-summary-dashboard .kpi-title {
     font-size: 14px;
     font-weight: 600;
     color: #1f272e;
-    margin-bottom: 4px;
+    margin: 0 0 4px 0;
+    padding: 0;
+    line-height: 1.4;
+    min-height: 19.6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
 }
 
 .sales-summary-dashboard .kpi-subtitle {
     font-size: 12px;
     color: #8d99a6;
     font-weight: 400;
+    margin: 0;
+    padding: 0;
+    line-height: 1.4;
+    min-height: 16.8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
 }
 
 /* ===== Overview Section ===== */
