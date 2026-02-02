@@ -13,6 +13,7 @@
   "supervisor_id",
   "supervisor_name",
   "column_break_mwzq",
+  "stock_entry_no",
   "section_break_wuxn",
   "production_details"
  ],
@@ -77,13 +78,19 @@
    "fieldtype": "Table",
    "label": "Production Details",
    "options": "Recycle Machine Production Table"
+  },
+  {
+   "fieldname": "stock_entry_no",
+   "fieldtype": "Link",
+   "label": "Stock Entry No",
+   "options": "Stock Entry"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-02 16:25:42.553795",
+ "modified": "2026-02-02 17:25:00.837867",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Recycle Machine Daily Production",

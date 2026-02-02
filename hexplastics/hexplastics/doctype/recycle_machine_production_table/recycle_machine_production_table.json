@@ -11,11 +11,14 @@
   "default_uom",
   "grinding_mip_inhand_stock",
   "material_consumed",
+  "grinding_mip_source_warehouse",
   "column_break_xezg",
   "pp_mip_item",
+  "pp_mip_inhand_stock",
   "pp_mip_production",
   "grinding_mip_stock_balance",
-  "pp_mip_stock_balance"
+  "pp_mip_stock_balance",
+  "pp_mip_target_warehouse"
  ],
  "fields": [
   {
@@ -102,13 +105,34 @@
    "in_list_view": 1,
    "label": "PP MIP Stock Balance",
    "read_only": 1
+  },
+  {
+   "default": "Raw Material - HEX",
+   "fieldname": "grinding_mip_source_warehouse",
+   "fieldtype": "Link",
+   "label": "Grinding MIP Source Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "default": "Raw Material - HEX",
+   "fieldname": "pp_mip_target_warehouse",
+   "fieldtype": "Link",
+   "label": "PP MIP Target Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "pp_mip_inhand_stock",
+   "fieldtype": "Float",
+   "label": "PP MIP In-hand Stock",
+   "precision": "4",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-02 16:27:36.828400",
+ "modified": "2026-02-02 17:25:46.813701",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Recycle Machine Production Table",
