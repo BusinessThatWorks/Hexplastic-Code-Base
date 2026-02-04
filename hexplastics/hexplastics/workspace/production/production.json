@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Production",
  "links": [],
- "modified": "2025-12-30 10:00:00.000000",
+ "modified": "2026-02-04 12:01:06.236371",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Production",
@@ -48,6 +48,12 @@
    "label": "Daily Rejection Data",
    "link_to": "Daily Rejection Data",
    "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "List",
+   "label": "Recycle Machine Daily Production",
+   "link_to": "Recycle Machine Daily Production",
    "type": "DocType"
   }
  ],
