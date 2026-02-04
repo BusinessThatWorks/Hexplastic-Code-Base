@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "format:{shift_type} - {production_date}",
  "creation": "2026-02-02 16:08:22.824552",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -83,17 +84,19 @@
    "fieldname": "stock_entry_no",
    "fieldtype": "Link",
    "label": "Stock Entry No",
-   "options": "Stock Entry"
+   "options": "Stock Entry",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-02 17:25:00.837867",
+ "modified": "2026-02-04 15:07:25.353762",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Recycle Machine Daily Production",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
@@ -113,5 +116,6 @@
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }
