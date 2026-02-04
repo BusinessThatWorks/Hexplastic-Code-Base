@@ -11,22 +11,22 @@ class ProductionLogSheet(Document):
 
     def validate(self):
         """Round calculated fields to their defined precision before save/submit.
-        
+
         This prevents floating-point precision drift that causes "Cannot Update After Submit" errors.
         All fields with precision 4 are rounded to 4 decimal places.
         """
         # Round total_rm_consumption to 4 decimal places (precision: 4)
         if self.get("total_rm_consumption") is not None:
             self.total_rm_consumption = round(flt(self.total_rm_consumption), 4)
-        
+
         # Round closing_qty_for_mip to 4 decimal places (precision: 4)
         if self.get("closing_qty_for_mip") is not None:
             self.closing_qty_for_mip = round(flt(self.closing_qty_for_mip), 4)
-        
+
         # Round net_weight to 4 decimal places (precision: 4)
         if self.get("net_weight") is not None:
             self.net_weight = round(flt(self.net_weight), 4)
-        
+
         # Round closing_stock in raw_material_consumption child table rows (precision: 4)
         if self.get("raw_material_consumption"):
             for row in self.raw_material_consumption:
@@ -99,12 +99,46 @@ class ProductionLogSheet(Document):
             if hasattr(stock_entry, "set_posting_time"):
                 stock_entry.set_posting_time = 1
 
-            # Custom fields on Stock Entry (if present in your instance)
+            # Custom fields on Stock Entry: Map from Production Log Sheet
+            # Map: Shift Type, Machine Used (fetch from Machine Master), Operator Name, Supervisor Name
+
+            # Get machine name from Machine Master if machine_used is set
+            # Transform to match Stock Entry Select field options (e.g., "Machine 1" → "Machine No 1")
+            machine_name_for_stock_entry = None
+            if self.machine_used:
+                machine_name = frappe.db.get_value(
+                    "Machine Master", self.machine_used, "machine_name"
+                )
+                if machine_name:
+                    # Valid options for Stock Entry custom_machine_used Select field
+                    valid_options = [
+                        "Machine No 1",
+                        "Machine No 2",
+                        "Machine No 3",
+                        "Machine No 4",
+                    ]
+
+                    if machine_name in valid_options:
+                        # Already in correct format
+                        machine_name_for_stock_entry = machine_name
+                    else:
+                        # Transform "Machine 1" → "Machine No 1", "Machine 2" → "Machine No 2", etc.
+                        import re
+
+                        match = re.match(
+                            r"Machine\s*(\d+)", machine_name, re.IGNORECASE
+                        )
+                        if match:
+                            transformed = f"Machine No {match.group(1)}"
+                            if transformed in valid_options:
+                                machine_name_for_stock_entry = transformed
+
+            # Map fields to Stock Entry
             for fieldname, value in [
-                ("shift_type", getattr(self, "shift_type", None)),
-                ("machine_used", getattr(self, "machine_used", None)),
-                ("operator", getattr(self, "operator_id", None)),
-                ("supervisor", getattr(self, "supervisor_id", None)),
+                ("custom_shift_type", getattr(self, "shift_type", None)),
+                ("custom_machine_used", machine_name_for_stock_entry),
+                ("custom_operator_name", getattr(self, "operator_name", None)),
+                ("custom_supervisor_name", getattr(self, "supervisor_name", None)),
             ]:
                 if hasattr(stock_entry, fieldname) and value:
                     stock_entry.set(fieldname, value)
