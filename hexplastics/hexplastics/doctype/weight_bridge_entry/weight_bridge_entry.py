@@ -54,7 +54,7 @@ def get_used_invoices(current_doc_name=None):
 				if row.sales_invoice:
 					used_sales.append(row.sales_invoice)
 
-	# Remove duplicates
+	# Remove duplicates so it not comes again in the list
 	used_purchase = list(set(used_purchase))
 	used_sales = list(set(used_sales))
 
