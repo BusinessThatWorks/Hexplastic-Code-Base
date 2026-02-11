@@ -1,10 +1,10 @@
 {
  "content": null,
- "creation": "2025-12-30 10:00:00.000000",
+ "creation": "2025-12-30 10:00:00",
  "docstatus": 0,
  "doctype": "Page",
  "idx": 0,
- "modified": "2025-12-30 10:00:00.000000",
+ "modified": "2026-02-11 11:11:54.295455",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "production-log-dashb",
@@ -24,7 +24,6 @@
  "script": null,
  "standard": "Yes",
  "style": null,
- "system_page": 0,
+ "system_page": 1,
  "title": "Production Log Book Dashboard"
 }
-
