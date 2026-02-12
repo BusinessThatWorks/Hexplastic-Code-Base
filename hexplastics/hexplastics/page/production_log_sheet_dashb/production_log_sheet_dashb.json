@@ -1,0 +1,30 @@
+{
+ "content": null,
+ "creation": "2026-02-11 12:00:00",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-02-11 12:00:00",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "production-log-sheet-dashb",
+ "owner": "Administrator",
+ "page_name": "production-log-sheet-dashb",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Manufacturing User"
+  },
+  {
+   "role": "Manufacturing Manager"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 1,
+ "title": "Production Log Sheet Dashboard"
+}
+
