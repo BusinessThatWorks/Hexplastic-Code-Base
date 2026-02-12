@@ -71,21 +71,15 @@ class ProductionLogSheet(Document):
                 "No raw material consumption quantity found. Cannot create Stock Entry."
             )
 
-        # Validate finished goods: either production_details has items OR main manufacturing_item has quantity
+        # Validate finished goods: production_details table must have items with quantities
         has_production_details = self.production_details and any(
             d.manufactured_qty and d.manufactured_qty > 0
             for d in self.production_details
         )
-        has_main_manufacturing_item = (
-            self.manufacturing_item
-            and self.manufactured_qty
-            and self.manufactured_qty > 0
-        )
 
-        if not has_production_details and not has_main_manufacturing_item:
+        if not has_production_details:
             frappe.throw(
-                "No finished goods found. Either Production Details table must have items with quantities, "
-                "or Manufacturing Item with Manufactured Qty must be set. Cannot create Stock Entry."
+                "Production Details table must have items with quantities. Cannot create Stock Entry."
             )
 
         try:
@@ -167,16 +161,16 @@ class ProductionLogSheet(Document):
                         "stock_uom": row.stock_uom,
                         "conversion_factor": 1,
                         "basic_rate": 0,
+                        "is_finished_item": 0,  # Raw materials are never finished items
                     },
                 )
 
-            # Track items already added from production_details to avoid duplicates
-            added_finished_items = set()
-
             # Map finished goods / scrap rows from production_details table (Target)
-            # Only the main manufacturing_item should be marked as is_finished_item = 1
-            # Other items (like MIP items) are treated as additional output without the finished item flag
+            # At least one item must be marked as is_finished_item = 1 (ERPNext validation requirement)
+            # Prefer marking manufacturing_item if it exists in production_details, otherwise mark first item
+            finished_item_marked = False
             if self.production_details:
+                # First pass: mark manufacturing_item as finished if it exists
                 for row in self.production_details:
                     if not row.item_code:
                         continue
@@ -201,9 +195,11 @@ class ProductionLogSheet(Document):
                                 f"Stock UOM not found for item {row.item_code}."
                             )
 
-                    # Only mark the main manufacturing item as is_finished_item
-                    # Other items (like MIP items added manually) are not marked as finished items
+                    # Mark as finished item if:
+                    # 1. It's the manufacturing_item, OR
+                    # 2. No finished item has been marked yet (mark first valid item)
                     is_main_item = row.item_code == self.manufacturing_item
+                    should_mark_finished = is_main_item or not finished_item_marked
 
                     stock_entry.append(
                         "items",
@@ -215,58 +211,12 @@ class ProductionLogSheet(Document):
                             "uom": item_uom,
                             "stock_uom": item_uom,
                             "conversion_factor": 1,
-                            "is_finished_item": 1 if is_main_item else 0,
+                            "is_finished_item": 1 if should_mark_finished else 0,
                         },
                     )
-                    added_finished_items.add(row.item_code)
 
-            # Also include main manufacturing_item if it exists and has quantity
-            # (in case it's not already in production_details table)
-            if (
-                self.manufacturing_item
-                and self.manufactured_qty
-                and self.manufactured_qty > 0
-            ):
-                if self.manufacturing_item not in added_finished_items:
-                    # Get default warehouse for finished goods
-                    # Try to get from first production_details row, or use default
-                    default_fg_warehouse = None
-                    if self.production_details:
-                        first_row = self.production_details[0]
-                        if first_row.target_warehouse:
-                            default_fg_warehouse = first_row.target_warehouse
-
-                    if not default_fg_warehouse:
-                        # Try to get from Item's default warehouse or use a standard default
-                        default_fg_warehouse = (
-                            frappe.db.get_value(
-                                "Item", self.manufacturing_item, "default_warehouse"
-                            )
-                            or "Finished Good - Hex"
-                        )
-
-                    # Get UOM for manufacturing item
-                    item_uom = frappe.db.get_value(
-                        "Item", self.manufacturing_item, "stock_uom"
-                    )
-                    if not item_uom:
-                        frappe.throw(
-                            f"Stock UOM not found for manufacturing item {self.manufacturing_item}."
-                        )
-
-                    stock_entry.append(
-                        "items",
-                        {
-                            "s_warehouse": None,
-                            "t_warehouse": default_fg_warehouse,
-                            "item_code": self.manufacturing_item,
-                            "qty": self.manufactured_qty,
-                            "uom": item_uom,
-                            "stock_uom": item_uom,
-                            "conversion_factor": 1,
-                            "is_finished_item": 1,
-                        },
-                    )
+                    if should_mark_finished:
+                        finished_item_marked = True
 
             if not stock_entry.items:
                 frappe.throw(
