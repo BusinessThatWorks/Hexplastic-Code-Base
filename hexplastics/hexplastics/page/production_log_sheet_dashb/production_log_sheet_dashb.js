@@ -53,8 +53,8 @@ class ProductionLogSheetDashboard {
 		this.setup_styles();
 		this.bind_events();
 		this.load_filter_options();
-		// Note: Default dates are set and data is fetched in load_html() callback
-		// to ensure HTML is loaded first
+		// Note: Data is fetched in load_html() callback without default dates
+		// to show overall aggregated data on first load
 		this.setup_table_scroll_indicators();
 	}
 
@@ -64,10 +64,9 @@ class ProductionLogSheetDashboard {
 			// Render this page's own template (HTML is copied from production_log_dashb
 			// so UI/UX remains identical, while data comes from Production Log Sheet).
 			this.wrapper.html(frappe.render_template("production_log_sheet_dashb"));
-			// After HTML is loaded, set default dates and fetch data
+			// After HTML is loaded, fetch data without setting default dates
+			// This shows overall aggregated data (no date restriction) on first load
 			setTimeout(() => {
-				self.set_default_dates();
-				// Ensure dates are set before fetching data
 				// Use a small delay to ensure DOM is fully ready
 				setTimeout(() => {
 					self.refresh_data();
@@ -377,10 +376,10 @@ class ProductionLogSheetDashboard {
 	}
 
 	format_currency(value, decimals = 2) {
-		if (value === null || value === undefined) return "₹ 0";
+		if (value === null || value === undefined) return '₹0';
 
 		const num = parseFloat(value);
-		if (isNaN(num)) return "₹ 0";
+		if (isNaN(num)) return '₹0';
 
 		// Format with Indian number system (commas)
 		const formatted = num.toLocaleString("en-IN", {
@@ -388,8 +387,8 @@ class ProductionLogSheetDashboard {
 			maximumFractionDigits: decimals,
 		});
 
-		// Prefix with ₹ symbol
-		return `₹ ${formatted}`;
+		// Return inline format without space - currency symbol stays with number
+		return `₹${formatted}`;
 	}
 
 	update_overview(data) {

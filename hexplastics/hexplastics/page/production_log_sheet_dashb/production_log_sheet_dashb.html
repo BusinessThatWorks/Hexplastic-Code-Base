@@ -69,7 +69,7 @@
 					<line x1="16" y1="13" x2="8" y2="13"></line>
 					<line x1="16" y1="17" x2="8" y2="17"></line>
 				</svg>
-				Log Book
+				Log Sheet
 			</button>
 			
 			<button class="tab-btn" data-tab="actual-vs-planned">
@@ -85,7 +85,7 @@
 					<line x1="9" y1="10" x2="15" y2="10"></line>
 					<line x1="9" y1="14" x2="15" y2="14"></line>
 				</svg>
-				Actual vs Planned
+				Planned vs Actual
 			</button>
 			<button class="tab-btn" data-tab="process-loss">
 				<svg
@@ -135,14 +135,14 @@
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
 						<div class="kpi-value" id="total-mip-used">0</div>
-						<div class="kpi-title">Total MIP Used</div>
+						<div class="kpi-title">Total Grinding MIP Used</div>
 						<div class="kpi-subtitle">Material in progress used</div>
 					</div>
 				</div>
 			</div>
 		</div>
 
-		<!-- Log Book Tab -->
+		<!-- Log Sheet Tab -->
 		<div class="tab-pane" id="log-book-tab">
 			<div class="kpi-cards-grid">
 				<!-- Total Costing Card - Commented out for now -->
@@ -155,14 +155,6 @@
 					</div>
 				</div>
 
-				<div class="kpi-card kpi-card-orange">
-					<div class="kpi-card-border"></div>
-					<div class="kpi-card-content">
-						<div class="kpi-value" id="total-prime-used">0</div>
-						<div class="kpi-title">Total Prime Used</div>
-						<div class="kpi-subtitle">Prime material consumption</div>
-					</div>
-				</div>
 				<div class="kpi-card kpi-card-purple">
 					<div class="kpi-card-border"></div>
 					<div class="kpi-card-content">
@@ -189,10 +181,10 @@
 				</div>
 			</div>
 
-			<!-- Log Book Entries Section -->
+			<!-- Log Sheet Entries Section -->
 			<div class="entries-section">
 				<div class="section-header section-header-with-actions">
-					<h3>Log Book Entries</h3>
+					<h3>Log Sheet Entries</h3>
 					<div class="export-actions">
 						<button class="export-btn export-btn-primary" id="export-logbook-btn" title="Export">
 							<svg class="export-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -215,7 +207,7 @@
 					<table class="entries-table" id="entries-table">
 						<thead>
 							<tr>
-								<th>Production Log Book ID</th>
+								<th>Production Log Sheet ID</th>
 								<th>Date</th>
 								<th>Shift</th>
 								<th>Manufactured Qty</th>
@@ -327,9 +319,9 @@
 							<tr>
 								<th>Item</th>
 								<th class="text-right">Planned Qty</th>
-								<th class="text-right">Planned Raw Material Consumption</th>
+								<th class="text-right">Planned RM Consumption</th>
 								<th class="text-right">Actual Manufactured Qty</th>
-								<th class="text-right">Actual Raw Material Consumption</th>
+								<th class="text-right">Actual RM Consumption</th>
 							</tr>
 						</thead>
 						<tbody id="actual-vs-planned-tbody">

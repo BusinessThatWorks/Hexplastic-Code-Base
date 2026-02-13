@@ -359,15 +359,20 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
 .production-log-dashboard .kpi-card-content {
     padding: 24px;
     text-align: center;
+    overflow: hidden;
+    word-wrap: break-word;
 }
 
 .production-log-dashboard .kpi-value {
-    font-size: 36px;
+    font-size: clamp(24px, 3vw, 36px);
     font-weight: 700;
     color: #1f272e;
     line-height: 1.2;
     margin-bottom: 8px;
     letter-spacing: -0.5px;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: visible;
 }
 
 .production-log-dashboard .kpi-value.loading-pulse {
@@ -719,7 +724,10 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     }
 
     .production-log-dashboard .kpi-value {
-        font-size: 28px;
+        font-size: clamp(20px, 4vw, 28px);
+        white-space: nowrap;
+        max-width: 100%;
+        overflow: visible;
     }
 
     .production-log-dashboard .entries-table {

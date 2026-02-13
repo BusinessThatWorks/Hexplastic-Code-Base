@@ -150,18 +150,18 @@ def get_log_book_data(filters=None):
         data = frappe.db.sql(
             """
             SELECT
-                COALESCE(SUM(gross_weight), 0) AS gross_weight,
-                COALESCE(SUM(net_weight), 0) AS net_weight,
-                COALESCE(SUM(total_rm_consumption), 0) AS total_rm_consumption
-            FROM `tabProduction Log Sheet`
-            WHERE docstatus = 1
+                COALESCE(SUM(pls.gross_weight), 0) AS gross_weight,
+                COALESCE(SUM(pls.net_weight), 0) AS net_weight,
+                COALESCE(SUM(pls.total_rm_consumption), 0) AS total_rm_consumption
+            FROM `tabProduction Log Sheet` pls
+            WHERE pls.docstatus = 1
                 {date_filter}
                 {shift_filter}
                 {item_filter}
         """.format(
-                date_filter=get_date_filter_sql(filters),
-                shift_filter=get_shift_filter_sql(filters),
-                item_filter=get_item_filter_sql(filters),
+                date_filter=get_date_filter_sql(filters, "pls"),
+                shift_filter=get_shift_filter_sql(filters, "pls"),
+                item_filter=get_item_filter_sql(filters, "pls"),
             ),
             as_dict=True,
         )
@@ -175,8 +175,30 @@ def get_log_book_data(filters=None):
         # Prime used does not exist on Production Log Sheet; keep card but set to 0
         total_prime_used = 0
 
-        # Costing behaviour: mirror original logic using net_weight as proxy
-        total_costing = net_weight
+        # Get total costing from linked Stock Entry (total_outgoing_value = cost of raw materials consumed)
+        costing_data = frappe.db.sql(
+            """
+            SELECT
+                COALESCE(SUM(se.total_outgoing_value), 0) AS total_costing
+            FROM `tabProduction Log Sheet` pls
+            INNER JOIN `tabStock Entry` se ON se.name = pls.stock_entry_no
+            WHERE pls.docstatus = 1
+                AND se.docstatus = 1
+                AND pls.stock_entry_no IS NOT NULL
+                {date_filter}
+                {shift_filter}
+                {item_filter}
+        """.format(
+                date_filter=get_date_filter_sql(filters, "pls"),
+                shift_filter=get_shift_filter_sql(filters, "pls"),
+                item_filter=get_item_filter_sql(filters, "pls"),
+            ),
+            as_dict=True,
+        )
+
+        total_costing = (
+            flt(costing_data[0].get("total_costing", 0), 2) if costing_data else 0
+        )
 
         return {
             "total_costing": total_costing,
