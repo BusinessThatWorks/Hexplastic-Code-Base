@@ -531,8 +531,10 @@ class ProductionLogSheetDashboard {
             <tr>
                 <td>${row.item || "-"}</td>
                 <td class="text-right">${this.format_number(row.planned_qty, 0)}</td>
+                <td class="text-right">${this.format_number(row.planned_fg_weight)}</td>
                 <td class="text-right">${this.format_number(row.planned_rm_consumption)}</td>
                 <td class="text-right">${this.format_number(row.actual_manufactured_qty, 0)}</td>
+                <td class="text-right">${this.format_number(row.actual_fg_weight)}</td>
                 <td class="text-right">${this.format_number(row.actual_rm_consumption)}</td>
             </tr>
         `

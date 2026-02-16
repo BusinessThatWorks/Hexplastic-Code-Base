@@ -941,6 +941,25 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     to { transform: rotate(360deg); }
 }
 
+/* ===== Planned vs Actual Table Vertical Separators ===== */
+/* Add vertical border after Item column (column 1) */
+.production-log-dashboard #actual-vs-planned-table th:nth-child(1),
+.production-log-dashboard #actual-vs-planned-table td:nth-child(1) {
+    border-right: 2px solid #e8e8e8;
+}
+
+/* Add vertical border after Planned RM Consumption column (column 4) */
+.production-log-dashboard #actual-vs-planned-table th:nth-child(4),
+.production-log-dashboard #actual-vs-planned-table td:nth-child(4) {
+    border-right: 2px solid #e8e8e8;
+}
+
+/* Add vertical border after Actual RM Consumption column (column 7) */
+.production-log-dashboard #actual-vs-planned-table th:nth-child(7),
+.production-log-dashboard #actual-vs-planned-table td:nth-child(7) {
+    border-right: 2px solid #e8e8e8;
+}
+
 /* ===== Print Styles ===== */
 @media print {
     .production-log-dashboard .filter-section,

@@ -93,15 +93,15 @@ def get_overview_data(filters=None):
             filters = {"docstatus": 1}
 
         # Calculate totals from Production Log Sheet
+        # Total Standard Weight is the sum of gross_weight from Production Log Sheet
         data = frappe.db.sql(
             """
             SELECT
-                COALESCE(SUM(pls.manufactured_qty * COALESCE(i.weight_per_unit, 0)), 0) AS total_standard_weight,
+                COALESCE(SUM(pls.gross_weight), 0) AS total_standard_weight,
                 COALESCE(SUM(pls.net_weight), 0) AS total_net_weight,
                 COALESCE(SUM(pls.process_loss_weight), 0) AS total_process_loss,
                 COALESCE(SUM(pls.mip_used), 0) AS total_mip_used
             FROM `tabProduction Log Sheet` pls
-            LEFT JOIN `tabItem` i ON pls.manufacturing_item = i.name
             WHERE pls.docstatus = 1
                 {date_filter}
                 {shift_filter}
@@ -411,7 +411,7 @@ def get_actual_vs_planned_data(filters=None):
 
     Returns:
         list: List of dicts with item, actual_manufactured_qty, actual_rm_consumption,
-              planned_qty, planned_rm_consumption
+              actual_fg_weight, planned_qty, planned_rm_consumption, planned_fg_weight
     """
     try:
         if isinstance(filters, str):
@@ -423,12 +423,14 @@ def get_actual_vs_planned_data(filters=None):
         # Get actual data from Production Log Sheet grouped by item
         # Actual Manufactured Qty is taken from Production Log Sheet FG Table (child table)
         # Actual Raw Material Consumption is taken from header field total_rm_consumption
+        # Actual FG Weight is taken from header field net_weight
         actual_data = frappe.db.sql(
             """
             SELECT
                 pls.manufacturing_item AS item,
                 COALESCE(SUM(fg.manufactured_qty), 0) AS actual_manufactured_qty,
-                COALESCE(SUM(pls.total_rm_consumption), 0) AS actual_rm_consumption
+                COALESCE(SUM(pls.total_rm_consumption), 0) AS actual_rm_consumption,
+                COALESCE(SUM(pls.net_weight), 0) AS actual_fg_weight
             FROM `tabProduction Log Sheet` pls
             LEFT JOIN `tabProduction Log Sheet FG Table` fg
                 ON fg.parent = pls.name
@@ -458,6 +460,7 @@ def get_actual_vs_planned_data(filters=None):
                     "actual_rm_consumption": flt(
                         row.get("actual_rm_consumption", 0), 2
                     ),
+                    "actual_fg_weight": flt(row.get("actual_fg_weight", 0), 2),
                 }
 
         # Get planned data from Production Plan
@@ -490,7 +493,7 @@ def get_actual_vs_planned_data(filters=None):
             plan_items = frappe.get_all(
                 "Production Plan Item",
                 filters={"parent": production_plan, "docstatus": ["!=", 2]},
-                fields=["item_code", "planned_qty", "bom_no"],
+                fields=["item_code", "planned_qty", "bom_no", "custom_planned_weight"],
             )
 
             for plan_item in plan_items:
@@ -506,30 +509,61 @@ def get_actual_vs_planned_data(filters=None):
                     planned_items_map[item_code] = {
                         "planned_qty": 0,
                         "planned_rm_consumption": 0,
+                        "planned_fg_weight": 0,
                     }
 
                 # Add planned quantity
                 planned_items_map[item_code]["planned_qty"] += planned_qty
 
-                # Get raw material consumption from BOM
+                # Add planned FG weight
+                planned_fg_weight = flt(plan_item.get("custom_planned_weight", 0), 2)
+                planned_items_map[item_code]["planned_fg_weight"] += planned_fg_weight
+
+                # Get raw material consumption from BOM using the formula:
+                # Planned RM Consumption = (BOM Item Qty ÷ BOM Quantity) × Planned Qty
                 if bom_no:
+                    # Get BOM Quantity (finished good quantity) and docstatus
+                    # Only consider active/submitted BOMs (docstatus = 1)
+                    bom_data = frappe.db.get_value(
+                        "BOM", bom_no, ["quantity", "docstatus"], as_dict=True
+                    )
+
+                    # Skip if BOM doesn't exist or is not submitted
+                    if not bom_data or bom_data.get("docstatus") != 1:
+                        continue
+
+                    bom_quantity = flt(
+                        bom_data.get("quantity", 0), 4
+                    )  # Finished good quantity from BOM
+
+                    # Skip if BOM quantity is invalid
+                    if bom_quantity <= 0:
+                        continue
+
+                    # Get BOM Items (raw materials)
                     bom_items = frappe.get_all(
                         "BOM Item",
                         filters={"parent": bom_no, "docstatus": ["!=", 2]},
                         fields=["item_code", "qty"],
                     )
 
-                    # Calculate total RM consumption for this BOM per unit
-                    # Sum all raw material quantities from BOM
-                    bom_rm_per_unit = 0
+                    # Calculate planned RM consumption for each BOM item
+                    # Formula: (BOM Item Qty ÷ BOM Quantity) × Planned Qty
+                    planned_rm_for_this_item = 0
                     for bom_item in bom_items:
-                        bom_rm_per_unit += flt(bom_item.get("qty", 0), 4)
+                        bom_item_qty = flt(
+                            bom_item.get("qty", 0), 4
+                        )  # Raw material quantity from BOM
 
-                    # Multiply by planned quantity to get total planned RM consumption for this item
-                    planned_rm_for_this_item = bom_rm_per_unit * planned_qty
-                    planned_items_map[item_code][
-                        "planned_rm_consumption"
-                    ] += planned_rm_for_this_item
+                        if bom_item_qty > 0 and bom_quantity > 0:
+                            # Calculate: (BOM Item Qty ÷ BOM Quantity) × Planned Qty
+                            rm_consumption = (bom_item_qty / bom_quantity) * planned_qty
+                            planned_rm_for_this_item += flt(rm_consumption, 4)
+
+                    # Add to total planned RM consumption for this item
+                    planned_items_map[item_code]["planned_rm_consumption"] += flt(
+                        planned_rm_for_this_item, 2
+                    )
 
         # Combine actual and planned data
         result = []
@@ -546,10 +580,12 @@ def get_actual_vs_planned_data(filters=None):
                     "item": item,
                     "actual_manufactured_qty": actual.get("actual_manufactured_qty", 0),
                     "actual_rm_consumption": actual.get("actual_rm_consumption", 0),
+                    "actual_fg_weight": actual.get("actual_fg_weight", 0),
                     "planned_qty": planned.get("planned_qty", 0),
                     "planned_rm_consumption": flt(
                         planned.get("planned_rm_consumption", 0), 2
                     ),
+                    "planned_fg_weight": flt(planned.get("planned_fg_weight", 0), 2),
                 }
             )
 
