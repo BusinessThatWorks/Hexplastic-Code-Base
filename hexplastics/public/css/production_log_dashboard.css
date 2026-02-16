@@ -409,8 +409,6 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
 .production-log-dashboard .entries-section .entries-table-container {
     border-radius: 0;
     box-shadow: none;
-    overflow-x: auto;
-    overflow-y: visible;
 }
 
 /* ===== Table Styles ===== */
@@ -418,10 +416,11 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    overflow-x: auto;
-    overflow-y: visible;
+    max-height: 450px;
     width: 100%;
     position: relative;
+    overflow-x: auto;
+    overflow-y: auto;
 }
 
 
@@ -429,11 +428,14 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     width: 100%;
     min-width: 1000px;
     border-collapse: collapse;
-    position: relative;
+    margin: 0;
 }
 
 .production-log-dashboard .entries-table thead {
     background: #f9f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 5;
 }
 
 .production-log-dashboard .entries-table th {
@@ -447,6 +449,10 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     border-bottom: 2px solid #e8e8e8;
     white-space: nowrap;
     background: #f9f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.05);
 }
 
 .production-log-dashboard .entries-table td {
@@ -594,16 +600,24 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     width: 100%;
 }
 
-.production-log-dashboard .process-loss-table-section {
-    width: 100%;
-}
-
-.production-log-dashboard .process-loss-chart-section,
-.production-log-dashboard .process-loss-table-section {
+.production-log-dashboard .process-loss-chart-section {
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     overflow: hidden;
+}
+
+.production-log-dashboard .process-loss-table-section {
+    width: 100%;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.production-log-dashboard .process-loss-table-section .entries-table-container {
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .production-log-dashboard .section-header {
@@ -634,6 +648,13 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
 
 .production-log-dashboard .process-loss-table {
     margin: 0;
+}
+
+.production-log-dashboard .process-loss-table-section {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 450px;
+    position: relative;
 }
 
 .production-log-dashboard .process-loss-table-section .entries-table {
@@ -689,8 +710,9 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     }
 
     .production-log-dashboard .entries-table-container {
+        max-height: 400px;
         overflow-x: auto;
-        overflow-y: visible;
+        overflow-y: auto;
     }
 
     .production-log-dashboard .tab-btn {

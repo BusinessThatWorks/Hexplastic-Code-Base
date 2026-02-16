@@ -280,24 +280,30 @@
 							</button>
 						</div>
 					</div>
-					<table class="entries-table process-loss-table">
-						<thead>
-							<tr>
-								<th>Date</th>
-								<th>Shift Type</th>
-								<th class="text-center">Process Loss (kg)</th>
-							</tr>
-						</thead>
-						<tbody id="process-loss-tbody">
-							<!-- Dynamic rows will be inserted here -->
-						</tbody>
-					</table>
-					<div
-						class="no-data-message"
-						id="no-process-loss-message"
-						style="display: none"
-					>
-						<p>No process loss data available</p>
+					<div class="entries-table-container">
+						<div class="table-loading" id="process-loss-loading" style="display: none">
+							<div class="loading-spinner"></div>
+							<span>Loading data...</span>
+						</div>
+						<table class="entries-table process-loss-table">
+							<thead>
+								<tr>
+									<th>Date</th>
+									<th>Shift Type</th>
+									<th class="text-center">Process Loss (kg)</th>
+								</tr>
+							</thead>
+							<tbody id="process-loss-tbody">
+								<!-- Dynamic rows will be inserted here -->
+							</tbody>
+						</table>
+						<div
+							class="no-data-message"
+							id="no-process-loss-message"
+							style="display: none"
+						>
+							<p>No process loss data available</p>
+						</div>
 					</div>
 				</div>
 			</div>
