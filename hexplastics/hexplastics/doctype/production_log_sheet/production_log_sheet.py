@@ -167,10 +167,19 @@ class ProductionLogSheet(Document):
 
             # Map finished goods / scrap rows from production_details table (Target)
             # At least one item must be marked as is_finished_item = 1 (ERPNext validation requirement)
-            # Prefer marking manufacturing_item if it exists in production_details, otherwise mark first item
+            # ERPNext only allows ONE item with is_finished_item = 1 in a Manufacture Stock Entry.
+            # Prefer marking manufacturing_item if it exists in production_details, otherwise mark first item.
             finished_item_marked = False
             if self.production_details:
-                # First pass: mark manufacturing_item as finished if it exists
+                # Pre-check: is the manufacturing_item present in production_details?
+                manufacturing_item_in_details = any(
+                    row.item_code == self.manufacturing_item
+                    for row in self.production_details
+                    if row.item_code
+                    and row.manufactured_qty
+                    and row.manufactured_qty > 0
+                )
+
                 for row in self.production_details:
                     if not row.item_code:
                         continue
@@ -195,11 +204,14 @@ class ProductionLogSheet(Document):
                                 f"Stock UOM not found for item {row.item_code}."
                             )
 
-                    # Mark as finished item if:
-                    # 1. It's the manufacturing_item, OR
-                    # 2. No finished item has been marked yet (mark first valid item)
+                    # Mark exactly ONE item as is_finished_item = 1:
+                    # - If manufacturing_item is in the details, only that item is marked.
+                    # - Otherwise, the first valid item is marked.
                     is_main_item = row.item_code == self.manufacturing_item
-                    should_mark_finished = is_main_item or not finished_item_marked
+                    if manufacturing_item_in_details:
+                        should_mark_finished = is_main_item and not finished_item_marked
+                    else:
+                        should_mark_finished = not finished_item_marked
 
                     stock_entry.append(
                         "items",
