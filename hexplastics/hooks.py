@@ -44,14 +44,14 @@ app_license = "mit"
 
 # include js in doctype views
 doctype_js = {
-    "BOM": "public/js/bom.js",
-    "Production Plan": "public/js/production_plan.js",
-    "Leave Application": "public/js/leave_application.js",
-    "Employee": "public/js/employee.js",
-    "Purchase Order": "public/js/purchase_order.js",
-    # Hide/neutralize Total Value Difference display for Stock Entries created
-    # from Production Log Sheet while leaving other Stock Entries untouched.
-    "Stock Entry": "public/js/stock_entry.js",
+	"BOM": "public/js/bom.js",
+	"Production Plan": "public/js/production_plan.js",
+	"Leave Application": "public/js/leave_application.js",
+	"Employee": "public/js/employee.js",
+	"Purchase Order": "public/js/purchase_order.js",
+	# Hide/neutralize Total Value Difference display for Stock Entries created
+	# from Production Log Sheet while leaving other Stock Entries untouched.
+	"Stock Entry": "public/js/stock_entry.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
@@ -163,11 +163,12 @@ doctype_js = {
 # ---------------
 
 scheduler_events = {
-    "cron": {
-        "0 9 * * *": [
-            "hexplastics.tasks.check_stock_levels_and_send_alert"
-        ],  # Run at 9:00 AM every day
-    },
+	"cron": {
+		# Run stock alert at 9:00 AM every day
+		"0 9 * * *": ["hexplastics.tasks.check_stock_levels_and_send_alert"],
+		# Run TimeWatch attendance sync every day at 5:50 PM
+		"40 12 * * *": ["hexplastics.utils.timewatch_api.sync_yesterday_attendance"],
+	},
 }
 
 # Testing
@@ -250,7 +251,7 @@ scheduler_events = {
 fixtures = [{"doctype": "Custom Field", "filters": {"module": "Hexplastics"}}]
 
 doc_events = {
-    "Production Log Book": {
-        "on_submit": "hexplastics.hexplastics.doctype.production_log_book.production_log_book.on_production_log_book_submit",
-    }
+	"Production Log Book": {
+		"on_submit": "hexplastics.hexplastics.doctype.production_log_book.production_log_book.on_production_log_book_submit",
+	}
 }
