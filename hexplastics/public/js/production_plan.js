@@ -15,6 +15,7 @@ frappe.ui.form.on("Production Plan", {
 		// Also fetch for existing rows
 		setTimeout(() => {
 			fetchAllDeliveryDates(frm);
+			fetchAllBOMNames(frm);
 		}, 500);
 	},
 
@@ -60,6 +61,26 @@ frappe.ui.form.on("Production Plan Item", {
 			// Clear weight_per_unit and custom_planned_weight if item_code is cleared
 			frappe.model.set_value(cdt, cdn, "weight_per_unit", 0);
 			frappe.model.set_value(cdt, cdn, "custom_planned_weight", 0);
+		}
+	},
+
+	bom_no(frm, cdt, cdn) {
+		// When bom_no changes, automatically fetch and populate BOM Name
+		let row = locals[cdt][cdn];
+		if (row.bom_no) {
+			fetchBOMName(frm, cdt, cdn, row.bom_no);
+		} else {
+			// Clear custom_bom_name if bom_no is cleared
+			frappe.model.set_value(cdt, cdn, "custom_bom_name", "");
+		}
+	},
+
+	// This fires after each row is rendered in the grid
+	form_render(frm, cdt, cdn) {
+		let row = locals[cdt][cdn];
+		// Fetch BOM name if bom_no exists but custom_bom_name is missing
+		if (row.bom_no && !row.custom_bom_name) {
+			fetchBOMName(frm, cdt, cdn, row.bom_no);
 		}
 	},
 
@@ -211,4 +232,49 @@ function calculatePlannedWeight(frm, cdt, cdn) {
 	let custom_planned_weight = planned_qty * weight_per_unit;
 
 	frappe.model.set_value(cdt, cdn, "custom_planned_weight", custom_planned_weight);
+}
+
+function fetchBOMName(frm, cdt, cdn, bom_no) {
+	// Fetch BOM name from BOM doctype
+	// In ERPNext, the BOM's name field is the BOM name itself
+	if (!bom_no) {
+		frappe.model.set_value(cdt, cdn, "custom_bom_name", "");
+		return;
+	}
+
+	frappe.call({
+		method: "frappe.client.get_value",
+		args: {
+			doctype: "BOM",
+			filters: { name: bom_no },
+			fieldname: ["name"],
+		},
+		callback(r) {
+			if (r.message && r.message.name) {
+				// Set the BOM name in custom_bom_name field
+				frappe.model.set_value(cdt, cdn, "custom_bom_name", r.message.name);
+			} else {
+				// If BOM not found, clear the field
+				frappe.model.set_value(cdt, cdn, "custom_bom_name", "");
+			}
+		},
+		error(r) {
+			// Handle error gracefully - clear the field if BOM is invalid
+			console.error("Error fetching BOM name for BOM No:", bom_no, r);
+			frappe.model.set_value(cdt, cdn, "custom_bom_name", "");
+		},
+	});
+}
+
+function fetchAllBOMNames(frm) {
+	// Fetch BOM names for all existing rows in the Assembly Item table (po_items)
+	if (!frm.doc.po_items || frm.doc.po_items.length === 0) {
+		return;
+	}
+
+	frm.doc.po_items.forEach(function (row) {
+		if (row.bom_no && !row.custom_bom_name) {
+			fetchBOMName(frm, row.doctype, row.name, row.bom_no);
+		}
+	});
 }
