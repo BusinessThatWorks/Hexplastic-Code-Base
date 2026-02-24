@@ -235,8 +235,7 @@ function calculatePlannedWeight(frm, cdt, cdn) {
 }
 
 function fetchBOMName(frm, cdt, cdn, bom_no) {
-	// Fetch BOM name from BOM doctype
-	// In ERPNext, the BOM's name field is the BOM name itself
+	// Fetch BOM name from BOM doctype's custom_bom_name field
 	if (!bom_no) {
 		frappe.model.set_value(cdt, cdn, "custom_bom_name", "");
 		return;
@@ -247,14 +246,14 @@ function fetchBOMName(frm, cdt, cdn, bom_no) {
 		args: {
 			doctype: "BOM",
 			filters: { name: bom_no },
-			fieldname: ["name"],
+			fieldname: ["custom_bom_name"],
 		},
 		callback(r) {
-			if (r.message && r.message.name) {
+			if (r.message && r.message.custom_bom_name) {
 				// Set the BOM name in custom_bom_name field
-				frappe.model.set_value(cdt, cdn, "custom_bom_name", r.message.name);
+				frappe.model.set_value(cdt, cdn, "custom_bom_name", r.message.custom_bom_name);
 			} else {
-				// If BOM not found, clear the field
+				// If BOM not found or custom_bom_name is empty, clear the field
 				frappe.model.set_value(cdt, cdn, "custom_bom_name", "");
 			}
 		},
