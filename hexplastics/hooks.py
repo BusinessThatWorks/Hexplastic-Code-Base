@@ -167,7 +167,7 @@ scheduler_events = {
 		# Run stock alert at 9:00 AM every day
 		"0 9 * * *": ["hexplastics.tasks.check_stock_levels_and_send_alert"],
 		# Run TimeWatch attendance sync every day at 5:50 PM
-		"30 13 * * *": ["hexplastics.utils.timewatch_api.sync_yesterday_attendance"],
+		"28 11 * * *": ["hexplastics.utils.timewatch_api.sync_yesterday_attendance"],
 	},
 }
 

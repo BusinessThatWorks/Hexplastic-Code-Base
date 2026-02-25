@@ -1,0 +1,30 @@
+{
+ "content": null,
+ "creation": "2026-02-23 15:11:49.055437",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "octicon octicon-graph",
+ "idx": 0,
+ "modified": "2026-02-23 15:11:49.055437",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "attendance-dashboard",
+ "owner": "Administrator",
+ "page_name": "attendance-dashboard",
+ "roles": [
+  {
+   "role": "HR Manager"
+  },
+  {
+   "role": "Administrator"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Attendance Dashboard"
+}
