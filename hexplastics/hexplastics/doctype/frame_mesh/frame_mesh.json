@@ -1,0 +1,57 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format: {mesh_type}",
+ "creation": "2026-02-26 15:41:48.850568",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "mesh_type",
+  "column_break_hzzn",
+  "column_break_ftql"
+ ],
+ "fields": [
+  {
+   "fieldname": "mesh_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Mesh Type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_hzzn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_ftql",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-26 15:42:20.952110",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "Frame Mesh",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
