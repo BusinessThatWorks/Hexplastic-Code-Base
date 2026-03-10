@@ -3,8 +3,10 @@
 
 frappe.ui.form.on("Recycle Machine Daily Production", {
     refresh(frm) {
-        // Refresh handler if needed in future
-        console.log("Recycle Machine Daily Production form refreshed", frm.doc);
+        // Clear stock_entry_no visually when this is a new amendment (not yet saved)
+        if (frm.doc.amended_from && frm.doc.__islocal && frm.doc.stock_entry_no) {
+            frm.set_value("stock_entry_no", "");
+        }
     },
 
     // Whenever production_date changes, recompute Available in Tray from previous shift

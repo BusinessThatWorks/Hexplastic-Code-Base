@@ -13,6 +13,10 @@ class RecycleMachineDailyProduction(Document):
 	based on the Production Details table.
 	"""
 
+	def before_insert(self):
+		if self.amended_from:
+			self.stock_entry_no = None
+
 	def on_submit(self):
 		"""Create and submit Manufacture Stock Entry on submit.
 
