@@ -18,9 +18,8 @@ class RecycleMachineDailyProduction(Document):
 
 		Rules:
 		- Only create if no stock_entry_no already exists (prevent duplicates)
-		- Map items from production_details table
-		- Source items: grinding_mip_item from grinding_mip_source_warehouse
-		- Target items: pp_mip_item to pp_mip_target_warehouse
+		- Source items: from production_details table (Recycle Machine Production Table)
+		- Target items: from table_eraa table (Recycle Machine PP MIP Table)
 		- Submit Stock Entry automatically
 		- Set stock_entry_no only after successful submission
 		"""
@@ -41,9 +40,15 @@ class RecycleMachineDailyProduction(Document):
 		has_valid_source = False
 		has_valid_target = False
 
+		# Source: Grinding MIP consumption (production_details)
 		for row in self.production_details:
-			if row.item_code and row.grinding_mip_source_warehouse and flt(row.material_consumed or 0) > 0:
-				has_valid_source = True
+			if row.item_code and row.grinding_mip_source_warehouse:
+				qty = flt(row.material_consumed or 0) - flt(row.closing_balance or 0)
+				if qty > 0:
+					has_valid_source = True
+
+		# Target: PP MIP production (table_eraa)
+		for row in getattr(self, "table_eraa", []) or []:
 			if row.pp_mip_item and row.pp_mip_target_warehouse and flt(row.pp_mip_production or 0) > 0:
 				has_valid_target = True
 
@@ -79,14 +84,17 @@ class RecycleMachineDailyProduction(Document):
 			if hasattr(stock_entry, "set_posting_time"):
 				stock_entry.set_posting_time = 1
 
-			# Build Stock Entry Items from production_details table
-			# Track if we've added the first finished item to avoid ERPNext validation error
-			first_finished_item_added = False
+			# Build Stock Entry Items
+			# 1) Source items from production_details (Grinding MIP Consumption)
 			for row in self.production_details:
-				_add_items_from_production_row(stock_entry, row, first_finished_item_added)
-				# Mark that we've processed at least one row with a finished item
-				if row.pp_mip_item and row.pp_mip_target_warehouse and flt(row.pp_mip_production or 0) > 0:
-					first_finished_item_added = True
+				_add_source_item_from_production_row(stock_entry, row)
+
+			# 2) Target items from table_eraa (PP MIP Production)
+			first_finished_item_added = False
+			for row in getattr(self, "table_eraa", []) or []:
+				first_finished_item_added = _add_finished_item_from_pp_row(
+					stock_entry, row, first_finished_item_added
+				)
 
 			# Validate that we have items
 			if not stock_entry.items:
@@ -125,24 +133,183 @@ class RecycleMachineDailyProduction(Document):
 			frappe.throw(f"Failed to create Manufacture Stock Entry: {frappe.utils.cstr(e)}")
 
 
-def _add_items_from_production_row(stock_entry, row, first_finished_item_added: bool = False) -> None:
-	"""Append Stock Entry Items based on a single Production Details row.
+@frappe.whitelist()
+def get_previous_closing_balance(production_date: str, shift_type: str, item_code: str) -> float:
+	"""Return the latest closing_balance for the given item from the immediate previous shift document.
+
+	Shift ordering:
+	- Day = 1
+	- Night = 2
+	Previous shift is determined by (production_date, shift_order) descending,
+	taking the first document that is strictly before the current (date, shift).
+	"""
+
+	if not production_date or not shift_type or not item_code:
+		return 0.0
+
+	# Map shift type to an order value for comparison
+	shift_order_map = {"Day": 1, "Night": 2}
+	current_shift_order = shift_order_map.get(shift_type)
+
+	if not current_shift_order:
+		# Unknown shift type
+		return 0.0
+
+	# Find the immediate previous shift document
+	previous_doc = frappe.db.sql(
+		"""
+		SELECT name
+		FROM `tabRecycle Machine Daily Production`
+		WHERE production_date <= %(production_date)s
+		  AND (
+			production_date < %(production_date)s
+			OR (
+				production_date = %(production_date)s
+				AND
+				CASE shift_type
+					WHEN 'Day' THEN 1
+					WHEN 'Night' THEN 2
+					ELSE 0
+				END < %(current_shift_order)s
+			)
+		  )
+		ORDER BY production_date DESC,
+			CASE shift_type
+				WHEN 'Day' THEN 1
+				WHEN 'Night' THEN 2
+				ELSE 0
+			END DESC
+		LIMIT 1
+		""",
+		{
+			"production_date": production_date,
+			"current_shift_order": current_shift_order,
+		},
+		as_dict=True,
+	)
+
+	if not previous_doc:
+		return 0.0
+
+	prev_name = previous_doc[0].name
+
+	# Get the closing_balance for this item_code from the child table of the previous document
+	row = frappe.db.sql(
+		"""
+		SELECT closing_balance
+		FROM `tabRecycle Machine Production Table`
+		WHERE parent = %(parent)s
+		  AND parentfield = 'production_details'
+		  AND parenttype = 'Recycle Machine Daily Production'
+		  AND item_code = %(item_code)s
+		ORDER BY idx ASC
+		LIMIT 1
+		""",
+		{"parent": prev_name, "item_code": item_code},
+		as_dict=True,
+	)
+
+	if not row:
+		return 0.0
+
+	return float(row[0].closing_balance or 0.0)
+
+
+@frappe.whitelist()
+def get_previous_total_closing_balance(production_date: str, shift_type: str) -> float:
+	"""Return the total closing_balance from the immediate previous shift document.
+
+	This ignores item_code and simply aggregates the closing_balance of all rows
+	in the previous Recycle Machine Daily Production document.
+	Used for the parent-level 'Available in Tray' field.
+	"""
+
+	if not production_date or not shift_type:
+		return 0.0
+
+	# Map shift type to an order value for comparison
+	shift_order_map = {"Day": 1, "Night": 2}
+	current_shift_order = shift_order_map.get(shift_type)
+
+	if not current_shift_order:
+		return 0.0
+
+	previous_doc = frappe.db.sql(
+		"""
+		SELECT name
+		FROM `tabRecycle Machine Daily Production`
+		WHERE production_date <= %(production_date)s
+		  AND (
+			production_date < %(production_date)s
+			OR (
+				production_date = %(production_date)s
+				AND
+				CASE shift_type
+					WHEN 'Day' THEN 1
+					WHEN 'Night' THEN 2
+					ELSE 0
+				END < %(current_shift_order)s
+			)
+		  )
+		ORDER BY production_date DESC,
+			CASE shift_type
+				WHEN 'Day' THEN 1
+				WHEN 'Night' THEN 2
+				ELSE 0
+			END DESC
+		LIMIT 1
+		""",
+		{
+			"production_date": production_date,
+			"current_shift_order": current_shift_order,
+		},
+		as_dict=True,
+	)
+
+	if not previous_doc:
+		return 0.0
+
+	prev_name = previous_doc[0].name
+
+	total = frappe.db.sql(
+		"""
+		SELECT SUM(closing_balance) AS total_closing_balance
+		FROM `tabRecycle Machine Production Table`
+		WHERE parent = %(parent)s
+		  AND parentfield = 'production_details'
+		  AND parenttype = 'Recycle Machine Daily Production'
+		""",
+		{"parent": prev_name},
+		as_dict=True,
+	)
+
+	if not total:
+		return 0.0
+
+	return float(total[0].total_closing_balance or 0.0)
+
+
+def _add_source_item_from_production_row(stock_entry, row) -> None:
+	"""Append Stock Entry source item based on a single Production Details row.
 
 	Rules:
-	- Source item: grinding_mip_item from grinding_mip_source_warehouse (qty = material_consumed)
-	- Target item: pp_mip_item to pp_mip_target_warehouse (qty = pp_mip_production)
-	- Only the FIRST finished item is marked as is_finished_item=1 (ERPNext validation requirement)
-	- Subsequent finished items are marked as is_finished_item=0 but still go to target warehouse
+	- Source item: grinding MIP item from grinding_mip_source_warehouse
+	  qty = material_consumed - closing_balance
 	- Skip items with zero or negative quantities
 	- Validate required fields
 	"""
 
 	# SOURCE ITEM: Grinding MIP Item (Raw Material)
 	if row.item_code and row.grinding_mip_source_warehouse:
-		qty = flt(row.material_consumed or 0)
+		material_consumed = flt(row.material_consumed or 0)
+		closing_balance = flt(getattr(row, "closing_balance", 0) or 0)
+		qty = material_consumed - closing_balance
 
 		if qty < 0:
-			frappe.throw(f"Row for Item {row.item_code or ''}: Material Consumed cannot be negative.")
+			frappe.throw(
+				f"Row for Item {row.item_code or ''}: "
+				f"Calculated consumption (material_consumed - closing_balance) cannot be negative."
+			)
 
 		# Only append if qty > 0
 		if qty > 0:
@@ -159,7 +326,19 @@ def _add_items_from_production_row(stock_entry, row, first_finished_item_added: 
 				),
 			)
 
-	# TARGET ITEM: PP MIP Item (Finished Good)
+
+def _add_finished_item_from_pp_row(
+	stock_entry, row, first_finished_item_added: bool = False
+) -> bool:
+	"""Append Stock Entry finished item based on a single PP MIP row (table_eraa).
+
+	Rules:
+	- Target item: pp_mip_item to pp_mip_target_warehouse (qty = pp_mip_production)
+	- Only the FIRST finished item is marked as is_finished_item=1 (ERPNext validation requirement)
+	- Subsequent finished items are marked as is_finished_item=0 but still go to target warehouse
+	- Skip items with zero or negative quantities
+	"""
+
 	if row.pp_mip_item and row.pp_mip_target_warehouse:
 		qty = flt(row.pp_mip_production or 0)
 
@@ -169,8 +348,6 @@ def _add_items_from_production_row(stock_entry, row, first_finished_item_added: 
 		# Only append if qty > 0
 		if qty > 0:
 			# Only mark the first finished item as is_finished_item=1
-			# This avoids ERPNext's "Multiple items cannot be marked as finished item" validation
-			# All other output items are still added to target warehouse but with is_finished_item=0
 			is_finished = 1 if not first_finished_item_added else 0
 
 			stock_entry.append(
@@ -185,6 +362,11 @@ def _add_items_from_production_row(stock_entry, row, first_finished_item_added: 
 					is_scrap_item=0,
 				),
 			)
+
+			# We've now added a finished item
+			first_finished_item_added = True
+
+	return first_finished_item_added
 
 
 def _make_stock_entry_item(

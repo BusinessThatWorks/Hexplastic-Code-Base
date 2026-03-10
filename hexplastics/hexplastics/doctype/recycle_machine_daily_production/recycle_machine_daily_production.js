@@ -4,6 +4,31 @@
 frappe.ui.form.on("Recycle Machine Daily Production", {
     refresh(frm) {
         // Refresh handler if needed in future
+        console.log("Recycle Machine Daily Production form refreshed", frm.doc);
+    },
+
+    // Whenever production_date changes, recompute Available in Tray from previous shift
+    production_date(frm) {
+        console.log(
+            "production_date changed",
+            frm.doc && frm.doc.production_date,
+            "shift_type:",
+            frm.doc && frm.doc.shift_type
+        );
+        set_parent_available_in_tray_from_previous_shift(frm);
+        set_available_in_tray_for_all_rows(frm);
+    },
+
+    // Whenever shift_type changes, recompute Available in Tray from previous shift
+    shift_type(frm) {
+        console.log(
+            "shift_type changed",
+            frm.doc && frm.doc.shift_type,
+            "production_date:",
+            frm.doc && frm.doc.production_date
+        );
+        set_parent_available_in_tray_from_previous_shift(frm);
+        set_available_in_tray_for_all_rows(frm);
     },
 });
 
@@ -21,6 +46,9 @@ frappe.ui.form.on("Recycle Machine Production Table", {
         // Fetch current in-hand stock from Bin using actual_qty
         // Filter by item_code and grinding_mip_source_warehouse
         fetch_grinding_mip_stock(frm, cdt, cdn, row);
+
+        // Also fetch previous closing balance to set Available in Tray
+        set_available_in_tray_from_previous_shift(frm, cdt, cdn, row);
     },
 
     // When warehouse changes, update the stock
@@ -274,4 +302,141 @@ function calculate_closing_balance_for_all_rows(frm) {
             frappe.model.set_value(row.doctype, row.name, "closing_balance", closing_balance);
         });
     }
+}
+
+// Helper: set Available in Tray from previous shift closing_balance
+function set_available_in_tray_from_previous_shift(frm, cdt, cdn, row) {
+    const doc = frm.doc || {};
+
+    if (!doc.production_date || !doc.shift_type || !row.item_code) {
+        // Missing required context, do nothing
+        console.log(
+            "Skipping set_available_in_tray_from_previous_shift due to missing context",
+            {
+                production_date: doc.production_date,
+                shift_type: doc.shift_type,
+                item_code: row.item_code,
+            }
+        );
+        return;
+    }
+
+    console.log("Calling get_previous_closing_balance for", {
+        production_date: doc.production_date,
+        shift_type: doc.shift_type,
+        item_code: row.item_code,
+        row_name: row.name,
+    });
+
+    frappe.call({
+        method: "hexplastics.hexplastics.doctype.recycle_machine_daily_production.recycle_machine_daily_production.get_previous_closing_balance",
+        args: {
+            production_date: doc.production_date,
+            shift_type: doc.shift_type,
+            item_code: row.item_code,
+        },
+        callback: function (r) {
+            console.log(
+                "get_previous_closing_balance response",
+                r && r.message,
+                "for row",
+                row.name
+            );
+            const closing_balance = r && r.message ? flt(r.message) : 0;
+            frappe.model.set_value(cdt, cdn, "available_in_tray", closing_balance);
+        },
+        error: function (err) {
+            console.error(
+                "Error calling get_previous_closing_balance",
+                err,
+                {
+                    production_date: doc.production_date,
+                    shift_type: doc.shift_type,
+                    item_code: row.item_code,
+                }
+            );
+        },
+    });
+}
+
+// Helper: recompute Available in Tray for all existing Grinding MIP rows
+// based only on current production_date and shift_type on the parent
+function set_available_in_tray_for_all_rows(frm) {
+    const doc = frm.doc || {};
+
+    if (!doc.production_date || !doc.shift_type || !doc.production_details) {
+        console.log("Skipping set_available_in_tray_for_all_rows, missing data", {
+            production_date: doc.production_date,
+            shift_type: doc.shift_type,
+            has_production_details: !!doc.production_details,
+        });
+        return;
+    }
+
+    console.log(
+        "Recomputing Available in Tray for all rows",
+        "production_date:",
+        doc.production_date,
+        "shift_type:",
+        doc.shift_type,
+        "rows:",
+        (doc.production_details || []).length
+    );
+
+    (doc.production_details || []).forEach(row => {
+        if (row.item_code) {
+            console.log(
+                "Recomputing Available in Tray for row",
+                row.name,
+                "item_code:",
+                row.item_code
+            );
+            set_available_in_tray_from_previous_shift(frm, row.doctype, row.name, row);
+        }
+    });
+}
+
+// Helper: set parent-level Available in Tray using total closing_balance
+// from the immediate previous shift document
+function set_parent_available_in_tray_from_previous_shift(frm) {
+    const doc = frm.doc || {};
+
+    if (!doc.production_date || !doc.shift_type) {
+        console.log(
+            "Skipping set_parent_available_in_tray_from_previous_shift due to missing context",
+            { production_date: doc.production_date, shift_type: doc.shift_type }
+        );
+        return;
+    }
+
+    console.log("Calling get_previous_total_closing_balance for parent", {
+        production_date: doc.production_date,
+        shift_type: doc.shift_type,
+    });
+
+    frappe.call({
+        method: "hexplastics.hexplastics.doctype.recycle_machine_daily_production.recycle_machine_daily_production.get_previous_total_closing_balance",
+        args: {
+            production_date: doc.production_date,
+            shift_type: doc.shift_type,
+        },
+        callback: function (r) {
+            console.log(
+                "get_previous_total_closing_balance response",
+                r && r.message
+            );
+            const total_closing_balance = r && r.message ? flt(r.message) : 0;
+            frm.set_value("available_in_tray", total_closing_balance);
+        },
+        error: function (err) {
+            console.error(
+                "Error calling get_previous_total_closing_balance",
+                err,
+                {
+                    production_date: doc.production_date,
+                    shift_type: doc.shift_type,
+                }
+            );
+        },
+    });
 }

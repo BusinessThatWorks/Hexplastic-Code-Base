@@ -13,6 +13,7 @@
   "column_break_snmu",
   "supervisor_id",
   "supervisor_name",
+  "available_in_tray",
   "column_break_mwzq",
   "stock_entry_no",
   "section_break_wuxn",
@@ -86,8 +87,7 @@
    "fieldname": "stock_entry_no",
    "fieldtype": "Link",
    "label": "Stock Entry No",
-   "options": "Stock Entry",
-   "read_only": 1
+   "options": "Stock Entry"
   },
   {
    "fieldname": "dana_production_details_section",
@@ -98,13 +98,19 @@
    "fieldname": "table_eraa",
    "fieldtype": "Table",
    "options": "Recycle Machine PP MIP Table"
+  },
+  {
+   "fieldname": "available_in_tray",
+   "fieldtype": "Float",
+   "label": "Available in Tray",
+   "precision": "4"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-10 14:55:01.058521",
+ "modified": "2026-03-10 16:33:28.533480",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Recycle Machine Daily Production",
