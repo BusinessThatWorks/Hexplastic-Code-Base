@@ -16,7 +16,9 @@
   "column_break_mwzq",
   "stock_entry_no",
   "section_break_wuxn",
-  "production_details"
+  "production_details",
+  "dana_production_details_section",
+  "table_eraa"
  ],
  "fields": [
   {
@@ -72,12 +74,12 @@
   },
   {
    "fieldname": "section_break_wuxn",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Grinding MIP Consumption"
   },
   {
    "fieldname": "production_details",
    "fieldtype": "Table",
-   "label": "Production Details",
    "options": "Recycle Machine Production Table"
   },
   {
@@ -86,13 +88,23 @@
    "label": "Stock Entry No",
    "options": "Stock Entry",
    "read_only": 1
+  },
+  {
+   "fieldname": "dana_production_details_section",
+   "fieldtype": "Section Break",
+   "label": "Dana Production Details"
+  },
+  {
+   "fieldname": "table_eraa",
+   "fieldtype": "Table",
+   "options": "Recycle Machine PP MIP Table"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-04 15:07:25.353762",
+ "modified": "2026-03-10 14:55:01.058521",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Recycle Machine Daily Production",
