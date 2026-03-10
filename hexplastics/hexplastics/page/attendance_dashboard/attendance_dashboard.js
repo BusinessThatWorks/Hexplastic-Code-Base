@@ -63,7 +63,7 @@ frappe.pages['attendance-dashboard'].on_page_load = function (wrapper) {
 		parent: $emp_wrapper,
 		render_input: true
 	});
-	employee_field.$wrapper.css({'margin': '0'});
+	employee_field.$wrapper.css({ 'margin': '0' });
 	// Hide the label if it exists
 	employee_field.$wrapper.find('label').hide();
 

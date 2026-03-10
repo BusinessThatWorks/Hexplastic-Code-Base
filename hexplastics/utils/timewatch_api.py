@@ -92,166 +92,12 @@ def test_timewatch_api():
 	return data
 
 
-# @frappe.whitelist()
-# def sync_yesterday_attendance():
-# 	"""
-# 	Sync yesterday's attendance from TimeWatch into ERPNext Attendance doctype.
-
-# 	Logic:
-# 	- Group by UserID
-# 	- Sort PunchTime ascending
-# 	- in_time = first PunchTime, out_time = last PunchTime
-# 	- If user has >= 2 punches → Present
-# 	- If user has 0 or 1 punch → Absent
-# 	- Map UserID -> Employee via Employee.custom_employee_id
-# 	- Create/Update Attendance for that date
-# 	"""
-
-# 	att_date = _get_yesterday_str()
-# 	punches, _ = _fetch_punches_for_date(att_date)
-
-# 	if not punches:
-# 		print(f"\nNo punches received for {att_date}. Nothing to sync.")
-# 		return {"success": False, "message": f"No punches for {att_date}"}
-
-# 	# Load Active employees and build map: custom_employee_id -> employee.name
-# 	employees = frappe.get_all(
-# 		"Employee",
-# 		filters={"status": "Active"},
-# 		fields=["name", "employee_name", "custom_employee_id"],
-# 	)
-# 	userid_to_emp = {emp.custom_employee_id: emp.name for emp in employees if emp.custom_employee_id}
-
-# 	print(f"\nLoaded {len(employees)} active employees with custom_employee_id.")
-# 	if not userid_to_emp:
-# 		print("No employees have custom_employee_id set. Aborting.")
-# 		return {"success": False, "message": "No employees with custom_employee_id"}
-
-# 	from collections import defaultdict
-
-# 	user_punch_times = defaultdict(list)  # {UserID: [datetime, ...]}
-
-# 	for row in punches:
-# 		userid = (row or {}).get("UserID")
-# 		punch_time_str = (row or {}).get("PunchTime")
-# 		if not userid or not punch_time_str:
-# 			continue
-
-# 		try:
-# 			punch_dt = datetime.fromisoformat(punch_time_str)
-# 		except Exception:
-# 			continue
-
-# 		if punch_dt.date().isoformat() != att_date:
-# 			continue
-
-# 		user_punch_times[userid].append(punch_dt)
-
-# 	print(f"\nUsers with punches for {att_date}: {len(user_punch_times)}")
-
-# 	created = 0
-# 	updated = 0
-# 	skipped_no_emp = 0
-# 	present_count = 0
-# 	absent_count = 0
-
-# 	# Users with punches
-# 	for userid, times in user_punch_times.items():
-# 		emp_name = userid_to_emp.get(userid)
-# 		if not emp_name:
-# 			print(f"Skipping UserID {userid} - no matching Employee.custom_employee_id")
-# 			skipped_no_emp += 1
-# 			continue
-
-# 		if not times:
-# 			continue
-
-# 		times.sort()
-# 		in_time = times[0]
-# 		out_time = times[-1] if len(times) > 1 else None
-
-# 		if out_time:
-# 			status = "Present"
-# 			present_count += 1
-# 		else:
-# 			status = "Absent"
-# 			absent_count += 1
-
-# 		existing = frappe.db.exists("Attendance", {"employee": emp_name, "attendance_date": att_date})
-
-# 		if existing:
-# 			doc = frappe.get_doc("Attendance", existing)
-# 			action = "Updated"
-# 			updated += 1
-# 		else:
-# 			doc = frappe.new_doc("Attendance")
-# 			doc.employee = emp_name
-# 			doc.attendance_date = att_date
-# 			action = "Created"
-# 			created += 1
-
-# 		doc.status = status
-# 		# assumes these custom fields exist on Attendance
-# 		doc.in_time = in_time
-# 		doc.out_time = out_time
-
-# 		doc.flags.ignore_permissions = True
-# 		doc.save()
-# 		print(
-# 			f"{action} Attendance for {emp_name} ({userid}) on {att_date}: "
-# 			f"status={status}, in={in_time}, out={out_time}"
-# 		)
-
-# 	# Users with no punches at all → Absent
-# 	userids_with_punches = set(user_punch_times.keys())
-# 	for emp in employees:
-# 		userid = emp.custom_employee_id
-# 		if not userid or userid in userids_with_punches:
-# 			continue
-
-# 		emp_name = emp.name
-
-# 		if frappe.db.exists("Attendance", {"employee": emp_name, "attendance_date": att_date}):
-# 			continue
-
-# 		doc = frappe.new_doc("Attendance")
-# 		doc.employee = emp_name
-# 		doc.attendance_date = att_date
-# 		doc.status = "Absent"
-# 		doc.flags.ignore_permissions = True
-# 		doc.save()
-
-# 		absent_count += 1
-# 		created += 1
-# 		print(f"Created Absent Attendance for {emp_name} ({userid}) on {att_date}")
-
-# 	frappe.db.commit()
-
-# 	summary = {
-# 		"success": True,
-# 		"date": att_date,
-# 		"present": present_count,
-# 		"absent": absent_count,
-# 		"created": created,
-# 		"updated": updated,
-# 		"skipped_no_employee": skipped_no_emp,
-# 	}
-
-# 	print("\n" + "=" * 80)
-# 	print("SYNC SUMMARY")
-# 	print("=" * 80)
-# 	print(json.dumps(summary, indent=2))
-# 	print("=" * 80 + "\n")
-
-# 	return summary
-
-
 def _sync_attendance_for_date(att_date: str, employee: str | None = None):
 	"""
 	Core attendance sync logic for a single date.
 
-	- If employee is None → process all active employees (same as daily cron).
-	- If employee is provided (Employee.name) → only process that employee.
+	- If employee is None → process all active employees.
+	- If employee is provided (Employee.name) → only that employee is processed.
 	"""
 
 	print("\n" + "=" * 80)
@@ -291,11 +137,7 @@ def _sync_attendance_for_date(att_date: str, employee: str | None = None):
 	print(f"[STEP] Employees with custom_employee_id: {len(userid_to_emp)}")
 	if not userid_to_emp:
 		print("[STOP] No employees with custom_employee_id. Aborting sync.")
-		return {
-			"success": False,
-			"message": "No employees with custom_employee_id",
-			"date": att_date,
-		}
+		return {"success": False, "message": "No employees with custom_employee_id", "date": att_date}
 
 	from collections import defaultdict
 
@@ -360,11 +202,6 @@ def _sync_attendance_for_date(att_date: str, employee: str | None = None):
 			skipped_no_emp += 1
 			continue
 
-		# If we are syncing for a single employee, skip other employees
-		if employee and emp_name != employee:
-			print(f"     [SKIP] Employee filter active, skipping {emp_name} (UserID {userid})")
-			continue
-
 		if not times:
 			print("     [SKIP] No valid times after filtering")
 			continue
@@ -408,9 +245,9 @@ def _sync_attendance_for_date(att_date: str, employee: str | None = None):
 		doc.attendance_date = att_date
 
 		# Map in_time / out_time into your custom datetime fields
-		# Store as datetime objects (not strings) since fields are Datetime type
-		doc.custom_attendance_in_time = in_time if in_time else None
-		doc.custom_attendance_out_time = out_time if out_time else None
+		# If your fieldnames are different, change them here.
+		doc.custom_attendance_in_time = in_time.strftime("%Y-%m-%d %H:%M:%S") if in_time else None
+		doc.custom_attendance_out_time = out_time.strftime("%Y-%m-%d %H:%M:%S") if out_time else None
 
 		doc.flags.ignore_permissions = True
 		doc.save()
@@ -446,10 +283,6 @@ def _sync_attendance_for_date(att_date: str, employee: str | None = None):
 			continue
 
 		emp_name = emp.name
-
-		# If employee filter is active, skip others
-		if employee and emp_name != employee:
-			continue
 
 		if frappe.db.exists("Attendance", {"employee": emp_name, "attendance_date": att_date}):
 			print(f"  [SKIP] Attendance already exists for {emp_name} on {att_date} (no punches case)")
@@ -518,7 +351,7 @@ def sync_attendance_range(start_date: str | None = None, end_date: str | None = 
 	Backfill attendance data over a date range [start_date, end_date] inclusive.
 
 	- Dates must be in YYYY-MM-DD format.
-	- When omitted, defaults to the last 30 days.
+	- When omitted, defaults to the last 30 days (including today).
 	- If employee is specified (Employee.name), only that employee's data will be processed.
 	"""
 
@@ -545,6 +378,7 @@ def sync_attendance_range(start_date: str | None = None, end_date: str | None = 
 	total_created = 0
 	total_updated = 0
 	total_skipped_no_employee = 0
+	date_errors: list[str] = []
 
 	day_count = (end_dt - start_dt).days + 1
 	for i in range(day_count):
@@ -555,11 +389,15 @@ def sync_attendance_range(start_date: str | None = None, end_date: str | None = 
 		try:
 			result = _sync_attendance_for_date(date_str, employee)
 		except Exception as e:
-			print(f"❌ Exception while syncing date {date_str}: {e!s}")
+			msg = f"Exception while syncing date {date_str}: {e!s}"
+			print(f"❌ {msg}")
+			date_errors.append(msg)
 			continue
 
 		if not result or not result.get("success"):
-			print(f"⚠️ Sync did not complete successfully for {date_str}")
+			msg = f"Sync did not complete successfully for {date_str}"
+			print(f"⚠️ {msg}")
+			date_errors.append(msg)
 			continue
 
 		total_present += result.get("present", 0)
@@ -568,8 +406,12 @@ def sync_attendance_range(start_date: str | None = None, end_date: str | None = 
 		total_updated += result.get("updated", 0)
 		total_skipped_no_employee += result.get("skipped_no_employee", 0)
 
+	# Consider backfill successful if we made any changes OR there were no per-day errors
+	any_changes = any([total_present, total_absent, total_created, total_updated])
+	success = bool(any_changes) or not date_errors
+
 	summary = {
-		"success": True,
+		"success": success,
 		"start_date": start_date,
 		"end_date": end_date,
 		"employee": employee,
@@ -578,6 +420,7 @@ def sync_attendance_range(start_date: str | None = None, end_date: str | None = 
 		"created": total_created,
 		"updated": total_updated,
 		"skipped_no_employee": total_skipped_no_employee,
+		"errors": date_errors,
 	}
 
 	print("\n" + "=" * 80)

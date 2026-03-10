@@ -5,7 +5,7 @@
  "doctype": "Page",
  "icon": "octicon octicon-graph",
  "idx": 0,
- "modified": "2026-02-23 15:11:49.055437",
+ "modified": "2026-03-10 12:06:21.508518",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "attendance-dashboard",
@@ -20,6 +20,9 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Prepared Report User"
   }
  ],
  "script": null,
