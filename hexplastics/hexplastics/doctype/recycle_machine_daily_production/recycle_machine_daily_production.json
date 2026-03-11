@@ -87,7 +87,8 @@
    "fieldname": "stock_entry_no",
    "fieldtype": "Link",
    "label": "Stock Entry No",
-   "options": "Stock Entry"
+   "options": "Stock Entry",
+   "read_only": 1
   },
   {
    "fieldname": "dana_production_details_section",
@@ -111,7 +112,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-11 10:44:08.063689",
+ "modified": "2026-03-11 16:30:48.000049",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Recycle Machine Daily Production",
