@@ -159,12 +159,13 @@ def get_previous_closing_balance(production_date: str, shift_type: str, item_cod
 		# Unknown shift type
 		return 0.0
 
-	# Find the immediate previous shift document
+	# Find the immediate previous shift document (only submitted documents, docstatus = 1)
 	previous_doc = frappe.db.sql(
 		"""
 		SELECT name
 		FROM `tabRecycle Machine Daily Production`
 		WHERE production_date <= %(production_date)s
+		  AND docstatus = 1
 		  AND (
 			production_date < %(production_date)s
 			OR (
@@ -238,11 +239,13 @@ def get_previous_total_closing_balance(production_date: str, shift_type: str) ->
 	if not current_shift_order:
 		return 0.0
 
+	# Find the immediate previous shift document (only submitted documents, docstatus = 1)
 	previous_doc = frappe.db.sql(
 		"""
 		SELECT name
 		FROM `tabRecycle Machine Daily Production`
 		WHERE production_date <= %(production_date)s
+		  AND docstatus = 1
 		  AND (
 			production_date < %(production_date)s
 			OR (
