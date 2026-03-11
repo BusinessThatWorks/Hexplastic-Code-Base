@@ -13,6 +13,33 @@ class RecycleMachineDailyProduction(Document):
 	based on the Production Details table.
 	"""
 
+	def before_cancel(self):
+		"""Prevent cancellation if linked Stock Entry is not cancelled.
+
+		When cancelling from the Stock Entry using 'Cancel All Documents',
+		allow this document to cancel so ERPNext's standard flow works without deadlock.
+		"""
+		# Allow cancel when triggered via "Cancel All Documents" from Stock Entry
+		cmd = frappe.local.form_dict.get("cmd") if hasattr(frappe.local, "form_dict") else None
+		if cmd == "frappe.desk.form.linked_with.cancel_all_linked_docs":
+			return
+
+		if not self.stock_entry_no:
+			return
+
+		docstatus = frappe.db.get_value("Stock Entry", self.stock_entry_no, "docstatus")
+		if docstatus in (0, 1):
+			frappe.throw(
+				f"Please cancel the linked Stock Entry <b>{self.stock_entry_no}</b> before cancelling this document.",
+				title="Cancel Stock Entry First",
+			)
+
+	def on_cancel(self):
+		"""Clear stock_entry_no on cancel so amended docs don't copy old reference."""
+		if self.stock_entry_no:
+			self.stock_entry_no = ""
+			frappe.db.set_value(self.doctype, self.name, "stock_entry_no", "")
+
 	def before_insert(self):
 		if self.amended_from:
 			self.stock_entry_no = None
