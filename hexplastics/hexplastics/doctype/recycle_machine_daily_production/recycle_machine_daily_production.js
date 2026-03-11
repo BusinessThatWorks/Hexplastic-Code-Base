@@ -130,6 +130,11 @@ frappe.ui.form.on("Recycle Machine PP MIP Table", {
         calculate_pp_mip_stock_and_bags(frm, cdt, cdn);
     },
 
+    // When grinding_mip_item changes, recalculate closing balance on Grinding MIP rows
+    grinding_mip_item: function (frm) {
+        calculate_closing_balance_for_all_rows(frm);
+    },
+
     // When pp_mip_production changes, recalculate stock balance and total bags
     pp_mip_production: function (frm, cdt, cdn) {
         calculate_pp_mip_stock_and_bags(frm, cdt, cdn);
@@ -283,27 +288,31 @@ function calculate_pp_mip_stock_and_bags(frm, cdt, cdn) {
     frappe.model.set_value(cdt, cdn, "total_bags", total_bags);
 }
 
-// Helper: calculate closing_balance on all Grinding MIP rows
-// Formula: closing_balance = material_consumed - total_pp_mip_production
+// Helper: calculate closing_balance on each Grinding MIP row
+// Matches by grinding_mip_item: sums only the pp_mip_production from table_eraa
+// rows where grinding_mip_item === production_details row's item_code
+// Formula: closing_balance = material_consumed - matched_pp_mip_production
 function calculate_closing_balance_for_all_rows(frm) {
     const doc = frm.doc || {};
 
-    // Sum PP MIP Production from table_eraa (Recycle Machine PP MIP Table)
-    let total_pp_mip_production = 0;
-    if (doc.table_eraa && Array.isArray(doc.table_eraa)) {
-        doc.table_eraa.forEach(row => {
-            total_pp_mip_production += flt(row.pp_mip_production || 0);
-        });
-    }
+    if (!doc.production_details || !Array.isArray(doc.production_details)) return;
 
-    // Update closing_balance in each production_details row
-    if (doc.production_details && Array.isArray(doc.production_details)) {
-        doc.production_details.forEach(row => {
-            const material_consumed = flt(row.material_consumed || 0);
-            const closing_balance = material_consumed - total_pp_mip_production;
-            frappe.model.set_value(row.doctype, row.name, "closing_balance", closing_balance);
-        });
-    }
+    doc.production_details.forEach(row => {
+        const material_consumed = flt(row.material_consumed || 0);
+
+        // Sum pp_mip_production only for table_eraa rows matching this item
+        let matched_production = 0;
+        if (doc.table_eraa && Array.isArray(doc.table_eraa)) {
+            doc.table_eraa.forEach(pp_row => {
+                if (pp_row.grinding_mip_item && pp_row.grinding_mip_item === row.item_code) {
+                    matched_production += flt(pp_row.pp_mip_production || 0);
+                }
+            });
+        }
+
+        const closing_balance = material_consumed - matched_production;
+        frappe.model.set_value(row.doctype, row.name, "closing_balance", closing_balance);
+    });
 }
 
 // Helper: set Available in Tray from previous shift closing_balance
