@@ -6,6 +6,7 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "grinding_mip_item",
   "pp_mip_item",
   "item_name",
   "default_uom",
@@ -27,7 +28,7 @@
    "reqd": 1
   },
   {
-   "columns": 2,
+   "columns": 1,
    "fieldname": "pp_mip_in_hand_stock",
    "fieldtype": "Float",
    "in_list_view": 1,
@@ -44,7 +45,7 @@
    "reqd": 1
   },
   {
-   "columns": 2,
+   "columns": 1,
    "description": "After Production",
    "fieldname": "pp_mip_stock_balance",
    "fieldtype": "Float",
@@ -86,13 +87,21 @@
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Total Bags"
+  },
+  {
+   "columns": 2,
+   "fieldname": "grinding_mip_item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Grinding MIP Item",
+   "options": "Item"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-10 15:05:32.961664",
+ "modified": "2026-03-11 10:42:07.647281",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Recycle Machine PP MIP Table",
