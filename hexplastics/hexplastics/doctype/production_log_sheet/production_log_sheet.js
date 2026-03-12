@@ -11,6 +11,11 @@ frappe.ui.form.on("Production Log Sheet", {
 		
 		// Calculate closing qty for MIP on refresh
 		calculate_closing_qty_for_mip(frm);
+
+		// Calculate total production weight after form fully renders
+		setTimeout(function() {
+			calculate_total_production_weight(frm);
+		}, 500);
 		
 		// Auto-fill avl_in_plant on refresh if date and shift are set
 		if (frm.doc.production_date && frm.doc.shift_type) {
@@ -71,6 +76,8 @@ frappe.ui.form.on("Production Log Sheet", {
 		calculate_net_weight(frm);
 		// Recalculate closing_qty_for_mip since net_weight changes
 		calculate_closing_qty_for_mip(frm);
+		// Recalculate total_production_weight since net_weight changes
+		calculate_total_production_weight(frm);
 	},
 
 	weight_of_fabric_packing(frm) {
@@ -78,6 +85,8 @@ frappe.ui.form.on("Production Log Sheet", {
 		calculate_net_weight(frm);
 		// Recalculate closing_qty_for_mip since net_weight changes
 		calculate_closing_qty_for_mip(frm);
+		// Recalculate total_production_weight since net_weight changes
+		calculate_total_production_weight(frm);
 	},
 
 	manufactured_qty(frm) {
@@ -415,7 +424,7 @@ function fetch_and_add_manufacturing_item(frm) {
 							
 							// Set default target_warehouse if not already set
 							if (!row.target_warehouse) {
-								frappe.model.set_value(row.doctype, row.name, "target_warehouse", "Finished Good - Hex");
+								frappe.model.set_value(row.doctype, row.name, "target_warehouse", "Finished Goods - HEX");
 							}
 							
 							// Set manufactured_qty from main form if available
@@ -425,6 +434,9 @@ function fetch_and_add_manufacturing_item(frm) {
 							
 							// Refresh the child table to show new row
 							frm.refresh_field("production_details");
+
+							// Recalculate total_production_weight after new row is added
+							calculate_total_production_weight(frm);
 						}
 					}
 				});
@@ -688,14 +700,24 @@ frappe.ui.form.on("Production Log Sheet FG Table", {
 
 		// Set default target_warehouse if not already set
 		if (!row.target_warehouse) {
-			frappe.model.set_value(cdt, cdn, "target_warehouse", "Finished Good - Hex");
+			frappe.model.set_value(cdt, cdn, "target_warehouse", "Finished Goods - HEX");
 		}
 	},
 
-	// When manufactured_qty is manually set in a row
+	// When manufactured_qty changes in any row - recalculate total production weight
 	manufactured_qty(frm, cdt, cdn) {
-		// No additional logic needed - just allow manual entry
+		calculate_total_production_weight(frm);
 		frm.refresh_field("production_details");
+	},
+
+	// When stock_uom changes in any row - recalculate total production weight
+	stock_uom(frm, cdt, cdn) {
+		calculate_total_production_weight(frm);
+	},
+
+	// When a row is deleted - recalculate total production weight
+	production_details_remove(frm, cdt, cdn) {
+		calculate_total_production_weight(frm);
 	}
 });
 
@@ -801,4 +823,29 @@ function fill_avl_in_plant_for_items(frm) {
 			console.error("Error fetching opening stock for Production Log Sheet:", r);
 		},
 	});
+}
+
+/**
+ * Calculate total_production_weight
+ * Formula: Sum of manufactured_qty for KGS rows in production_details + net_weight
+ * Direct set - no setTimeout (setTimeout only used in refresh event)
+ * @param {Object} frm - The form object
+ */
+function calculate_total_production_weight(frm) {
+	let manufactured_qty_total = 0.0;
+
+	(frm.doc.production_details || []).forEach(function(row) {
+		const uom = (row.stock_uom || "").trim().toUpperCase();
+		if (uom === "KGS") {
+			manufactured_qty_total += flt(row.manufactured_qty) || 0;
+		}
+	});
+
+	const net_weight = flt(frm.doc.net_weight) || 0;
+	let total = manufactured_qty_total + net_weight;
+
+	// Round to 4 decimal places to prevent floating-point drift
+	total = Math.round(total * 10000) / 10000;
+
+	frm.set_value("total_production_weight", total);
 }
