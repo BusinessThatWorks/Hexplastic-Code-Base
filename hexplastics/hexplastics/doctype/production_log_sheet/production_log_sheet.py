@@ -15,9 +15,11 @@ class ProductionLogSheet(Document):
         This prevents floating-point precision drift that causes "Cannot Update After Submit" errors.
         All fields with precision 4 are rounded to 4 decimal places.
         """
-        # Round total_rm_consumption to 4 decimal places (precision: 4)
-        if self.get("total_rm_consumption") is not None:
-            self.total_rm_consumption = round(flt(self.total_rm_consumption), 4)
+        # Calculate total_rm_consumption from raw_material_consumption child table
+        self._calculate_total_rm_consumption()
+
+        # Calculate total_production_weight from production_details child table
+        self._calculate_total_production_weight()
 
         # Round closing_qty_for_mip to 4 decimal places (precision: 4)
         if self.get("closing_qty_for_mip") is not None:
@@ -32,6 +34,24 @@ class ProductionLogSheet(Document):
             for row in self.raw_material_consumption:
                 if row.get("closing_stock") is not None:
                     row.closing_stock = round(flt(row.closing_stock), 4)
+
+    def _calculate_total_rm_consumption(self):
+        """Sum of consumption from raw_material_consumption child table."""
+        total = 0.0
+        for row in self.get("raw_material_consumption", []):
+            total += flt(row.consumption)
+        self.total_rm_consumption = round(total, 4)
+
+    def _calculate_total_production_weight(self):
+        """Sum of manufactured_qty for KGS rows in production_details + net_weight."""
+        manufactured_qty_total = 0.0
+        for row in self.get("production_details", []):
+            uom = (row.stock_uom or "").strip().upper()
+            if uom == "KGS":
+                manufactured_qty_total += flt(row.manufactured_qty)
+
+        net_weight = flt(self.net_weight)
+        self.total_production_weight = round(manufactured_qty_total + net_weight, 4)
 
     def on_submit(self):
         """Create and submit Manufacture Stock Entry on submit.
@@ -237,6 +257,10 @@ class ProductionLogSheet(Document):
 
             # Link back to source document for traceability
             stock_entry.production_log_sheet = self.name
+
+            # Map Total RM Consumption and Total Production Weight to Stock Entry custom fields
+            stock_entry.custom_total_rm_consumption = flt(self.total_rm_consumption)
+            stock_entry.custom_total_production_weight = flt(self.total_production_weight)
 
             # Insert the Stock Entry
             stock_entry.insert(ignore_permissions=True)
