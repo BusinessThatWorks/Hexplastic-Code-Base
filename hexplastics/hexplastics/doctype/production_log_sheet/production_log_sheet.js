@@ -836,7 +836,7 @@ function calculate_total_production_weight(frm) {
 
 	(frm.doc.production_details || []).forEach(function(row) {
 		const uom = (row.stock_uom || "").trim().toUpperCase();
-		if (uom === "KGS") {
+		if (uom === "KGS"|| uom === "KG") {
 			manufactured_qty_total += flt(row.manufactured_qty) || 0;
 		}
 	});
