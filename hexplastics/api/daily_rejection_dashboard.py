@@ -333,8 +333,9 @@ def get_weekly_data(shift="All", date_from=None, date_to=None):
         if day_data["total_box_checked"] > 0:
             rejection_pct = (day_data["total_rejection"] / day_data["total_box_checked"]) * 100
         
-        # Create label: "Day Name, MMM DD"
-        label = day_data["date"].strftime("%a, %b %d")
+        # Use explicit date format so full date appears under each bar
+        # Example: 05-02-2026
+        label = day_data["date"].strftime("%d-%m-%Y")
         
         labels.append(label)
         values.append(flt(rejection_pct, 2))
@@ -581,8 +582,9 @@ def get_custom_date_range_data(shift="All", date_from=None, date_to=None):
         if day_data["total_box_checked"] > 0:
             rejection_pct = (day_data["total_rejection"] / day_data["total_box_checked"]) * 100
         
-        # Create label: "MMM DD, YYYY"
-        label = day_data["date"].strftime("%b %d, %Y")
+        # Use explicit date format so full date appears under each bar
+        # Example: 05-02-2026
+        label = day_data["date"].strftime("%d-%m-%Y")
         
         labels.append(label)
         values.append(flt(rejection_pct, 2))
