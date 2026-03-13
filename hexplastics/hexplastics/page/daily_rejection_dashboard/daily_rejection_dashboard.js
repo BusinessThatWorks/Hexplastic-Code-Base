@@ -935,8 +935,8 @@ class RejectionDashboard {
 						<th>ID</th>
 						<th>Date</th>
 						<th>Total Box Checked</th>
-						<th>Day Shift Rejection</th>
-						<th>Night Shift Rejection</th>
+						<th class="col-day-shift">Day Shift Rejection</th>
+						<th class="col-night-shift">Night Shift Rejection</th>
 						<th>Total Rejection</th>
 						<th>Rejection %</th>
 					</tr>
@@ -950,8 +950,8 @@ class RejectionDashboard {
 					<td><a href="/app/daily-rejection-data/${row.id}" target="_blank">${row.id}</a></td>
 					<td>${frappe.datetime.str_to_user(row.rejection_date)}</td>
 					<td>${this.format_number(row.total_box_checked, 0)}</td>
-					<td>${this.format_number(row.day_shift_rejection, 0)}</td>
-					<td>${this.format_number(row.night_shift_rejection, 0)}</td>
+					<td class="col-day-shift">${this.format_number(row.day_shift_rejection, 0)}</td>
+					<td class="col-night-shift">${this.format_number(row.night_shift_rejection, 0)}</td>
 					<td>${this.format_number(row.total_rejection, 0)}</td>
 					<td><span class="rejection-badge">${this.format_number(row.rejection_percentage, 2)}%</span></td>
 				</tr>
@@ -964,6 +964,21 @@ class RejectionDashboard {
 		`;
 
 		tableContainer.innerHTML = tableHTML;
+
+		// Show/hide shift specific columns based on current Shift filter
+		const shiftFilterEl = document.getElementById("shift-filter");
+		const shiftValue = shiftFilterEl ? shiftFilterEl.value || "All" : "All";
+
+		const dayCols = tableContainer.querySelectorAll(".col-day-shift");
+		const nightCols = tableContainer.querySelectorAll(".col-night-shift");
+
+		dayCols.forEach((el) => {
+			el.style.display = shiftValue === "Night" ? "none" : "";
+		});
+
+		nightCols.forEach((el) => {
+			el.style.display = shiftValue === "Day" ? "none" : "";
+		});
 	}
 
 	// ===== Export Functionality =====
