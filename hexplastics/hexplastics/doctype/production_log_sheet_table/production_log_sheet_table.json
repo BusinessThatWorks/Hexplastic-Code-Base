@@ -12,11 +12,8 @@
   "source_warehouse",
   "stock_uom",
   "section_break_trar",
-  "avl_in_plant",
-  "issued",
   "column_break_mzge",
-  "consumption",
-  "closing_stock"
+  "consumption"
  ],
  "fields": [
   {
@@ -54,24 +51,6 @@
    "fieldtype": "Section Break"
   },
   {
-   "columns": 1,
-   "fieldname": "avl_in_plant",
-   "fieldtype": "Float",
-   "in_list_view": 1,
-   "label": "Avl. In Plant",
-   "precision": "4",
-   "read_only": 1
-  },
-  {
-   "columns": 1,
-   "fieldname": "issued",
-   "fieldtype": "Float",
-   "in_list_view": 1,
-   "label": "Issued",
-   "precision": "4",
-   "reqd": 1
-  },
-  {
    "fieldname": "column_break_mzge",
    "fieldtype": "Column Break"
   },
@@ -83,15 +62,6 @@
    "label": "Consumption",
    "precision": "4",
    "reqd": 1
-  },
-  {
-   "columns": 1,
-   "fieldname": "closing_stock",
-   "fieldtype": "Float",
-   "in_list_view": 1,
-   "label": "Closing Stock",
-   "precision": "4",
-   "read_only": 1
   },
   {
    "columns": 1,
