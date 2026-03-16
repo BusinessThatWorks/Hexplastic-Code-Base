@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"IEVS-1zM9F\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Dashboards</b></span>\",\"col\":12}},{\"id\":\"DASH-PLB01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Log Book Dashboard\",\"col\":4}},{\"id\":\"IEVS-2zM9G\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"9YJbpEEnE_\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Log Book\",\"col\":4}},{\"id\":\"-GF3KEtFfV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Rejection Data\",\"col\":4}}]",
+ "content": "[{\"id\":\"7guGKhFjc0\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"IEVS-2zM9G\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"TaFl4XMoRs\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Machine Master\",\"col\":12}},{\"id\":\"-GF3KEtFfV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Rejection Data\",\"col\":4}},{\"id\":\"dFTp_2ZDgi\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Recycle Machine Daily Production\",\"col\":4}},{\"id\":\"9YJbpEEnE_\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Log Sheet\",\"col\":4}},{\"id\":\"4QUtY3psQ1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"IEVS-1zM9F\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Dashboards</b></span>\",\"col\":12}},{\"id\":\"DASH-PLB01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Log Book Dashboard\",\"col\":4}},{\"id\":\"LNYW9Z2bBH\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Rejection Dashboard\",\"col\":4}},{\"id\":\"gcBYVa55uU\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"qL6OAMA_sE\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Frame Library</b></span>\",\"col\":12}},{\"id\":\"UdlOHprsaL\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Frame Master\",\"col\":12}},{\"id\":\"29KvvmTVtd\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Frame Size\",\"col\":3}},{\"id\":\"8Ji_boHwEt\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Frame Material Type\",\"col\":3}},{\"id\":\"s05LVUvRno\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Frame Colour\",\"col\":3}},{\"id\":\"sLZNocyx7W\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Frame Mesh\",\"col\":3}}]",
  "creation": "2025-12-29 15:14:09.405148",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Production",
  "links": [],
- "modified": "2026-02-04 12:01:06.236371",
+ "modified": "2026-03-16 15:39:57.973760",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Production",
@@ -22,9 +22,31 @@
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [],
+ "roles": [
+  {
+   "role": "Manufacturing Manager"
+  },
+  {
+   "role": "Manufacturing User"
+  }
+ ],
  "sequence_id": 20.0,
  "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Daily Rejection Dashboard",
+   "link_to": "daily-rejection-dashboard",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Recycle Machine Daily Production",
+   "link_to": "Recycle Machine Daily Production",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
   {
    "color": "Blue",
    "doc_view": "",
@@ -37,8 +59,32 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Production Log Book",
-   "link_to": "Production Log Book",
+   "label": "Production Log Sheet",
+   "link_to": "Production Log Sheet",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Frame Size",
+   "link_to": "Frame Size",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Machine Master",
+   "link_to": "Machine Master",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Frame Material Type",
+   "link_to": "Frame Material Type",
    "stats_filter": "[]",
    "type": "DocType"
   },
@@ -51,9 +97,27 @@
    "type": "DocType"
   },
   {
+   "color": "Grey",
    "doc_view": "List",
-   "label": "Recycle Machine Daily Production",
-   "link_to": "Recycle Machine Daily Production",
+   "label": "Frame Colour",
+   "link_to": "Frame Colour",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Frame Mesh",
+   "link_to": "Frame Mesh",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Frame Master",
+   "link_to": "Frame Master",
+   "stats_filter": "[]",
    "type": "DocType"
   }
  ],
