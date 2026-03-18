@@ -43,11 +43,11 @@ class ProductionLogSheet(Document):
         self.total_rm_consumption = round(total, 4)
 
     def _calculate_total_production_weight(self):
-        """Sum of manufactured_qty for KGS rows in production_details + net_weight."""
+        """Sum of manufactured_qty for KG/KGS rows in production_details + net_weight."""
         manufactured_qty_total = 0.0
         for row in self.get("production_details", []):
             uom = (row.stock_uom or "").strip().upper()
-            if uom == "KGS":
+            if uom in {"KGS", "KG"}:
                 manufactured_qty_total += flt(row.manufactured_qty)
 
         net_weight = flt(self.net_weight)
@@ -260,7 +260,9 @@ class ProductionLogSheet(Document):
 
             # Map Total RM Consumption and Total Production Weight to Stock Entry custom fields
             stock_entry.custom_total_rm_consumption = flt(self.total_rm_consumption)
-            stock_entry.custom_total_production_weight = flt(self.total_production_weight)
+            stock_entry.custom_total_production_weight = flt(
+                self.total_production_weight
+            )
 
             # Insert the Stock Entry
             stock_entry.insert(ignore_permissions=True)

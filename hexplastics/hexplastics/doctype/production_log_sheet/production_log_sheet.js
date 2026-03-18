@@ -5,21 +5,26 @@ frappe.ui.form.on("Production Log Sheet", {
 	refresh(frm) {
 		// Set up BOM filter based on Production Plan
 		setup_bom_filter(frm);
-		
-		// Calculate total RM consumption on refresh
-		calculate_total_rm_consumption(frm);
-		
-		// Calculate closing qty for MIP on refresh
-		calculate_closing_qty_for_mip(frm);
 
-		// Calculate total production weight after form fully renders
-		setTimeout(function() {
-			calculate_total_production_weight(frm);
-		}, 500);
-		
-		// Auto-fill avl_in_plant on refresh if date and shift are set
-		if (frm.doc.production_date && frm.doc.shift_type) {
-			fill_avl_in_plant_for_items(frm);
+		// Avoid mutating already-saved docs on refresh; it can incorrectly keep form dirty.
+		// Recalculations/autofill still run during field change events and explicit user actions.
+		const can_mutate_on_refresh = frm.is_new() || !!frm.doc.__unsaved;
+		if (can_mutate_on_refresh) {
+			// Calculate total RM consumption on refresh
+			calculate_total_rm_consumption(frm);
+
+			// Calculate closing qty for MIP on refresh
+			calculate_closing_qty_for_mip(frm);
+
+			// Calculate total production weight after form fully renders
+			setTimeout(function() {
+				calculate_total_production_weight(frm);
+			}, 500);
+
+			// Auto-fill avl_in_plant on refresh if date and shift are set
+			if (frm.doc.production_date && frm.doc.shift_type) {
+				fill_avl_in_plant_for_items(frm);
+			}
 		}
 
 		// Initialize manual edit tracking for opening_qty_for_mip.
@@ -505,7 +510,7 @@ function add_bom_items_to_table(frm, items) {
 function calculate_total_rm_consumption(frm) {
 	if (!frm.doc.raw_material_consumption || frm.doc.raw_material_consumption.length === 0) {
 		// If table is empty, set total to 0
-		frm.set_value("total_rm_consumption", 0);
+		set_form_value_if_changed(frm, "total_rm_consumption", 0);
 		// Trigger recalculation of closing_qty_for_mip
 		calculate_closing_qty_for_mip(frm);
 		return;
@@ -523,7 +528,7 @@ function calculate_total_rm_consumption(frm) {
 	total = Math.round(total * 10000) / 10000;
 	
 	// Update the total_rm_consumption field
-	frm.set_value("total_rm_consumption", total);
+	set_form_value_if_changed(frm, "total_rm_consumption", total);
 	// Trigger recalculation of closing_qty_for_mip
 	calculate_closing_qty_for_mip(frm);
 }
@@ -548,7 +553,7 @@ function calculate_closing_qty_for_mip(frm) {
 	closing_qty = Math.round(closing_qty * 10000) / 10000;
 	
 	// Update the closing_qty_for_mip field
-	frm.set_value("closing_qty_for_mip", closing_qty);
+	set_form_value_if_changed(frm, "closing_qty_for_mip", closing_qty);
 }
 
 /**
@@ -618,7 +623,7 @@ function maybe_set_opening_qty_for_mip(frm) {
 
 			if (r && typeof r.message !== "undefined" && r.message !== null) {
 				const opening_qty = flt(r.message) || 0;
-				frm.set_value("opening_qty_for_mip", opening_qty);
+				set_form_value_if_changed(frm, "opening_qty_for_mip", opening_qty);
 			}
 		},
 		error: function (err) {
@@ -804,8 +809,7 @@ function fill_avl_in_plant_for_items(frm) {
 						// Only set if value exists in the map
 						const opening_stock = flt(opening_stock_map[row.item_code]) || 0;
 
-						// Use frappe.model.set_value to update the field
-						frappe.model.set_value(
+						set_child_value_if_changed(
 							row.doctype,
 							row.name,
 							"avl_in_plant",
@@ -847,5 +851,54 @@ function calculate_total_production_weight(frm) {
 	// Round to 4 decimal places to prevent floating-point drift
 	total = Math.round(total * 10000) / 10000;
 
-	frm.set_value("total_production_weight", total);
+	set_form_value_if_changed(frm, "total_production_weight", total);
+}
+
+/**
+ * Set a parent form field only when the new value differs from current value.
+ * Prevents unnecessary dirty-state toggles after refresh/save.
+ *
+ * @param {Object} frm - The form object
+ * @param {string} fieldname - Parent fieldname
+ * @param {number|string|null} value - New value
+ */
+function set_form_value_if_changed(frm, fieldname, value) {
+	const current = frm.doc[fieldname];
+	if (is_same_numeric_value(current, value)) {
+		return;
+	}
+	frm.set_value(fieldname, value);
+}
+
+/**
+ * Set a child row field only when the new value differs from current value.
+ *
+ * @param {string} cdt - Child doctype
+ * @param {string} cdn - Child docname
+ * @param {string} fieldname - Child fieldname
+ * @param {number|string|null} value - New value
+ */
+function set_child_value_if_changed(cdt, cdn, fieldname, value) {
+	const row = locals[cdt] && locals[cdt][cdn];
+	if (!row) {
+		return;
+	}
+	if (is_same_numeric_value(row[fieldname], value)) {
+		return;
+	}
+	frappe.model.set_value(cdt, cdn, fieldname, value);
+}
+
+/**
+ * Compare values after numeric normalization to precision 4.
+ * This avoids false differences like 1 vs 1.0000.
+ *
+ * @param {*} current
+ * @param {*} next
+ * @returns {boolean}
+ */
+function is_same_numeric_value(current, next) {
+	const normalized_current = Math.round((flt(current) || 0) * 10000) / 10000;
+	const normalized_next = Math.round((flt(next) || 0) * 10000) / 10000;
+	return normalized_current === normalized_next;
 }
