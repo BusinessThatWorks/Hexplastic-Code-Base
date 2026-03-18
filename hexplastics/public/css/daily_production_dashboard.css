@@ -1,0 +1,634 @@
+/* ================================================================
+   Daily Production Dashboard – Gaurav's Dashboard
+   All styles scoped to .daily-production-dashboard
+   ================================================================ */
+
+/* ── Base container ─────────────────────────────────────────────── */
+.daily-production-dashboard {
+    background: #f0f4f8;
+    min-height: calc(100vh - 60px);
+    padding: 0 0 40px 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+        'Helvetica Neue', Arial, sans-serif;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Override Frappe page width constraints */
+body[data-page-route*="daily-production"] .page-container,
+body[data-page-route*="daily-production"] .layout-main,
+body[data-page-route*="daily-production"] .page-content,
+body[data-page-route*="daily-production"] .layout-container,
+body[data-page-route*="daily-production"] .page-wrapper,
+body[data-page-route*="daily-production"] .page-body,
+body[data-page-route*="daily-production"] .form-container,
+body[data-page-route*="daily-production"] .form-layout,
+body[data-page-route*="daily-production"] .page-form,
+body[data-page-route*="daily-production"] .page-content-wrapper {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+body[data-page-route*="daily-production"] .page-container,
+body[data-page-route*="daily-production"] .layout-main {
+    margin: 0 !important;
+    float: none !important;
+    padding: 0 !important;
+}
+
+body[data-page-route*="daily-production"] .page-body,
+body[data-page-route*="daily-production"] .page-content-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* ── Section wrapper ────────────────────────────────────────────── */
+.daily-production-dashboard .dp-section {
+    background: #ffffff;
+    border-radius: 16px;
+    margin: 20px 24px;
+    padding: 28px 32px 32px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e8ecf1;
+}
+
+/* ── Section header ─────────────────────────────────────────────── */
+ .daily-production-dashboard .dp-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #eef1f5;
+}
+
+.daily-production-dashboard .dp-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.daily-production-dashboard .dp-section-icon {
+    font-size: 22px;
+}
+
+.daily-production-dashboard .dp-section-title h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1d21;
+    margin: 0;
+    letter-spacing: -0.2px;
+}
+
+/* Global header filters (date range + refresh) */
+.daily-production-dashboard .dp-global-filters {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    margin: 8px 24px 4px;
+}
+
+.daily-production-dashboard .dp-date-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #6b7b8d;
+}
+
+.daily-production-dashboard .dp-date-filter input[type="date"] {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #d0d7e2;
+    font-size: 12px;
+    min-width: 140px;
+}
+
+.daily-production-dashboard .dp-refresh-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+}
+
+.daily-production-dashboard .dp-section-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: #8896a4;
+    background: #f0f3f7;
+    padding: 4px 12px;
+    border-radius: 8px;
+    letter-spacing: 0.8px;
+    border: 1px solid #e3e8ee;
+}
+
+/* ── Sub-section label ──────────────────────────────────────────── */
+.daily-production-dashboard .dp-subsection-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #6b7b8d;
+    letter-spacing: 1.2px;
+    margin-bottom: 12px;
+    margin-top: 8px;
+    text-transform: uppercase;
+}
+
+/* ── Card grid ──────────────────────────────────────────────────── */
+.daily-production-dashboard .dp-cards-row {
+    display: grid;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.daily-production-dashboard .dp-cards-row:last-child {
+    margin-bottom: 0;
+}
+
+.daily-production-dashboard .dp-cards-row-2 {
+    grid-template-columns: 1fr 1fr;
+}
+
+.daily-production-dashboard .dp-cards-row-1 {
+    grid-template-columns: 1fr;
+}
+
+/* Generic two-column row (cards or tables side by side) */
+.daily-production-dashboard .dp-row-two-cols {
+    display: grid;
+    grid-template-columns: 1.1fr 1.1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+/* Tables row specifically can be a bit tighter on spacing */
+.daily-production-dashboard .dp-row-tables {
+    margin-top: 4px;
+}
+
+/* Row that holds cards + side table */
+.daily-production-dashboard .dp-row-with-table {
+    display: grid;
+    grid-template-columns: 2fr 1.1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+/* Compact cards (smaller boxes) */
+.daily-production-dashboard .dp-cards-compact {
+    margin-bottom: 0;
+}
+
+.daily-production-dashboard .dp-card-compact {
+    padding: 14px 18px;
+}
+
+.daily-production-dashboard .dp-card-compact .dp-card-value {
+    font-size: 26px;
+}
+
+.daily-production-dashboard .dp-card-compact .dp-card-sub {
+    margin-bottom: 6px;
+}
+
+/* ── Card base ──────────────────────────────────────────────────── */
+.daily-production-dashboard .dp-card {
+    border-radius: 14px;
+    padding: 18px 22px;
+    position: relative;
+    overflow: hidden;
+    border-left: 5px solid transparent;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.daily-production-dashboard .dp-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.daily-production-dashboard .dp-card-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.daily-production-dashboard .dp-card-value {
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 2px;
+    letter-spacing: -0.5px;
+}
+
+.daily-production-dashboard .dp-value-big {
+    font-size: 40px;
+}
+
+.daily-production-dashboard .dp-card-sub {
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0.72;
+    margin-bottom: 14px;
+}
+
+/* ── Card badge ─────────────────────────────────────────────────── */
+.daily-production-dashboard .dp-card-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* ── MIP cards: Total Generated & Net Balance (deeper blue) ─────── */
+.daily-production-dashboard .dp-card-green {
+    /* TOTAL GENERATED */
+    background: linear-gradient(135deg, #e4f0ff 0%, #c9e0ff 45%, #b3d2ff 100%);
+    border-left-color: #7ea9f2;
+    color: #12325c;
+}
+
+.daily-production-dashboard .dp-card-green .dp-card-label {
+    color: #12325c;
+}
+
+.daily-production-dashboard .dp-card-green .dp-card-value {
+    color: #0b2343;
+}
+
+.daily-production-dashboard .dp-badge-green {
+    background: rgba(255, 255, 255, 0.55);
+    color: #0a6b45;
+    border: 1px solid rgba(10, 107, 69, 0.15);
+}
+
+/* NET BALANCE uses the same palette as Total Generated but a bit deeper */
+.daily-production-dashboard .dp-card-green-gradient {
+    background: linear-gradient(135deg, #dbe9ff 0%, #c0d7ff 45%, #a4c5ff 100%);
+    border-left-color: #6e9df0;
+    color: #102b4f;
+}
+
+.daily-production-dashboard .dp-card-green-gradient .dp-card-label {
+    color: #102b4f;
+}
+
+.daily-production-dashboard .dp-card-green-gradient .dp-card-value {
+    color: #0a1f3a;
+}
+
+/* ── RED cards (light pastel for rejection / negative) ──────────── */
+.daily-production-dashboard .dp-card-red-gradient {
+    background: linear-gradient(135deg, #fde8e8 0%, #fbd1d1 45%, #f7b8b8 100%);
+    border-left-color: #f29a9a;
+    color: #7c1f1f;
+}
+
+.daily-production-dashboard .dp-card-red-gradient .dp-card-label {
+    color: #7c1f1f;
+}
+
+.daily-production-dashboard .dp-card-red-gradient .dp-card-value {
+    color: #641010;
+}
+
+.daily-production-dashboard .dp-card-red {
+    background: linear-gradient(135deg, #fee9e9 0%, #fcd4d4 45%, #f8bbbb 100%);
+    border-left-color: #f29a9a;
+    color: #7c1f1f;
+}
+
+.daily-production-dashboard .dp-card-red .dp-card-label {
+    color: #7c1f1f;
+}
+
+.daily-production-dashboard .dp-card-red .dp-card-value {
+    color: #641010;
+}
+
+.daily-production-dashboard .dp-badge-red {
+    background: rgba(255, 255, 255, 0.55);
+    color: #a12020;
+    border: 1px solid rgba(161, 32, 32, 0.15);
+}
+
+/* ── ORANGE card (light amber) ──────────────────────────────────── */
+.daily-production-dashboard .dp-card-orange {
+    background: linear-gradient(135deg, #fff4e5 0%, #ffe1bf 45%, #ffd099 100%);
+    border-left-color: #f6b779;
+    color: #7a3b05;
+}
+
+.daily-production-dashboard .dp-card-orange .dp-card-label {
+    color: #7a3b05;
+}
+
+.daily-production-dashboard .dp-card-orange .dp-card-value {
+    color: #5a2a03;
+}
+
+.daily-production-dashboard .dp-badge-orange {
+    background: rgba(255, 255, 255, 0.55);
+    color: #9a4500;
+    border: 1px solid rgba(154, 69, 0, 0.15);
+}
+
+/* ── DISPATCH cards (light mustard / yellow) ────────────────────── */
+.daily-production-dashboard .dp-card-blue {
+    /* Top \"Total Quantity Dispatched\" card */
+    background: linear-gradient(135deg, #fff3d4 0%, #ffe2a6 45%, #ffd489 100%);
+    border-left-color: #f0b957;
+    color: #5c3b06;
+}
+
+.daily-production-dashboard .dp-card-blue .dp-card-label {
+    color: #5c3b06;
+}
+
+.daily-production-dashboard .dp-card-blue .dp-card-value {
+    color: #3f2904;
+}
+
+.daily-production-dashboard .dp-card-blue-light {
+    /* \"Sheets Dispatched\" card */
+    background: linear-gradient(135deg, #fff7df 0%, #ffe6b3 45%, #ffd892 100%);
+    border-left-color: #f2c365;
+    color: #5c3b06;
+}
+
+.daily-production-dashboard .dp-card-blue-light .dp-card-label {
+    color: #5c3b06;
+}
+
+.daily-production-dashboard .dp-card-blue-light .dp-card-value {
+    color: #3f2904;
+}
+
+.daily-production-dashboard .dp-badge-blue {
+    background: rgba(255, 255, 255, 0.55);
+    color: #155da0;
+    border: 1px solid rgba(21, 93, 160, 0.15);
+}
+
+/* ── PURPLE card (EXIDE, light) ─────────────────────────────────── */
+.daily-production-dashboard .dp-card-purple {
+    background: linear-gradient(135deg, #f4e9ff 0%, #e6d7ff 45%, #d6c0ff 100%);
+    border-left-color: #c0a0f5;
+    color: #4a2276;
+}
+
+.daily-production-dashboard .dp-card-purple .dp-card-label {
+    color: #4a2276;
+}
+
+.daily-production-dashboard .dp-card-purple .dp-card-value {
+    color: #351558;
+}
+
+.daily-production-dashboard .dp-badge-purple {
+    background: rgba(255, 255, 255, 0.55);
+    color: #5a2da0;
+    border: 1px solid rgba(90, 45, 160, 0.15);
+}
+
+/* ── Split card layout (dispatch total / MIP net) ───────────────── */
+.daily-production-dashboard .dp-card-wide {
+    padding: 28px 32px;
+}
+
+.daily-production-dashboard .dp-card-body-split {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+}
+
+.daily-production-dashboard .dp-card-body-left {
+    flex: 1;
+}
+
+.daily-production-dashboard .dp-card-body-right {
+    flex-shrink: 0;
+}
+
+/* ── Mini-table inside split cards ──────────────────────────────── */
+.daily-production-dashboard .dp-mini-table {
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    padding: 16px 24px;
+    min-width: 200px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+.daily-production-dashboard .dp-mini-table-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 28px;
+    text-align: center;
+}
+
+.daily-production-dashboard .dp-mini-table-header {
+    margin-bottom: 6px;
+}
+
+.daily-production-dashboard .dp-mini-table-header span {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    opacity: 0.7;
+}
+
+.daily-production-dashboard .dp-mini-table-values span {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.daily-production-dashboard .dp-mini-table-pct span {
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.65;
+}
+
+/* ── MIP mini-table ─────────────────────────────────────────────── */
+.daily-production-dashboard .dp-mini-table-mip {
+    min-width: 220px;
+}
+
+.daily-production-dashboard .dp-mini-table-mip .dp-mini-table-row {
+    padding: 5px 0;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.daily-production-dashboard .dp-mip-label {
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0.75;
+}
+
+.daily-production-dashboard .dp-mip-value {
+    font-size: 15px;
+    font-weight: 700;
+    text-align: right;
+}
+
+.daily-production-dashboard .dp-mip-net-row {
+    border-top: 2px solid rgba(0, 0, 0, 0.12);
+    margin-top: 4px;
+    padding-top: 8px !important;
+}
+
+.daily-production-dashboard .dp-mip-net-label {
+    color: #0b6e4a !important;
+    opacity: 1 !important;
+    font-weight: 700 !important;
+}
+
+.daily-production-dashboard .dp-mip-net-value {
+    color: #0b6e4a !important;
+    font-size: 16px !important;
+    font-weight: 800 !important;
+}
+
+/* ── Production summary side table ─────────────────────────────── */
+.daily-production-dashboard .dp-summary-table-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px 18px 14px;
+    border: 1px solid #e2e7ee;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    max-height: 320px;
+}
+
+.daily-production-dashboard .dp-summary-table-header {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1f2933;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+/* Scrollable wrapper around the table */
+.daily-production-dashboard .dp-summary-table-wrap {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.daily-production-dashboard .dp-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.daily-production-dashboard .dp-summary-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #ffffff;
+}
+
+.daily-production-dashboard .dp-summary-table th,
+.daily-production-dashboard .dp-summary-table td {
+    padding: 6px 4px;
+    text-align: left;
+}
+
+.daily-production-dashboard .dp-summary-table th {
+    font-weight: 700;
+    color: #6b7b8d;
+    border-bottom: 2px solid #e2e7ee;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    background: #ffffff;
+}
+
+.daily-production-dashboard .dp-summary-table td {
+    color: #1f2933;
+    border-bottom: 1px solid #f1f4f8;
+}
+
+.daily-production-dashboard .dp-summary-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Scrollbar styling for the table wrapper */
+.daily-production-dashboard .dp-summary-table-wrap::-webkit-scrollbar {
+    width: 5px;
+}
+
+.daily-production-dashboard .dp-summary-table-wrap::-webkit-scrollbar-track {
+    background: #f1f4f8;
+    border-radius: 4px;
+}
+
+.daily-production-dashboard .dp-summary-table-wrap::-webkit-scrollbar-thumb {
+    background: #c5cdd8;
+    border-radius: 4px;
+}
+
+.daily-production-dashboard .dp-summary-table-wrap::-webkit-scrollbar-thumb:hover {
+    background: #a0aab5;
+}
+
+/* ── Loading pulse animation ────────────────────────────────────── */
+.daily-production-dashboard .dp-loading .dp-card-value {
+    animation: dp-pulse 1.2s ease-in-out infinite;
+    opacity: 0.5;
+}
+
+@keyframes dp-pulse {
+    0%, 100% { opacity: 0.5; }
+    50%      { opacity: 0.2; }
+}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .daily-production-dashboard .dp-section {
+        margin: 12px 12px;
+        padding: 20px 16px;
+    }
+
+    .daily-production-dashboard .dp-cards-row-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .daily-production-dashboard .dp-row-with-table {
+        grid-template-columns: 1fr;
+    }
+
+    .daily-production-dashboard .dp-row-two-cols {
+        grid-template-columns: 1fr;
+    }
+
+    .daily-production-dashboard .dp-card-value {
+        font-size: 32px;
+    }
+
+    .daily-production-dashboard .dp-value-big {
+        font-size: 38px;
+    }
+
+    .daily-production-dashboard .dp-card-body-split {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .daily-production-dashboard .dp-mini-table {
+        width: 100%;
+        min-width: unset;
+    }
+}
