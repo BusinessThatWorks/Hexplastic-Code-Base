@@ -1,0 +1,491 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-20 11:39:51.306513",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_acyh",
+  "production_date",
+  "raw_material",
+  "rm_source_warehouse",
+  "column_break_hpxt",
+  "shift_type",
+  "machine_name",
+  "column_break_pxoz",
+  "amended_from",
+  "box_stock_entry_id",
+  "section_break_coob",
+  "print_available_in_plant",
+  "sheet_received",
+  "column_break_uexn",
+  "front_printed",
+  "back_printed",
+  "column_break_oyxw",
+  "print_checked",
+  "print_rejected",
+  "column_break_gxir",
+  "transfer_to_clean_sheet",
+  "die_punching_dept_section",
+  "die_available_in_plant",
+  "received_from_printing_dept",
+  "column_break_vyon",
+  "die_checked",
+  "die_rejected",
+  "column_break_srzv",
+  "trimming_dept_section",
+  "trim_available_in_plant",
+  "received_from_die_punching_dept",
+  "column_break_euji",
+  "trim_checked",
+  "column_break_bznl",
+  "stapling_dept_section",
+  "staple_available_in_plant",
+  "received_from_trimming_dept",
+  "column_break_mojd",
+  "staple_checked",
+  "staple_rejected",
+  "column_break_cdvs",
+  "box_produced",
+  "taping_dept_section",
+  "tape_available_in_plant",
+  "received_from_stapling_dept",
+  "column_break_hgtt",
+  "tape_checked",
+  "tape_rejected",
+  "column_break_tgky",
+  "stickering_dept_section",
+  "sticker_available_in_plant",
+  "received_from_taping_dept",
+  "column_break_ybja",
+  "sticker_checked",
+  "sticker_rejected",
+  "column_break_hsms",
+  "sticker_transfer_to_clean_sheet",
+  "finished_goods_details_section",
+  "finished_item",
+  "column_break_uypn",
+  "total_box_produced",
+  "column_break_tqeh",
+  "fg_target_warehouse",
+  "sheet_cleaning_tab",
+  "cleaning_item",
+  "sheet_cleaning_qty",
+  "column_break_kcko",
+  "target_warehouse",
+  "column_break_jdjd",
+  "stock_entry_id"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_acyh",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Box Production",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "production_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Production Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "shift_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Shift Type",
+   "options": "\nDay\nNight",
+   "reqd": 1
+  },
+  {
+   "fieldname": "machine_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Machine Name",
+   "options": "Machine Master",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_hpxt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_pxoz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_coob",
+   "fieldtype": "Section Break",
+   "label": "Printing Dept."
+  },
+  {
+   "fieldname": "sheet_received",
+   "fieldtype": "Int",
+   "label": "Sheet Received",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_uexn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "front_printed",
+   "fieldtype": "Int",
+   "label": "Front Printed",
+   "reqd": 1
+  },
+  {
+   "fieldname": "back_printed",
+   "fieldtype": "Int",
+   "label": "Back Printed",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_oyxw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "die_punching_dept_section",
+   "fieldtype": "Section Break",
+   "label": "Die Punching Dept."
+  },
+  {
+   "fieldname": "received_from_printing_dept",
+   "fieldtype": "Int",
+   "label": "Received from Printing Dept"
+  },
+  {
+   "fieldname": "column_break_vyon",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "die_checked",
+   "fieldtype": "Int",
+   "label": "Checked",
+   "reqd": 1
+  },
+  {
+   "fieldname": "die_rejected",
+   "fieldtype": "Int",
+   "label": "Rejected",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_srzv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "print_checked",
+   "fieldtype": "Int",
+   "label": "Checked",
+   "reqd": 1
+  },
+  {
+   "fieldname": "print_rejected",
+   "fieldtype": "Int",
+   "label": "Rejected",
+   "reqd": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "trimming_dept_section",
+   "fieldtype": "Section Break",
+   "label": "Trimming Dept."
+  },
+  {
+   "fieldname": "trim_available_in_plant",
+   "fieldtype": "Int",
+   "label": "Available in Plant"
+  },
+  {
+   "fieldname": "received_from_die_punching_dept",
+   "fieldtype": "Int",
+   "label": "Received from Die Punching Dept"
+  },
+  {
+   "fieldname": "column_break_euji",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "trim_checked",
+   "fieldtype": "Int",
+   "label": "Checked",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_bznl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "print_available_in_plant",
+   "fieldtype": "Int",
+   "label": "Available in Plant"
+  },
+  {
+   "fieldname": "die_available_in_plant",
+   "fieldtype": "Int",
+   "label": "Available in Plant"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "stapling_dept_section",
+   "fieldtype": "Section Break",
+   "label": "Stapling Dept."
+  },
+  {
+   "fieldname": "staple_available_in_plant",
+   "fieldtype": "Int",
+   "label": "Available in Plant"
+  },
+  {
+   "fieldname": "received_from_trimming_dept",
+   "fieldtype": "Int",
+   "label": "Received from Trimming Dept"
+  },
+  {
+   "fieldname": "column_break_mojd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "staple_checked",
+   "fieldtype": "Int",
+   "label": "Checked",
+   "reqd": 1
+  },
+  {
+   "fieldname": "staple_rejected",
+   "fieldtype": "Int",
+   "label": "Rejected",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_cdvs",
+   "fieldtype": "Column Break"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "taping_dept_section",
+   "fieldtype": "Section Break",
+   "label": "Taping Dept."
+  },
+  {
+   "fieldname": "tape_available_in_plant",
+   "fieldtype": "Int",
+   "label": "Available in Plant"
+  },
+  {
+   "fieldname": "received_from_stapling_dept",
+   "fieldtype": "Int",
+   "label": "Received from Stapling Dept"
+  },
+  {
+   "fieldname": "column_break_hgtt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "tape_checked",
+   "fieldtype": "Int",
+   "label": "Checked",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tape_rejected",
+   "fieldtype": "Int",
+   "label": "Rejected",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_tgky",
+   "fieldtype": "Column Break"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "stickering_dept_section",
+   "fieldtype": "Section Break",
+   "label": "Stickering Dept."
+  },
+  {
+   "fieldname": "sticker_available_in_plant",
+   "fieldtype": "Int",
+   "label": "Available in Plant"
+  },
+  {
+   "fieldname": "received_from_taping_dept",
+   "fieldtype": "Int",
+   "label": "Received from Taping Dept"
+  },
+  {
+   "fieldname": "column_break_ybja",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sticker_checked",
+   "fieldtype": "Int",
+   "label": "Checked",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sticker_rejected",
+   "fieldtype": "Int",
+   "label": "Rejected",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_hsms",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "raw_material",
+   "fieldtype": "Link",
+   "label": "Raw Material",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "rm_source_warehouse",
+   "fieldtype": "Link",
+   "label": "RM Source Warehouse",
+   "options": "Warehouse",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_gxir",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "transfer_to_clean_sheet",
+   "fieldtype": "Int",
+   "label": "Transfer to Clean Sheet",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sticker_transfer_to_clean_sheet",
+   "fieldtype": "Int",
+   "label": "Transfer to Clean Sheet",
+   "reqd": 1
+  },
+  {
+   "fieldname": "finished_goods_details_section",
+   "fieldtype": "Section Break",
+   "label": "Finished Goods Details"
+  },
+  {
+   "fieldname": "finished_item",
+   "fieldtype": "Link",
+   "label": "Finished Item",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_uypn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_box_produced",
+   "fieldtype": "Int",
+   "label": "Total Box Produced",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_tqeh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "fg_target_warehouse",
+   "fieldtype": "Link",
+   "label": "FG Target Warehouse",
+   "options": "Warehouse",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sheet_cleaning_tab",
+   "fieldtype": "Tab Break",
+   "label": "Sheet Cleaning"
+  },
+  {
+   "fieldname": "cleaning_item",
+   "fieldtype": "Link",
+   "label": "Cleaning Item",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sheet_cleaning_qty",
+   "fieldtype": "Int",
+   "label": "Sheet Cleaning Qty",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_kcko",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "target_warehouse",
+   "fieldtype": "Link",
+   "label": "Target Warehouse",
+   "options": "Warehouse",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_jdjd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "stock_entry_id",
+   "fieldtype": "Link",
+   "label": "Stock Entry ID",
+   "options": "Stock Entry"
+  },
+  {
+   "fieldname": "box_stock_entry_id",
+   "fieldtype": "Link",
+   "label": "Stock Entry ID",
+   "options": "Stock Entry"
+  },
+  {
+   "fieldname": "box_produced",
+   "fieldtype": "Int",
+   "label": "Box Produced",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-03-21 11:26:37.633796",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "Box Production",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
