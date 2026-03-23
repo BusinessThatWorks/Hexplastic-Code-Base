@@ -187,7 +187,7 @@ class DailyProductionDashboard {
 					.map(
 						(row) => `
 					<tr>
-						<td>${frappe.utils.escape_html(row.item_name || "-")}</td>
+						<td>${frappe.utils.escape_html(row.rejection_id || "-")}</td>
 						<td>${this.fmt(row.rejected_qty || 0)}</td>
 						<td>${(row.rejection_pct || 0).toFixed(2)}%</td>
 					</tr>`

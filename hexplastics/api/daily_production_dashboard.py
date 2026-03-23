@@ -239,41 +239,28 @@ def _get_production_plan_overview(from_date, to_date):
 def _get_rejection_overview(from_date, to_date):
     """Return rows for Rejection Overview table.
 
-    Daily Rejection Data is aggregate-only and does not store item-level data.
-    For dashboard item-wise visibility, derive rejection from Production Log
-    Sheet and group by manufacturing item.
+    Fetch Rejection Id (Daily Rejection Data `name`) and its rejection metrics.
     """
-    dcond, dparams = _date_condition("pls.production_date", from_date, to_date)
     rows = frappe.db.sql(
         f"""
         SELECT
-            pls.manufacturing_item                                   AS item_code,
-            COALESCE(i.item_name, pls.manufacturing_item)            AS item_name,
-            COALESCE(SUM(pls.process_loss_weight), 0)                AS rejected_qty,
-            CASE
-                WHEN COALESCE(SUM(pls.manufactured_qty), 0) > 0 THEN
-                    (COALESCE(SUM(pls.process_loss_weight), 0) / COALESCE(SUM(pls.manufactured_qty), 0)) * 100
-                ELSE 0
-            END                                                      AS rejection_pct
-        FROM `tabProduction Log Sheet` pls
-        LEFT JOIN `tabItem` i ON i.name = pls.manufacturing_item
-        WHERE pls.docstatus = 1
-          AND {dcond}
-          AND pls.manufacturing_item IS NOT NULL
-        GROUP BY pls.manufacturing_item, i.item_name
-        HAVING COALESCE(SUM(pls.process_loss_weight), 0) > 0
-        ORDER BY rejected_qty DESC, item_name ASC
+            r.name AS rejection_id,
+            COALESCE(r.total_rejection, 0) AS rejected_qty,
+            COALESCE(r.rejection_in_, 0) AS rejection_pct
+        FROM `tabDaily Rejection Data` r
+        WHERE r.docstatus = 1
+          AND { _date_condition("r.rejection_date", from_date, to_date)[0] }
+        ORDER BY r.rejection_date DESC, r.name DESC
         LIMIT 20
         """,
-        dparams,
+        _date_condition("r.rejection_date", from_date, to_date)[1],
         as_dict=True,
     )
 
     return [
         {
-            "item_code": r.item_code,
-            "item_name": r.item_name,
-            "rejected_qty": flt(r.rejected_qty, 2),
+            "rejection_id": r.rejection_id,
+            "rejected_qty": int(flt(r.rejected_qty, 0)),
             "rejection_pct": flt(r.rejection_pct, 2),
         }
         for r in rows
