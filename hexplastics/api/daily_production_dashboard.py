@@ -18,7 +18,8 @@ from frappe.utils import flt, getdate, nowdate, add_days
 def get_daily_production_data(from_date=None, to_date=None):
     """Return all three dashboard sections for the given date range.
 
-    If no dates are provided, defaults to today's date for both.
+    If no dates are provided, returns *all* data (no date filter).
+    If only one date is provided, the other is left open-ended.
 
     Returns:
         dict: {
@@ -27,15 +28,11 @@ def get_daily_production_data(from_date=None, to_date=None):
             mip:        { ... }
         }
     """
-    if not from_date and not to_date:
-        target = getdate(nowdate())
-        from_dt = to_dt = target
-    else:
-        from_dt = getdate(from_date) if from_date else getdate(nowdate())
-        to_dt = getdate(to_date) if to_date else from_dt
+    from_dt = getdate(from_date) if from_date else None
+    to_dt = getdate(to_date) if to_date else None
 
     # Yesterday comparison is only meaningful when viewing a single day
-    yesterday = add_days(from_dt, -1) if from_dt == to_dt else None
+    yesterday = add_days(from_dt, -1) if (from_dt and to_dt and from_dt == to_dt) else None
 
     try:
         return {
@@ -53,6 +50,23 @@ def get_daily_production_data(from_date=None, to_date=None):
             "dispatch": _empty_dispatch(),
             "mip": _empty_mip(),
         }
+
+
+def _date_condition(date_col, from_date, to_date):
+    """Return (sql_fragment, params_tuple) for an optional date range.
+
+    * Both dates given  → ``date_col BETWEEN %s AND %s``
+    * Only from_date    → ``date_col >= %s``
+    * Only to_date      → ``date_col <= %s``
+    * Neither           → ``1=1`` (no filter)
+    """
+    if from_date and to_date:
+        return f"{date_col} BETWEEN %s AND %s", (from_date, to_date)
+    if from_date:
+        return f"{date_col} >= %s", (from_date,)
+    if to_date:
+        return f"{date_col} <= %s", (to_date,)
+    return "1=1", ()
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -108,8 +122,9 @@ def _get_production_summary(from_date, to_date, yesterday=None):
 
 def _production_by_group(from_date, to_date):
     """Return {sheets: int, boxes: int} for a date range."""
+    dcond, dparams = _date_condition("pls.production_date", from_date, to_date)
     data = frappe.db.sql(
-        """
+        f"""
         SELECT
             CASE
                 WHEN LOWER(i.item_group) LIKE '%%sheet%%' THEN 'sheets'
@@ -120,10 +135,10 @@ def _production_by_group(from_date, to_date):
         FROM `tabProduction Log Sheet` pls
         LEFT JOIN `tabItem` i ON pls.manufacturing_item = i.name
         WHERE pls.docstatus = 1
-          AND pls.production_date BETWEEN %s AND %s
+          AND {dcond}
         GROUP BY category
         """,
-        (from_date, to_date),
+        dparams,
         as_dict=True,
     )
 
@@ -145,30 +160,32 @@ def _get_rejection_data(from_date, to_date):
     """
     try:
         # Box rejection from Daily Rejection Data
+        dcond_rej, dparams_rej = _date_condition("rejection_date", from_date, to_date)
         box_rej = frappe.db.sql(
-            """
+            f"""
             SELECT COALESCE(SUM(total_rejection), 0) AS total
             FROM `tabDaily Rejection Data`
             WHERE docstatus = 1
-              AND rejection_date BETWEEN %s AND %s
+              AND {dcond_rej}
             """,
-            (from_date, to_date),
+            dparams_rej,
             as_dict=True,
         )
         boxes_rejected = int(flt(box_rej[0].get("total", 0))) if box_rej else 0
 
         # Sheet rejection — use process_loss_weight from Production Log Sheet
         # for items in the "Sheet" group, expressed in kg (displayed as-is)
+        dcond_pls, dparams_pls = _date_condition("pls.production_date", from_date, to_date)
         sheet_rej = frappe.db.sql(
-            """
+            f"""
             SELECT COALESCE(SUM(pls.process_loss_weight), 0) AS total
             FROM `tabProduction Log Sheet` pls
             LEFT JOIN `tabItem` i ON pls.manufacturing_item = i.name
             WHERE pls.docstatus = 1
-              AND pls.production_date BETWEEN %s AND %s
+              AND {dcond_pls}
               AND LOWER(i.item_group) LIKE '%%sheet%%'
             """,
-            (from_date, to_date),
+            dparams_pls,
             as_dict=True,
         )
         sheets_rejected = int(flt(sheet_rej[0].get("total", 0))) if sheet_rej else 0
@@ -187,26 +204,30 @@ def _get_rejection_data(from_date, to_date):
 
 def _get_production_plan_overview(from_date, to_date):
     """Return rows for Production Plan Overview table."""
+    dcond, dparams = _date_condition("pls.production_date", from_date, to_date)
     rows = frappe.db.sql(
-        """
+        f"""
         SELECT
-            pls.manufacturing_item AS item_name,
-            pls.production_plan     AS production_plan,
+            pls.manufacturing_item                    AS item_code,
+            COALESCE(i.item_name, pls.manufacturing_item) AS item_name,
+            pls.production_plan                       AS production_plan,
             COALESCE(SUM(pls.manufactured_qty), 0) AS manufactured_qty
         FROM `tabProduction Log Sheet` pls
+        LEFT JOIN `tabItem` i ON i.name = pls.manufacturing_item
         WHERE pls.docstatus = 1
-          AND pls.production_date BETWEEN %s AND %s
+          AND {dcond}
           AND pls.manufacturing_item IS NOT NULL
-        GROUP BY pls.manufacturing_item, pls.production_plan
+        GROUP BY pls.manufacturing_item, i.item_name, pls.production_plan
         ORDER BY manufactured_qty DESC
         LIMIT 20
         """,
-        (from_date, to_date),
+        dparams,
         as_dict=True,
     )
 
     return [
         {
+            "item_code": r.item_code,
             "item_name": r.item_name,
             "production_plan": r.production_plan,
             "manufactured_qty": flt(r.manufactured_qty, 0),
@@ -218,30 +239,41 @@ def _get_production_plan_overview(from_date, to_date):
 def _get_rejection_overview(from_date, to_date):
     """Return rows for Rejection Overview table.
 
-    Note: current Daily Rejection setup is box-oriented, so we show
-    aggregate box rejection per document as "Total Rejection".
+    Daily Rejection Data is aggregate-only and does not store item-level data.
+    For dashboard item-wise visibility, derive rejection from Production Log
+    Sheet and group by manufacturing item.
     """
+    dcond, dparams = _date_condition("pls.production_date", from_date, to_date)
     rows = frappe.db.sql(
-        """
+        f"""
         SELECT
-            name           AS docname,
-            rejection_date AS rejection_date,
-            COALESCE(total_rejection, 0) AS rejected_qty,
-            COALESCE(rejection_in_, 0) AS rejection_pct
-        FROM `tabDaily Rejection Data`
-        WHERE docstatus = 1
-          AND rejection_date BETWEEN %s AND %s
-        ORDER BY rejection_date DESC, name DESC
+            pls.manufacturing_item                                   AS item_code,
+            COALESCE(i.item_name, pls.manufacturing_item)            AS item_name,
+            COALESCE(SUM(pls.process_loss_weight), 0)                AS rejected_qty,
+            CASE
+                WHEN COALESCE(SUM(pls.manufactured_qty), 0) > 0 THEN
+                    (COALESCE(SUM(pls.process_loss_weight), 0) / COALESCE(SUM(pls.manufactured_qty), 0)) * 100
+                ELSE 0
+            END                                                      AS rejection_pct
+        FROM `tabProduction Log Sheet` pls
+        LEFT JOIN `tabItem` i ON i.name = pls.manufacturing_item
+        WHERE pls.docstatus = 1
+          AND {dcond}
+          AND pls.manufacturing_item IS NOT NULL
+        GROUP BY pls.manufacturing_item, i.item_name
+        HAVING COALESCE(SUM(pls.process_loss_weight), 0) > 0
+        ORDER BY rejected_qty DESC, item_name ASC
         LIMIT 20
         """,
-        (from_date, to_date),
+        dparams,
         as_dict=True,
     )
 
     return [
         {
-            "item_name": "Boxes",  # we only track box rejection here
-            "rejected_qty": int(flt(r.rejected_qty, 0)),
+            "item_code": r.item_code,
+            "item_name": r.item_name,
+            "rejected_qty": flt(r.rejected_qty, 2),
             "rejection_pct": flt(r.rejection_pct, 2),
         }
         for r in rows
@@ -271,8 +303,9 @@ def _get_dispatch_summary(from_date, to_date):
     contains **EXIDE** as EXIDE.
     """
     try:
+        dcond, dparams = _date_condition("dn.posting_date", from_date, to_date)
         data = frappe.db.sql(
-            """
+            f"""
             SELECT
                 CASE
                     WHEN LOWER(i.item_group) LIKE '%%sheet%%'
@@ -289,10 +322,10 @@ def _get_dispatch_summary(from_date, to_date):
             INNER JOIN `tabDelivery Note` dn ON dn.name = dni.parent
             LEFT  JOIN `tabItem` i         ON dni.item_code = i.name
             WHERE dn.docstatus = 1
-              AND dn.posting_date BETWEEN %s AND %s
+              AND {dcond}
             GROUP BY category
             """,
-            (from_date, to_date),
+            dparams,
             as_dict=True,
         )
 
@@ -328,16 +361,17 @@ def _get_mip_summary(from_date, to_date):
     * **Total Generated** = SUM of ``closing_qty_for_mip`` from Production Log Sheet
     """
     try:
+        dcond, dparams = _date_condition("pls.production_date", from_date, to_date)
         data = frappe.db.sql(
-            """
+            f"""
             SELECT
                 COALESCE(SUM(pls.mip_used), 0)             AS total_consumed,
                 COALESCE(SUM(pls.closing_qty_for_mip), 0)  AS total_generated
             FROM `tabProduction Log Sheet` pls
             WHERE pls.docstatus = 1
-              AND pls.production_date BETWEEN %s AND %s
+              AND {dcond}
             """,
-            (from_date, to_date),
+            dparams,
             as_dict=True,
         )
 

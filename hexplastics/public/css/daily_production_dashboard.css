@@ -530,6 +530,8 @@ body[data-page-route*="daily-production"] .page-content-wrapper {
 .daily-production-dashboard .dp-summary-table {
     width: 100%;
     border-collapse: collapse;
+    /* Fixed layout keeps sticky header aligned with body columns */
+    table-layout: fixed;
     font-size: 12px;
 }
 
@@ -543,7 +545,6 @@ body[data-page-route*="daily-production"] .page-content-wrapper {
 .daily-production-dashboard .dp-summary-table th,
 .daily-production-dashboard .dp-summary-table td {
     padding: 6px 4px;
-    text-align: left;
 }
 
 .daily-production-dashboard .dp-summary-table th {
@@ -554,12 +555,32 @@ body[data-page-route*="daily-production"] .page-content-wrapper {
     text-transform: uppercase;
     letter-spacing: 0.6px;
     background: #ffffff;
+    text-align: center; /* center header label text */
 }
 
 .daily-production-dashboard .dp-summary-table td {
     color: #1f2933;
     border-bottom: 1px solid #f1f4f8;
+    text-align: center; /* center values under header */
 }
+
+/* Column sizing + alignment for the 3-column dashboard tables */
+.daily-production-dashboard .dp-summary-table th:nth-child(1),
+.daily-production-dashboard .dp-summary-table td:nth-child(1) {
+    width: 46%;
+    word-break: break-word;
+}
+.daily-production-dashboard .dp-summary-table th:nth-child(2),
+.daily-production-dashboard .dp-summary-table td:nth-child(2) {
+    width: 28%;
+}
+.daily-production-dashboard .dp-summary-table th:nth-child(3),
+.daily-production-dashboard .dp-summary-table td:nth-child(3) {
+    width: 26%;
+}
+
+/* Numeric alignment for body cells */
+/* (kept as-is via td default: centered) */
 
 .daily-production-dashboard .dp-summary-table tr:last-child td {
     border-bottom: none;

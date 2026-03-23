@@ -43,14 +43,9 @@ class DailyProductionDashboard {
 			() => {
 				self.wrapper.html(frappe.render_template("daily_production"));
 
-				// Set default date range: From = Today, To = Today
+				// Date inputs are empty by default — dashboard shows all data
 				const fromInput = document.getElementById("dp-from-date");
 				const toInput = document.getElementById("dp-to-date");
-				const todayStr = new Date().toISOString().split("T")[0];
-				if (fromInput && toInput) {
-					fromInput.value = todayStr;
-					toInput.value = todayStr;
-				}
 
 				// Auto-refresh when date range changes
 				if (fromInput) {
@@ -131,6 +126,7 @@ class DailyProductionDashboard {
 		}
 	}
 
+
 	/* ── Section 1 — Production Summary ───────────────────────── */
 	render_production(d) {
 		if (!d) return;
@@ -149,14 +145,6 @@ class DailyProductionDashboard {
 		// Rejection
 		this.set_el("sheets-rejected", this.fmt(d.sheets_rejected));
 		this.set_el("boxes-rejected", this.fmt(d.boxes_rejected));
-		this.set_el(
-			"sheets-rejected-sub",
-			`out of ${this.fmt(d.sheets_produced)} produced`
-		);
-		this.set_el(
-			"boxes-rejected-sub",
-			`out of ${this.fmt(d.boxes_produced)} produced`
-		);
 		this.set_el(
 			"sheets-reject-rate",
 			`${this.pct(d.sheets_rejected, d.sheets_produced)}% reject rate`
@@ -232,16 +220,6 @@ class DailyProductionDashboard {
 		);
 
 		// Sub cards
-		this.set_el("dispatch-sheets-sub", `of ${this.fmt(total)} total`);
-		this.set_el("dispatch-exide-sub", `of ${this.fmt(total)} total`);
-		this.set_el(
-			"dispatch-sheets-pct",
-			`${this.pct(d.sheets_dispatched, total)}% share`
-		);
-		this.set_el(
-			"dispatch-exide-pct",
-			`${this.pct(d.exide_dispatched, total)}% share`
-		);
 	}
 
 	/* ── Section 3 — MIP ──────────────────────────────────────── */
@@ -266,29 +244,14 @@ class DailyProductionDashboard {
 
 		// Dynamic colour for net balance card
 		const netCard = this.wrapper.find("#mip-net-balance").closest(".dp-card");
-		const statusBadge = document.getElementById("mip-status-badge");
-		const statusText = document.getElementById("mip-status-text");
-
 		if (net >= 0) {
 			netCard
 				.removeClass("dp-card-red-gradient")
 				.addClass("dp-card-green-gradient");
-			if (statusBadge) {
-				statusBadge.className = "dp-card-badge dp-badge-green";
-			}
-			if (statusText) {
-				statusText.textContent = "Surplus — inventory positive today";
-			}
 		} else {
 			netCard
 				.removeClass("dp-card-green-gradient")
 				.addClass("dp-card-red-gradient");
-			if (statusBadge) {
-				statusBadge.className = "dp-card-badge dp-badge-red";
-			}
-			if (statusText) {
-				statusText.textContent = "Deficit — inventory negative today";
-			}
 		}
 	}
 }
