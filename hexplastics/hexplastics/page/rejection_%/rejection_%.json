@@ -4,7 +4,7 @@
  "docstatus": 0,
  "doctype": "Page",
  "idx": 0,
- "modified": "2026-01-02 14:06:34.547577",
+ "modified": "2026-03-23 22:07:21.797331",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Rejection %",
@@ -16,6 +16,12 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Manufacturing User"
+  },
+  {
+   "role": "Manufacturing Manager"
   }
  ],
  "script": null,

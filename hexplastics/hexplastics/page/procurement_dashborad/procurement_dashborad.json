@@ -4,7 +4,7 @@
  "docstatus": 0,
  "doctype": "Page",
  "idx": 0,
- "modified": "2026-01-05 14:23:19.781263",
+ "modified": "2026-03-23 22:05:49.241929",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Procurement Dashborad",
@@ -16,6 +16,24 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Purchase User"
+  },
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Sales User"
+  },
+  {
+   "role": "Purchase Manager"
+  },
+  {
+   "role": "Sales Manager"
+  },
+  {
+   "role": "Accounts Manager"
   }
  ],
  "script": null,
