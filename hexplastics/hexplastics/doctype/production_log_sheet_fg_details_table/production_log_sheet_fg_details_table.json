@@ -1,0 +1,99 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-25 14:24:58.772071",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "bom",
+  "bom_name",
+  "manufacturing_item",
+  "column_break_gjje",
+  "manufactured_qty",
+  "gross_weight",
+  "weight_of_fabric_packing",
+  "net_weight"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "fieldname": "bom",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "BOM",
+   "options": "BOM"
+  },
+  {
+   "fieldname": "column_break_gjje",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 1,
+   "fetch_from": "bom.custom_bom_name",
+   "fieldname": "bom_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "BOM Grade",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "manufacturing_item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Manufacturing Item",
+   "options": "Item",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "manufactured_qty",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Manufactured Qty",
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "gross_weight",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Gross Weight",
+   "precision": "4",
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "net_weight",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Net Weight",
+   "precision": "4",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "weight_of_fabric_packing",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Weight of Fabric Packing",
+   "precision": "4",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-25 14:30:07.646195",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "Production Log Sheet FG Details Table",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

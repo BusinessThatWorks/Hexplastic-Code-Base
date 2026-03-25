@@ -10,12 +10,9 @@
   "production_date",
   "production_time",
   "column_break_eoeb",
-  "bom",
-  "bom_name",
-  "manufacturing_item",
-  "column_break_uzrs",
   "shift_type",
   "machine_used",
+  "column_break_uzrs",
   "stock_entry_no",
   "amended_from",
   "section_break_kjgo",
@@ -26,13 +23,7 @@
   "supervisor_name",
   "column_break_ygjr",
   "finished_good_details_section",
-  "manufactured_qty",
-  "column_break_sqlw",
-  "gross_weight",
-  "column_break_dsst",
-  "weight_of_fabric_packing",
-  "column_break_ldqt",
-  "net_weight",
+  "table_foun",
   "section_break_urbl",
   "raw_material_consumption",
   "section_break_rquc",
@@ -89,30 +80,8 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "bom",
-   "fieldtype": "Link",
-   "label": "BOM",
-   "options": "BOM",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "bom.item",
-   "fieldname": "manufacturing_item",
-   "fieldtype": "Link",
-   "label": "Manufacturing Item",
-   "options": "Item",
-   "reqd": 1
-  },
-  {
    "fieldname": "column_break_uzrs",
    "fieldtype": "Column Break"
-  },
-  {
-   "fetch_from": "bom.custom_bom_name",
-   "fieldname": "bom_name",
-   "fieldtype": "Data",
-   "label": "BOM Name",
-   "read_only": 1
   },
   {
    "fieldname": "shift_type",
@@ -170,41 +139,6 @@
    "fieldname": "finished_good_details_section",
    "fieldtype": "Section Break",
    "label": "Finished Good Details"
-  },
-  {
-   "fieldname": "manufactured_qty",
-   "fieldtype": "Int",
-   "label": "Manufactured Qty",
-   "reqd": 1
-  },
-  {
-   "fieldname": "column_break_sqlw",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "column_break_dsst",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "gross_weight",
-   "fieldtype": "Float",
-   "label": "Gross Weight",
-   "precision": "4",
-   "reqd": 1
-  },
-  {
-   "fieldname": "weight_of_fabric_packing",
-   "fieldtype": "Float",
-   "label": "Weight of Fabric Packing",
-   "precision": "4",
-   "reqd": 1
-  },
-  {
-   "fieldname": "net_weight",
-   "fieldtype": "Float",
-   "label": "Net Weight",
-   "precision": "4",
-   "read_only": 1
   },
   {
    "fieldname": "section_break_jcgo",
@@ -293,10 +227,6 @@
    "reqd": 1
   },
   {
-   "fieldname": "column_break_ldqt",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "section_break_rquc",
    "fieldtype": "Section Break"
   },
@@ -332,13 +262,18 @@
    "fieldtype": "Float",
    "label": "Total Production Weight",
    "precision": "4"
+  },
+  {
+   "fieldname": "table_foun",
+   "fieldtype": "Table",
+   "options": "Production Log Sheet FG Details Table"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-11 14:25:04.775156",
+ "modified": "2026-03-25 14:31:00.656848",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Production Log Sheet",
