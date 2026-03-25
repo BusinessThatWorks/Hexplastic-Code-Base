@@ -7,29 +7,32 @@ function calculate_rate_per_kg(cdt, cdn, weight_per_unit) {
     const amount = flt(row.amount);
     const weight = flt(weight_per_unit);
 
-    if (!qty || !amount) {
+    if (!amount || !qty || !weight) {
         frappe.model.set_value(cdt, cdn, "custom_rate_per_kg", 0);
         return;
     }
 
-    const rate_per_kg = (weight * qty) / amount;
+    const rate_per_kg = amount / (qty * weight);
     frappe.model.set_value(cdt, cdn, "custom_rate_per_kg", rate_per_kg);
 }
 
 function update_rate_per_kg(frm, cdt, cdn) {
     const row = locals[cdt][cdn];
-    const local_weight = flt(row.per_kg_weight || row.weight_per_unit);
 
     if (!row.item_code) {
         frappe.model.set_value(cdt, cdn, "custom_rate_per_kg", 0);
         return;
     }
 
-    if (local_weight) {
-        calculate_rate_per_kg(cdt, cdn, local_weight);
+    // Prefer the already-populated value on the SO Item row; this matches what users see in the grid.
+    const row_weight = flt(row.weight_per_unit || 0);
+    if (row_weight) {
+        frappe.model.set_value(cdt, cdn, "per_kg_weight", row_weight);
+        calculate_rate_per_kg(cdt, cdn, row_weight);
         return;
     }
 
+    // Fallback: fetch from Item master (in case row field isn't populated yet).
     frappe.db.get_value("Item", row.item_code, "weight_per_unit").then((r) => {
         const weight_per_unit = r && r.message ? r.message.weight_per_unit : 0;
         frappe.model.set_value(cdt, cdn, "per_kg_weight", weight_per_unit);
