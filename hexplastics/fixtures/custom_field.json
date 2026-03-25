@@ -1780,7 +1780,7 @@
   "doctype": "Custom Field",
   "dt": "Sales Order",
   "fetch_from": null,
-  "fetch_if_empty": 0,
+  "fetch_if_empty": 1,
   "fieldname": "custom_dispatch_through",
   "fieldtype": "Data",
   "hidden": 0,
