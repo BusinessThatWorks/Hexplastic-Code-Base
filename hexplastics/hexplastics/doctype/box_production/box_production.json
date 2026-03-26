@@ -22,10 +22,15 @@
   "front_printed",
   "back_printed",
   "column_break_oyxw",
-  "print_checked",
-  "print_rejected",
+  "in_area_checked",
   "column_break_gxir",
   "transfer_to_clean_sheet",
+  "out_area_checking",
+  "rejected_for_dry_problem",
+  "column_break_pegv",
+  "rejected_for_printing",
+  "column_break_wnic",
+  "rejected_for_broken",
   "die_punching_dept_section",
   "die_available_in_plant",
   "received_from_printing_dept",
@@ -61,7 +66,6 @@
   "sticker_checked",
   "sticker_rejected",
   "column_break_hsms",
-  "sticker_transfer_to_clean_sheet",
   "finished_goods_details_section",
   "finished_item",
   "column_break_uypn",
@@ -172,7 +176,7 @@
   {
    "fieldname": "die_checked",
    "fieldtype": "Int",
-   "label": "Checked",
+   "label": "Work Completed",
    "reqd": 1
   },
   {
@@ -184,18 +188,6 @@
   {
    "fieldname": "column_break_srzv",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "print_checked",
-   "fieldtype": "Int",
-   "label": "Checked",
-   "reqd": 1
-  },
-  {
-   "fieldname": "print_rejected",
-   "fieldtype": "Int",
-   "label": "Rejected",
-   "reqd": 1
   },
   {
    "collapsible": 1,
@@ -220,7 +212,7 @@
   {
    "fieldname": "trim_checked",
    "fieldtype": "Int",
-   "label": "Checked",
+   "label": "Work Completed",
    "reqd": 1
   },
   {
@@ -260,7 +252,7 @@
   {
    "fieldname": "staple_checked",
    "fieldtype": "Int",
-   "label": "Checked",
+   "label": "Work Completed",
    "reqd": 1
   },
   {
@@ -296,7 +288,7 @@
   {
    "fieldname": "tape_checked",
    "fieldtype": "Int",
-   "label": "Checked",
+   "label": "Work Completed",
    "reqd": 1
   },
   {
@@ -365,12 +357,6 @@
   },
   {
    "fieldname": "transfer_to_clean_sheet",
-   "fieldtype": "Int",
-   "label": "Transfer to Clean Sheet",
-   "reqd": 1
-  },
-  {
-   "fieldname": "sticker_transfer_to_clean_sheet",
    "fieldtype": "Int",
    "label": "Transfer to Clean Sheet",
    "reqd": 1
@@ -458,13 +444,47 @@
    "fieldtype": "Int",
    "label": "Box Produced",
    "reqd": 1
+  },
+  {
+   "fieldname": "in_area_checked",
+   "fieldtype": "Int",
+   "label": "Rejected by In-Area",
+   "reqd": 1
+  },
+  {
+   "fieldname": "out_area_checking",
+   "fieldtype": "Section Break",
+   "label": "Out-Area Checking"
+  },
+  {
+   "fieldname": "rejected_for_dry_problem",
+   "fieldtype": "Int",
+   "label": "Rejected for Dry Problem"
+  },
+  {
+   "fieldname": "column_break_pegv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rejected_for_printing",
+   "fieldtype": "Int",
+   "label": "Rejected for Printing"
+  },
+  {
+   "fieldname": "column_break_wnic",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rejected_for_broken",
+   "fieldtype": "Int",
+   "label": "Rejected for Broken"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-21 11:26:37.633796",
+ "modified": "2026-03-26 20:01:54.925936",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Box Production",
