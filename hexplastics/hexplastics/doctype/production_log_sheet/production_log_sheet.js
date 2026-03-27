@@ -48,11 +48,13 @@ frappe.ui.form.on("Production Log Sheet", {
 			// Clear cached BOMs when Production Plan is cleared
 			frm._production_plan_boms = [];
 			setup_bom_filter(frm);
-			
-			// Clear BOM field when Production Plan is cleared
-			if (frm.doc.bom) {
-				frm.set_value("bom", "");
-			}
+
+			// Clear BOM selection inside Finished Good Details when Production Plan is cleared.
+			// The old logic cleared header `bom`, now moved to child `table_foun`.
+			(frm.doc.table_foun || []).forEach(function(row) {
+				frappe.model.set_value(row.doctype, row.name, "bom", "");
+			});
+			frm.refresh_field("table_foun");
 		}
 	},
 
@@ -291,7 +293,8 @@ frappe.ui.form.on("Production Log Sheet", {
  * @param {Object} frm - The form object
  */
 function setup_bom_filter(frm) {
-	frm.set_query("bom", function() {
+	// The `bom` field is now inside the child table `table_foun`.
+	frm.set_query("bom", "table_foun", function() {
 		// If Production Plan is selected and we have cached BOMs, filter to only those BOMs
 		if (frm.doc.production_plan && frm._production_plan_boms && frm._production_plan_boms.length > 0) {
 			return {
@@ -374,7 +377,13 @@ function update_production_details_manufactured_qty(frm) {
 		return;
 	}
 	
-	const manufactured_qty = flt(frm.doc.manufactured_qty) || 0;
+	// `manufactured_qty` was moved to `Finished Good Details` (child table: table_foun).
+	// Use child value when present, otherwise fallback to legacy parent field.
+	const fg_details = frm.doc.table_foun || [];
+	const manufactured_qty =
+		fg_details.length > 0
+			? flt(fg_details[0]?.manufactured_qty) || 0
+			: flt(frm.doc.manufactured_qty) || 0;
 	
 	// Update manufactured_qty for all rows in production_details table
 	frm.doc.production_details.forEach(function(row) {
@@ -391,22 +400,43 @@ function update_production_details_manufactured_qty(frm) {
  * Fetch manufacturing item from BOM and add it to production_details table
  * @param {Object} frm - The form object
  */
-function fetch_and_add_manufacturing_item(frm) {
-	if (!frm.doc.bom) {
-		return;
-	}
+function fetch_and_add_manufacturing_item(frm, bom_name) {
+	const bom_to_use =
+		bom_name ||
+		frm.doc.bom ||
+		(frm.doc.table_foun && frm.doc.table_foun[0] && frm.doc.table_foun[0].bom) ||
+		null;
+	if (!bom_to_use) return;
+
+	// `manufactured_qty` was moved to Finished Good Details (table_foun).
+	const fg_details = frm.doc.table_foun || [];
+	const manufactured_qty_val =
+		(fg_details.length > 0 ? flt(fg_details[0].manufactured_qty) : 0) ||
+		flt(frm.doc.manufactured_qty) ||
+		0;
 	
 	// Fetch BOM document to get manufacturing item
 	frappe.call({
 		method: "frappe.client.get",
 		args: {
 			doctype: "BOM",
-			name: frm.doc.bom
+			name: bom_to_use
 		},
 		callback: function(r) {
 			if (r.message && r.message.item) {
 				const manufacturing_item_code = r.message.item;
 				
+				// Populate the moved `manufacturing_item` field in Finished Good Details.
+				(frm.doc.table_foun || []).forEach(function(fg_row) {
+					// Field is read_only, but programmatic set should still work for defaults.
+					frappe.model.set_value(
+						fg_row.doctype,
+						fg_row.name,
+						"manufacturing_item",
+						manufacturing_item_code
+					);
+				});
+
 				// Get item details
 				frappe.call({
 					method: "frappe.client.get",
@@ -432,10 +462,13 @@ function fetch_and_add_manufacturing_item(frm) {
 								frappe.model.set_value(row.doctype, row.name, "target_warehouse", "Finished Goods - HEX");
 							}
 							
-							// Set manufactured_qty from main form if available
-							if (frm.doc.manufactured_qty) {
-								frappe.model.set_value(row.doctype, row.name, "manufactured_qty", flt(frm.doc.manufactured_qty) || 0);
-							}
+							// Set manufactured_qty from moved field.
+							frappe.model.set_value(
+								row.doctype,
+								row.name,
+								"manufactured_qty",
+								manufactured_qty_val
+							);
 							
 							// Refresh the child table to show new row
 							frm.refresh_field("production_details");
@@ -542,7 +575,15 @@ function calculate_total_rm_consumption(frm) {
 function calculate_closing_qty_for_mip(frm) {
 	// Safely parse all values, treating null/undefined/empty as 0
 	const total_rm_consumption = flt(frm.doc.total_rm_consumption) || 0;
-	const net_weight = flt(frm.doc.net_weight) || 0;
+	// `net_weight` was moved to `Finished Good Details` (child table: table_foun).
+	// Use summed child net_weight when present, otherwise fallback to legacy parent field.
+	const fg_details = frm.doc.table_foun || [];
+	const net_weight =
+		fg_details.length > 0
+			? fg_details.reduce(function (acc, row) {
+					return acc + (flt(row.net_weight) || 0);
+				}, 0)
+			: flt(frm.doc.net_weight) || 0;
 	const process_loss_weight = flt(frm.doc.process_loss_weight) || 0;
 	
 	// Calculate closing_qty_for_mip
@@ -726,6 +767,193 @@ frappe.ui.form.on("Production Log Sheet FG Table", {
 	}
 });
 
+// Handle child table field changes for Finished Good Details
+// This mirrors the old header logic for gross_weight/weight_of_fabric_packing → net_weight.
+frappe.ui.form.on("Production Log Sheet FG Details Table", {
+	bom(frm, cdt, cdn) {
+		const row = locals[cdt] && locals[cdt][cdn];
+		const bom_name = row && row.bom;
+
+		// Mirror old header `bom(frm)` logic, but use child row BOM.
+		if (bom_name) {
+			// Clear existing rows in raw_material_consumption table
+			frm.clear_table("raw_material_consumption");
+
+			// Preserve manually added rows in production_details
+			const rows_to_keep = [];
+			(frm.doc.production_details || []).forEach(function(p_row) {
+				if (
+					p_row.manual_entry === 1 ||
+					p_row.manual_entry === "1" ||
+					p_row.manual_entry === true
+				) {
+					rows_to_keep.push({
+						item_code: p_row.item_code,
+						item_name: p_row.item_name,
+						target_warehouse: p_row.target_warehouse,
+						manufactured_qty: p_row.manufactured_qty,
+						stock_uom: p_row.stock_uom,
+						manual_entry: 1,
+					});
+				}
+			});
+
+			frm.clear_table("production_details");
+
+			// Restore manual rows
+			rows_to_keep.forEach(function(row_data) {
+				let new_row = frm.add_child("production_details");
+				new_row.item_code = row_data.item_code;
+				new_row.item_name = row_data.item_name;
+				new_row.target_warehouse = row_data.target_warehouse;
+				new_row.manufactured_qty = row_data.manufactured_qty;
+				new_row.stock_uom = row_data.stock_uom;
+				new_row.manual_entry = 1;
+			});
+
+			// Fetch BOM items from server
+			frappe.call({
+				method: "hexplastics.api.production_log_book.get_bom_items_only",
+				args: { bom_name: bom_name },
+				callback: function(r) {
+					if (r.message && r.message.length > 0) {
+						add_bom_items_to_table(frm, r.message);
+						frm.refresh_field("raw_material_consumption");
+						calculate_total_rm_consumption(frm);
+
+						// Auto-fill avl_in_plant after adding BOM items
+						if (frm.doc.production_date && frm.doc.shift_type) {
+							fill_avl_in_plant_for_items(frm);
+						}
+					}
+				},
+			});
+
+			// Fetch manufacturing item (main item) from BOM and add it to production_details
+			fetch_and_add_manufacturing_item(frm, bom_name);
+		} else {
+			// BOM cleared: clear raw_material_consumption
+			frm.clear_table("raw_material_consumption");
+			frm.refresh_field("raw_material_consumption");
+
+			// Preserve manually added items in production_details
+			const manual_rows_to_keep = [];
+			(frm.doc.production_details || []).forEach(function(p_row) {
+				if (
+					p_row.manual_entry === 1 ||
+					p_row.manual_entry === "1" ||
+					p_row.manual_entry === true
+				) {
+					manual_rows_to_keep.push({
+						item_code: p_row.item_code,
+						item_name: p_row.item_name,
+						target_warehouse: p_row.target_warehouse,
+						manufactured_qty: p_row.manufactured_qty,
+						stock_uom: p_row.stock_uom,
+						manual_entry: 1,
+					});
+				}
+			});
+
+			frm.clear_table("production_details");
+
+			manual_rows_to_keep.forEach(function(row_data) {
+				let new_row = frm.add_child("production_details");
+				new_row.item_code = row_data.item_code;
+				new_row.item_name = row_data.item_name;
+				new_row.target_warehouse = row_data.target_warehouse;
+				new_row.manufactured_qty = row_data.manufactured_qty;
+				new_row.stock_uom = row_data.stock_uom;
+				new_row.manual_entry = 1;
+			});
+
+			frm.refresh_field("production_details");
+			calculate_total_rm_consumption(frm);
+			calculate_total_production_weight(frm);
+			calculate_closing_qty_for_mip(frm);
+		}
+	},
+	gross_weight(frm, cdt, cdn) {
+		calculate_finished_good_details_net_weight(frm, cdt, cdn);
+	},
+	weight_of_fabric_packing(frm, cdt, cdn) {
+		calculate_finished_good_details_net_weight(frm, cdt, cdn);
+	},
+
+	// When manufactured_qty changes in Finished Good Details, keep Production Details in sync.
+	manufactured_qty(frm, cdt, cdn) {
+		update_production_details_manufactured_qty(frm);
+		calculate_total_production_weight(frm);
+		calculate_closing_qty_for_mip(frm);
+		frm.refresh_field("production_details");
+	},
+
+	table_foun_add(frm, cdt, cdn) {
+		calculate_finished_good_details_net_weight(frm, cdt, cdn);
+		// Keep legacy Production Details manufactured_qty in sync with moved field.
+		update_production_details_manufactured_qty(frm);
+		calculate_total_production_weight(frm);
+		calculate_closing_qty_for_mip(frm);
+		frm.refresh_field("production_details");
+	},
+	table_foun_remove(frm, cdt, cdn) {
+		// Recalculate totals when FG details rows are added/removed.
+		update_production_details_manufactured_qty(frm);
+		calculate_closing_qty_for_mip(frm);
+		calculate_total_production_weight(frm);
+		frm.refresh_field("production_details");
+	}
+});
+
+function calculate_finished_good_details_net_weight(frm, cdt, cdn) {
+	const row = locals[cdt] && locals[cdt][cdn];
+	if (!row) return;
+
+	let gross_weight = flt(row.gross_weight) || 0;
+	let weight_of_fabric_packing = flt(row.weight_of_fabric_packing) || 0;
+
+	// Formula: net_weight = gross_weight - weight_of_fabric_packing
+	let net_weight = gross_weight - weight_of_fabric_packing;
+	net_weight = Math.max(0, net_weight);
+
+	// Round to 4 decimal places to match field precision.
+	net_weight = Math.round(net_weight * 10000) / 10000;
+
+	if (flt(row.net_weight) !== net_weight) {
+		frappe.model.set_value(cdt, cdn, "net_weight", net_weight);
+	}
+
+	// Optional: keep legacy header fields in sync (dashboards/APIs may still read them).
+	const fg_details = frm.doc.table_foun || [];
+	const total_net_weight = fg_details.reduce(function (acc, r) {
+		return acc + (flt(r.net_weight) || 0);
+	}, 0);
+	const total_gross_weight = fg_details.reduce(function (acc, r) {
+		return acc + (flt(r.gross_weight) || 0);
+	}, 0);
+	const total_fabric_packing_weight = fg_details.reduce(function (acc, r) {
+		return acc + (flt(r.weight_of_fabric_packing) || 0);
+	}, 0);
+
+	if (frm.fields_dict && frm.fields_dict.net_weight) {
+		set_form_value_if_changed(frm, "net_weight", Math.round(total_net_weight * 10000) / 10000);
+	}
+	if (frm.fields_dict && frm.fields_dict.gross_weight) {
+		set_form_value_if_changed(frm, "gross_weight", Math.round(total_gross_weight * 10000) / 10000);
+	}
+	if (frm.fields_dict && frm.fields_dict.weight_of_fabric_packing) {
+		set_form_value_if_changed(
+			frm,
+			"weight_of_fabric_packing",
+			Math.round(total_fabric_packing_weight * 10000) / 10000
+		);
+	}
+
+	// Totals that depend on net_weight
+	calculate_closing_qty_for_mip(frm);
+	calculate_total_production_weight(frm);
+}
+
 /**
  * Calculate closing_stock for a specific row in Raw Material Consumption table
  * Formula: closing_stock = (avl_in_plant + issued) - consumption
@@ -845,7 +1073,15 @@ function calculate_total_production_weight(frm) {
 		}
 	});
 
-	const net_weight = flt(frm.doc.net_weight) || 0;
+	// `net_weight` was moved to `Finished Good Details` (child table: table_foun).
+	// Use summed child net_weight when present, otherwise fallback to legacy parent field.
+	const fg_details = frm.doc.table_foun || [];
+	const net_weight =
+		fg_details.length > 0
+			? fg_details.reduce(function (acc, row) {
+					return acc + (flt(row.net_weight) || 0);
+				}, 0)
+			: flt(frm.doc.net_weight) || 0;
 	let total = manufactured_qty_total + net_weight;
 
 	// Round to 4 decimal places to prevent floating-point drift

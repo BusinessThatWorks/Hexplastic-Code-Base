@@ -15,17 +15,63 @@ class ProductionLogSheet(Document):
         This prevents floating-point precision drift that causes "Cannot Update After Submit" errors.
         All fields with precision 4 are rounded to 4 decimal places.
         """
+        # Recompute moved-field derived values server-side so imports/API saves
+        # behave like the pre-move client logic.
+        self._recalculate_finished_good_details_derived_fields()
+
         # Calculate total_rm_consumption from raw_material_consumption child table
         self._calculate_total_rm_consumption()
 
         # Calculate total_production_weight from production_details child table
         self._calculate_total_production_weight()
 
+        # Calculate closing_qty_for_mip from total_rm_consumption - net_weight - process_loss_weight
+        # (net_weight is now sourced from Finished Good Details child table: table_foun)
+        self._calculate_closing_qty_for_mip()
+
+        # Keep legacy header fields in sync (dashboards/APIs may still read them).
+        details = self.get("table_foun") or []
+        net_weight_total = self._get_finished_good_net_weight_total()
+        gross_weight_total = sum(flt(d.get("gross_weight")) for d in details)
+        fabric_packing_weight_total = sum(
+            flt(d.get("weight_of_fabric_packing")) for d in details
+        )
+        manufacturing_item_total = None
+        if details:
+            manufacturing_item_total = details[0].get("manufacturing_item")
+        if self.meta.has_field("manufacturing_item") and not manufacturing_item_total:
+            # Fallback for cases where the child field isn't populated
+            for d in self.get("production_details", []):
+                if d.get("item_code") and not (d.get("manual_entry") in [1, "1", True]):
+                    manufacturing_item_total = d.get("item_code")
+                    break
+            if not manufacturing_item_total:
+                # Last resort: first available item_code from production_details
+                for d in self.get("production_details", []):
+                    if d.get("item_code"):
+                        manufacturing_item_total = d.get("item_code")
+                        break
+
+        if self.meta.has_field("net_weight"):
+            self.net_weight = round(flt(net_weight_total), 4)
+        if self.meta.has_field("gross_weight"):
+            self.gross_weight = round(flt(gross_weight_total), 4)
+        if self.meta.has_field("weight_of_fabric_packing"):
+            self.weight_of_fabric_packing = round(flt(fabric_packing_weight_total), 4)
+        if self.meta.has_field("manufacturing_item"):
+            self.manufacturing_item = manufacturing_item_total
+
         # Round closing_qty_for_mip to 4 decimal places (precision: 4)
         if self.get("closing_qty_for_mip") is not None:
             self.closing_qty_for_mip = round(flt(self.closing_qty_for_mip), 4)
 
-        # Round net_weight to 4 decimal places (precision: 4)
+        # Round net_weight in Finished Good Details rows (precision: 4)
+        if self.get("table_foun"):
+            for row in self.table_foun:
+                if row.get("net_weight") is not None:
+                    row.net_weight = round(flt(row.net_weight), 4)
+
+        # Backward compatibility: if legacy parent net_weight exists, round it too.
         if self.get("net_weight") is not None:
             self.net_weight = round(flt(self.net_weight), 4)
 
@@ -35,6 +81,42 @@ class ProductionLogSheet(Document):
                 if row.get("closing_stock") is not None:
                     row.closing_stock = round(flt(row.closing_stock), 4)
 
+    def _recalculate_finished_good_details_derived_fields(self) -> None:
+        """Recompute derived values inside Finished Good Details (child table).
+
+        Pre-move behavior (header fields):
+        - net_weight = max(0, gross_weight - weight_of_fabric_packing)
+
+        After move:
+        - Recompute the same formula per `Finished Good Details` row so
+          server-side validation keeps data consistent even if JS doesn't run
+          (imports/API).
+
+        Also sync `production_details.manufactured_qty` using the moved
+        `manufactured_qty` value (same legacy behavior as the header field):
+        - apply the (single) moved manufactured_qty to all `production_details`
+          rows with `item_code`.
+        """
+        details = self.get("table_foun") or []
+        if details:
+            for row in details:
+                gross_weight = flt(row.get("gross_weight"))
+                weight_of_fabric_packing = flt(
+                    row.get("weight_of_fabric_packing")
+                )
+                net_weight = max(0.0, gross_weight - weight_of_fabric_packing)
+                row.net_weight = round(net_weight, 4)
+
+            manufactured_qty = flt(details[0].get("manufactured_qty"))
+        else:
+            # If FG details are removed, behave like the old header field:
+            # production_details manufactured_qty becomes 0.
+            manufactured_qty = flt(self.get("manufactured_qty"))
+
+        for d in self.get("production_details", []):
+            if d.get("item_code"):
+                d.manufactured_qty = manufactured_qty
+
     def _calculate_total_rm_consumption(self):
         """Sum of consumption from raw_material_consumption child table."""
         total = 0.0
@@ -42,16 +124,37 @@ class ProductionLogSheet(Document):
             total += flt(row.consumption)
         self.total_rm_consumption = round(total, 4)
 
+    def _get_finished_good_net_weight_total(self) -> float:
+        """Sum of net_weight from Finished Good Details child table (table_foun).
+
+        Falls back to legacy parent `net_weight` if the child table is empty.
+        """
+        details = self.get("table_foun") or []
+        if details:
+            return sum(flt(d.get("net_weight")) for d in details)
+        return flt(self.get("net_weight"))
+
     def _calculate_total_production_weight(self):
-        """Sum of manufactured_qty for KG/KGS rows in production_details + net_weight."""
+        """Sum of manufactured_qty for KG/KGS rows in production_details + net_weight.
+
+        net_weight is sourced from Finished Good Details child table (table_foun).
+        """
         manufactured_qty_total = 0.0
         for row in self.get("production_details", []):
             uom = (row.stock_uom or "").strip().upper()
             if uom in {"KGS", "KG"}:
                 manufactured_qty_total += flt(row.manufactured_qty)
 
-        net_weight = flt(self.net_weight)
-        self.total_production_weight = round(manufactured_qty_total + net_weight, 4)
+        net_weight_total = self._get_finished_good_net_weight_total()
+        self.total_production_weight = round(manufactured_qty_total + net_weight_total, 4)
+
+    def _calculate_closing_qty_for_mip(self) -> None:
+        """closing_qty_for_mip = total_rm_consumption - net_weight - process_loss_weight"""
+        total_rm_consumption = flt(self.total_rm_consumption)
+        net_weight_total = self._get_finished_good_net_weight_total()
+        process_loss_weight = flt(self.get("process_loss_weight"))
+
+        self.closing_qty_for_mip = total_rm_consumption - net_weight_total - process_loss_weight
 
     def on_submit(self):
         """Create and submit Manufacture Stock Entry on submit.
