@@ -156,6 +156,33 @@ class ProductionLogSheet(Document):
 
         self.closing_qty_for_mip = total_rm_consumption - net_weight_total - process_loss_weight
 
+    def _get_manufacturing_item_for_stock_entry(self) -> str | None:
+        """Resolve manufacturing item after the field moved to Finished Good Details.
+
+        Priority:
+        1. `table_foun[0].manufacturing_item` (new source)
+        2. legacy header `manufacturing_item` (if still present)
+        3. first non-manual row from `production_details`
+        4. first row with `item_code` from `production_details`
+        """
+        details = self.get("table_foun") or []
+        if details and details[0].get("manufacturing_item"):
+            return details[0].get("manufacturing_item")
+
+        legacy = self.get("manufacturing_item")
+        if legacy:
+            return legacy
+
+        for d in self.get("production_details", []):
+            if d.get("item_code") and not (d.get("manual_entry") in [1, "1", True]):
+                return d.get("item_code")
+
+        for d in self.get("production_details", []):
+            if d.get("item_code"):
+                return d.get("item_code")
+
+        return None
+
     def on_submit(self):
         """Create and submit Manufacture Stock Entry on submit.
 
@@ -293,10 +320,13 @@ class ProductionLogSheet(Document):
             # ERPNext only allows ONE item with is_finished_item = 1 in a Manufacture Stock Entry.
             # Prefer marking manufacturing_item if it exists in production_details, otherwise mark first item.
             finished_item_marked = False
+            manufacturing_item_for_stock_entry = (
+                self._get_manufacturing_item_for_stock_entry()
+            )
             if self.production_details:
                 # Pre-check: is the manufacturing_item present in production_details?
                 manufacturing_item_in_details = any(
-                    row.item_code == self.manufacturing_item
+                    row.item_code == manufacturing_item_for_stock_entry
                     for row in self.production_details
                     if row.item_code
                     and row.manufactured_qty
@@ -330,7 +360,7 @@ class ProductionLogSheet(Document):
                     # Mark exactly ONE item as is_finished_item = 1:
                     # - If manufacturing_item is in the details, only that item is marked.
                     # - Otherwise, the first valid item is marked.
-                    is_main_item = row.item_code == self.manufacturing_item
+                    is_main_item = row.item_code == manufacturing_item_for_stock_entry
                     if manufacturing_item_in_details:
                         should_mark_finished = is_main_item and not finished_item_marked
                     else:
