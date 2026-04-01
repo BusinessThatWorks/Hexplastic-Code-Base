@@ -60,19 +60,8 @@
   "tape_checked",
   "tape_rejected",
   "column_break_tgky",
-  "stickering_dept_section",
-  "sticker_available_in_plant",
-  "received_from_taping_dept",
-  "column_break_ybja",
-  "sticker_checked",
-  "sticker_rejected",
-  "column_break_hsms",
   "finished_goods_details_section",
-  "finished_item",
-  "column_break_uypn",
-  "total_box_produced",
-  "column_break_tqeh",
-  "fg_target_warehouse",
+  "table_aqtt",
   "sheet_cleaning_tab",
   "cleaning_item",
   "sheet_cleaning_qty",
@@ -314,43 +303,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "collapsible": 1,
-   "fieldname": "stickering_dept_section",
-   "fieldtype": "Section Break",
-   "label": "Stickering Dept."
-  },
-  {
-   "fieldname": "sticker_available_in_plant",
-   "fieldtype": "Int",
-   "label": "Available in Plant"
-  },
-  {
-   "fieldname": "received_from_taping_dept",
-   "fieldtype": "Int",
-   "label": "Received from Taping Dept",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_ybja",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "sticker_checked",
-   "fieldtype": "Int",
-   "label": "Checked",
-   "mandatory_depends_on": "eval:((doc.sticker_available_in_plant||0)+(doc.received_from_taping_dept||0)>0)"
-  },
-  {
-   "fieldname": "sticker_rejected",
-   "fieldtype": "Int",
-   "label": "Rejected",
-   "mandatory_depends_on": "eval:((doc.sticker_available_in_plant||0)+(doc.received_from_taping_dept||0)>0)"
-  },
-  {
-   "fieldname": "column_break_hsms",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "rm_source_warehouse",
    "fieldtype": "Link",
    "label": "RM Source Warehouse",
@@ -366,39 +318,6 @@
    "fieldtype": "Int",
    "label": "Transfer to Clean Sheet",
    "read_only": 1
-  },
-  {
-   "fieldname": "finished_goods_details_section",
-   "fieldtype": "Section Break",
-   "label": "Finished Goods Details"
-  },
-  {
-   "fieldname": "finished_item",
-   "fieldtype": "Link",
-   "label": "Finished Item",
-   "options": "Item",
-   "reqd": 1
-  },
-  {
-   "fieldname": "column_break_uypn",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "total_box_produced",
-   "fieldtype": "Int",
-   "label": "Total Box Produced",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_tqeh",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "fg_target_warehouse",
-   "fieldtype": "Link",
-   "label": "FG Target Warehouse",
-   "options": "Warehouse",
-   "reqd": 1
   },
   {
    "fieldname": "sheet_cleaning_tab",
@@ -486,13 +405,23 @@
    "fieldname": "rejected_for_broken",
    "fieldtype": "Int",
    "label": "Rejected for Broken"
+  },
+  {
+   "fieldname": "finished_goods_details_section",
+   "fieldtype": "Section Break",
+   "label": "Finished Goods Details"
+  },
+  {
+   "fieldname": "table_aqtt",
+   "fieldtype": "Table",
+   "options": "Box Production Table"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-01 14:48:36.968408",
+ "modified": "2026-04-01 17:23:15.449645",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Box Production",
