@@ -96,6 +96,13 @@
    "search_index": 1
   },
   {
+   "fieldname": "raw_material",
+   "fieldtype": "Link",
+   "label": "Raw Material",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
    "fieldname": "production_date",
    "fieldtype": "Date",
    "in_list_view": 1,
@@ -167,7 +174,8 @@
   {
    "fieldname": "received_from_printing_dept",
    "fieldtype": "Int",
-   "label": "Received from Printing Dept"
+   "label": "Received from Printing Dept",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_vyon",
@@ -177,13 +185,13 @@
    "fieldname": "die_checked",
    "fieldtype": "Int",
    "label": "Work Completed",
-   "reqd": 1
+   "mandatory_depends_on": "eval:((doc.die_available_in_plant||0)+(doc.received_from_printing_dept||0)>0)"
   },
   {
    "fieldname": "die_rejected",
    "fieldtype": "Int",
    "label": "Rejected",
-   "reqd": 1
+   "mandatory_depends_on": "eval:((doc.die_available_in_plant||0)+(doc.received_from_printing_dept||0)>0)"
   },
   {
    "fieldname": "column_break_srzv",
@@ -203,7 +211,8 @@
   {
    "fieldname": "received_from_die_punching_dept",
    "fieldtype": "Int",
-   "label": "Received from Die Punching Dept"
+   "label": "Received from Die Punching Dept",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_euji",
@@ -213,7 +222,7 @@
    "fieldname": "trim_checked",
    "fieldtype": "Int",
    "label": "Work Completed",
-   "reqd": 1
+   "mandatory_depends_on": "eval:((doc.trim_available_in_plant||0)+(doc.received_from_die_punching_dept||0)>0)"
   },
   {
    "fieldname": "column_break_bznl",
@@ -243,7 +252,8 @@
   {
    "fieldname": "received_from_trimming_dept",
    "fieldtype": "Int",
-   "label": "Received from Trimming Dept"
+   "label": "Received from Trimming Dept",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_mojd",
@@ -253,13 +263,13 @@
    "fieldname": "staple_checked",
    "fieldtype": "Int",
    "label": "Work Completed",
-   "reqd": 1
+   "mandatory_depends_on": "eval:((doc.staple_available_in_plant||0)+(doc.received_from_trimming_dept||0)>0)"
   },
   {
    "fieldname": "staple_rejected",
    "fieldtype": "Int",
    "label": "Rejected",
-   "reqd": 1
+   "mandatory_depends_on": "eval:((doc.staple_available_in_plant||0)+(doc.received_from_trimming_dept||0)>0)"
   },
   {
    "fieldname": "column_break_cdvs",
@@ -279,7 +289,8 @@
   {
    "fieldname": "received_from_stapling_dept",
    "fieldtype": "Int",
-   "label": "Received from Stapling Dept"
+   "label": "Received from Stapling Dept",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_hgtt",
@@ -289,13 +300,13 @@
    "fieldname": "tape_checked",
    "fieldtype": "Int",
    "label": "Work Completed",
-   "reqd": 1
+   "mandatory_depends_on": "eval:((doc.tape_available_in_plant||0)+(doc.received_from_stapling_dept||0)>0)"
   },
   {
    "fieldname": "tape_rejected",
    "fieldtype": "Int",
    "label": "Rejected",
-   "reqd": 1
+   "mandatory_depends_on": "eval:((doc.tape_available_in_plant||0)+(doc.received_from_stapling_dept||0)>0)"
   },
   {
    "fieldname": "column_break_tgky",
@@ -315,7 +326,8 @@
   {
    "fieldname": "received_from_taping_dept",
    "fieldtype": "Int",
-   "label": "Received from Taping Dept"
+   "label": "Received from Taping Dept",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_ybja",
@@ -325,24 +337,17 @@
    "fieldname": "sticker_checked",
    "fieldtype": "Int",
    "label": "Checked",
-   "reqd": 1
+   "mandatory_depends_on": "eval:((doc.sticker_available_in_plant||0)+(doc.received_from_taping_dept||0)>0)"
   },
   {
    "fieldname": "sticker_rejected",
    "fieldtype": "Int",
    "label": "Rejected",
-   "reqd": 1
+   "mandatory_depends_on": "eval:((doc.sticker_available_in_plant||0)+(doc.received_from_taping_dept||0)>0)"
   },
   {
    "fieldname": "column_break_hsms",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "raw_material",
-   "fieldtype": "Link",
-   "label": "Raw Material",
-   "options": "Item",
-   "reqd": 1
   },
   {
    "fieldname": "rm_source_warehouse",
@@ -359,7 +364,7 @@
    "fieldname": "transfer_to_clean_sheet",
    "fieldtype": "Int",
    "label": "Transfer to Clean Sheet",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "finished_goods_details_section",
@@ -381,7 +386,7 @@
    "fieldname": "total_box_produced",
    "fieldtype": "Int",
    "label": "Total Box Produced",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "column_break_tqeh",
@@ -410,7 +415,7 @@
    "fieldname": "sheet_cleaning_qty",
    "fieldtype": "Int",
    "label": "Sheet Cleaning Qty",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "column_break_kcko",
@@ -431,19 +436,21 @@
    "fieldname": "stock_entry_id",
    "fieldtype": "Link",
    "label": "Stock Entry ID",
-   "options": "Stock Entry"
+   "options": "Stock Entry",
+   "read_only": 1
   },
   {
    "fieldname": "box_stock_entry_id",
    "fieldtype": "Link",
    "label": "Stock Entry ID",
-   "options": "Stock Entry"
+   "options": "Stock Entry",
+   "read_only": 1
   },
   {
    "fieldname": "box_produced",
    "fieldtype": "Int",
    "label": "Box Produced",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "in_area_checked",
@@ -484,7 +491,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-26 20:01:54.925936",
+ "modified": "2026-04-01 14:11:28.844396",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Box Production",
