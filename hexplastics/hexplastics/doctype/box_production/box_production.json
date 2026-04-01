@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "format: {production_date} - {shift_type}",
  "creation": "2026-03-20 11:39:51.306513",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -491,10 +492,11 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-01 14:11:28.844396",
+ "modified": "2026-04-01 14:48:36.968408",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Box Production",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
