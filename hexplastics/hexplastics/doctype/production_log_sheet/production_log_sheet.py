@@ -36,20 +36,24 @@ class ProductionLogSheet(Document):
         fabric_packing_weight_total = sum(
             flt(d.get("weight_of_fabric_packing")) for d in details
         )
-        manufacturing_item_total = None
-        if details:
-            manufacturing_item_total = details[0].get("manufacturing_item")
-        if self.meta.has_field("manufacturing_item") and not manufacturing_item_total:
-            # Fallback for cases where the child field isn't populated
+
+        # Resolve a single manufacturing_item for legacy header field.
+        # Use the first FG row's manufacturing_item, falling back to
+        # production_details if needed.
+        manufacturing_item_value = None
+        for d in details:
+            if d.get("manufacturing_item"):
+                manufacturing_item_value = d.get("manufacturing_item")
+                break
+        if self.meta.has_field("manufacturing_item") and not manufacturing_item_value:
             for d in self.get("production_details", []):
                 if d.get("item_code") and not (d.get("manual_entry") in [1, "1", True]):
-                    manufacturing_item_total = d.get("item_code")
+                    manufacturing_item_value = d.get("item_code")
                     break
-            if not manufacturing_item_total:
-                # Last resort: first available item_code from production_details
+            if not manufacturing_item_value:
                 for d in self.get("production_details", []):
                     if d.get("item_code"):
-                        manufacturing_item_total = d.get("item_code")
+                        manufacturing_item_value = d.get("item_code")
                         break
 
         if self.meta.has_field("net_weight"):
@@ -59,7 +63,7 @@ class ProductionLogSheet(Document):
         if self.meta.has_field("weight_of_fabric_packing"):
             self.weight_of_fabric_packing = round(flt(fabric_packing_weight_total), 4)
         if self.meta.has_field("manufacturing_item"):
-            self.manufacturing_item = manufacturing_item_total
+            self.manufacturing_item = manufacturing_item_value
 
         # Round closing_qty_for_mip to 4 decimal places (precision: 4)
         if self.get("closing_qty_for_mip") is not None:
@@ -84,22 +88,20 @@ class ProductionLogSheet(Document):
     def _recalculate_finished_good_details_derived_fields(self) -> None:
         """Recompute derived values inside Finished Good Details (child table).
 
-        Pre-move behavior (header fields):
-        - net_weight = max(0, gross_weight - weight_of_fabric_packing)
-
-        After move:
-        - Recompute the same formula per `Finished Good Details` row so
-          server-side validation keeps data consistent even if JS doesn't run
-          (imports/API).
-
-        Also sync `production_details.manufactured_qty` using the moved
-        `manufactured_qty` value (same legacy behavior as the header field):
-        - apply the (single) moved manufactured_qty to all `production_details`
-          rows with `item_code`.
+        Multi-row aware:
+        - Recompute ``net_weight`` per FG Details row.
+        - Build a map of ``manufacturing_item → SUM(manufactured_qty)`` across
+          *all* FG rows and apply those totals to the corresponding
+          ``production_details`` rows (excluding manual entries).
         """
         details = self.get("table_foun") or []
+
         if details:
+            # Map: manufacturing_item → total manufactured_qty
+            item_qty_map: dict[str, float] = {}
+
             for row in details:
+                # Recompute net_weight per row
                 gross_weight = flt(row.get("gross_weight"))
                 weight_of_fabric_packing = flt(
                     row.get("weight_of_fabric_packing")
@@ -107,15 +109,25 @@ class ProductionLogSheet(Document):
                 net_weight = max(0.0, gross_weight - weight_of_fabric_packing)
                 row.net_weight = round(net_weight, 4)
 
-            manufactured_qty = flt(details[0].get("manufactured_qty"))
-        else:
-            # If FG details are removed, behave like the old header field:
-            # production_details manufactured_qty becomes 0.
-            manufactured_qty = flt(self.get("manufactured_qty"))
+                # Accumulate manufactured_qty per manufacturing_item
+                mfg_item = row.get("manufacturing_item")
+                if mfg_item:
+                    item_qty_map[mfg_item] = item_qty_map.get(
+                        mfg_item, 0
+                    ) + flt(row.get("manufactured_qty"))
 
-        for d in self.get("production_details", []):
-            if d.get("item_code"):
-                d.manufactured_qty = manufactured_qty
+            # Update non-manual production_details rows
+            for d in self.get("production_details", []):
+                if d.get("manual_entry") in [1, "1", True]:
+                    continue
+                if d.get("item_code") and d.item_code in item_qty_map:
+                    d.manufactured_qty = item_qty_map[d.item_code]
+        else:
+            # Legacy fallback: no FG rows → use parent field
+            manufactured_qty = flt(self.get("manufactured_qty"))
+            for d in self.get("production_details", []):
+                if d.get("item_code"):
+                    d.manufactured_qty = manufactured_qty
 
     def _calculate_total_rm_consumption(self):
         """Sum of consumption from raw_material_consumption child table."""

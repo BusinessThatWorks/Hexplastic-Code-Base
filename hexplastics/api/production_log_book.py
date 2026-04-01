@@ -7,6 +7,92 @@ from datetime import datetime, timedelta
 
 
 @frappe.whitelist()
+def get_combined_bom_data(bom_names):
+    """Fetch raw-material items and manufacturing-item data for multiple BOMs in one call.
+
+    This is the primary API used by the Production Log Sheet multi-row
+    Finished Good Details flow.  It:
+    1. Collects raw materials (BOM Items) across all provided BOMs,
+       **deduplicated** by ``item_code``.
+    2. Resolves the manufacturing (finished) item for each BOM.
+
+    Args:
+        bom_names (list | str): List of BOM names.  May arrive as a
+            JSON-encoded string from the client side.
+
+    Returns:
+        dict: {
+            "raw_materials": [
+                {"item_code": "…", "item_name": "…", "uom": "…"}, …
+            ],
+            "manufacturing_items": {
+                "<bom_name>": {
+                    "item_code": "…",
+                    "item_name": "…",
+                    "stock_uom": "…"
+                }, …
+            }
+        }
+    """
+    try:
+        if isinstance(bom_names, str):
+            bom_names = frappe.parse_json(bom_names)
+
+        # Deduplicate and filter
+        bom_names = list({b for b in (bom_names or []) if b})
+
+        if not bom_names:
+            return {"raw_materials": [], "manufacturing_items": {}}
+
+        # ── Raw materials (deduplicated by item_code) ────────────────
+        seen_items: set = set()
+        raw_materials: list = []
+
+        for bom_name in bom_names:
+            if not frappe.db.exists("BOM", bom_name):
+                continue
+            items = frappe.get_all(
+                "BOM Item",
+                filters={"parent": bom_name},
+                fields=["item_code", "qty", "uom", "item_name"],
+                order_by="idx",
+            )
+            for item in items:
+                if item.item_code and item.item_code not in seen_items:
+                    seen_items.add(item.item_code)
+                    raw_materials.append(item)
+
+        # ── Manufacturing items (one per BOM) ────────────────────────
+        manufacturing_items: dict = {}
+
+        for bom_name in bom_names:
+            bom_data = frappe.db.get_value("BOM", bom_name, ["item"], as_dict=True)
+            if not bom_data or not bom_data.item:
+                continue
+            item_code = bom_data.item
+            item_details = frappe.db.get_value(
+                "Item", item_code, ["item_name", "stock_uom"], as_dict=True
+            )
+            manufacturing_items[bom_name] = {
+                "item_code": item_code,
+                "item_name": (item_details.item_name if item_details else item_code),
+                "stock_uom": (item_details.stock_uom if item_details else ""),
+            }
+
+        return {
+            "raw_materials": raw_materials,
+            "manufacturing_items": manufacturing_items,
+        }
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching combined BOM data"),
+        )
+        frappe.throw(_("Error fetching combined BOM data"))
+
+
+@frappe.whitelist()
 def get_bom_items_only(bom_name):
     """
     Fetch only BOM Items (from BOM Item child table) for populating the Production Log Book Table.
@@ -836,7 +922,9 @@ def get_boms_from_production_plan(production_plan: str) -> list:
 
         # Validate that Production Plan exists
         if not frappe.db.exists("Production Plan", production_plan):
-            frappe.throw(_("Production Plan {0} does not exist").format(production_plan))
+            frappe.throw(
+                _("Production Plan {0} does not exist").format(production_plan)
+            )
 
         # Fetch BOM names from Production Plan Item child table
         # Try different possible field names for the child table
@@ -851,11 +939,7 @@ def get_boms_from_production_plan(production_plan: str) -> list:
         )
 
         # Extract BOM names, filtering out None/empty values
-        bom_names = [
-            item["bom_no"]
-            for item in plan_items
-            if item.get("bom_no")
-        ]
+        bom_names = [item["bom_no"] for item in plan_items if item.get("bom_no")]
 
         # Remove duplicates and return
         return list(set(bom_names)) if bom_names else []

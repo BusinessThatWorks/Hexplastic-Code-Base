@@ -369,31 +369,61 @@ function calculate_net_weight(frm) {
 }
 
 /**
- * Update manufactured_qty in all rows of production_details table
+ * Update manufactured_qty in production_details table from Finished Good Details.
+ *
+ * Multi-row aware: builds a map of manufacturing_item → SUM(manufactured_qty)
+ * from all FG rows, then applies matching quantities to non-manual
+ * production_details rows.
+ *
  * @param {Object} frm - The form object
  */
 function update_production_details_manufactured_qty(frm) {
 	if (!frm.doc.production_details || frm.doc.production_details.length === 0) {
 		return;
 	}
-	
-	// `manufactured_qty` was moved to `Finished Good Details` (child table: table_foun).
-	// Use child value when present, otherwise fallback to legacy parent field.
+
 	const fg_details = frm.doc.table_foun || [];
-	const manufactured_qty =
-		fg_details.length > 0
-			? flt(fg_details[0]?.manufactured_qty) || 0
-			: flt(frm.doc.manufactured_qty) || 0;
-	
-	// Update manufactured_qty for all rows in production_details table
-	frm.doc.production_details.forEach(function(row) {
-		if (row.item_code) {
-			frappe.model.set_value(row.doctype, row.name, "manufactured_qty", manufactured_qty);
+
+	if (fg_details.length === 0) {
+		// Legacy fallback: no FG rows → use parent field (if it exists)
+		const manufactured_qty = flt(frm.doc.manufactured_qty) || 0;
+		frm.doc.production_details.forEach(function(row) {
+			if (row.item_code) {
+				frappe.model.set_value(row.doctype, row.name, "manufactured_qty", manufactured_qty);
+			}
+		});
+		frm.refresh_field("production_details");
+		return;
+	}
+
+	// Build map: manufacturing_item → total manufactured_qty from FG rows
+	const item_qty_map = {};
+	fg_details.forEach(function(fg_row) {
+		if (fg_row.manufacturing_item) {
+			const item = fg_row.manufacturing_item;
+			item_qty_map[item] = (item_qty_map[item] || 0) + (flt(fg_row.manufactured_qty) || 0);
 		}
 	});
-	
-	// Refresh the child table to show updated values
-	frm.refresh_field("production_details");
+
+	// Update non-manual production_details rows
+	let changed = false;
+	frm.doc.production_details.forEach(function(pd_row) {
+		// Skip manual rows
+		if (pd_row.manual_entry === 1 || pd_row.manual_entry === "1" || pd_row.manual_entry === true) {
+			return;
+		}
+		if (pd_row.item_code && item_qty_map.hasOwnProperty(pd_row.item_code)) {
+			const new_qty = item_qty_map[pd_row.item_code];
+			if (flt(pd_row.manufactured_qty) !== new_qty) {
+				frappe.model.set_value(pd_row.doctype, pd_row.name, "manufactured_qty", new_qty);
+				changed = true;
+			}
+		}
+	});
+
+	if (changed) {
+		frm.refresh_field("production_details");
+	}
 }
 
 /**
@@ -767,111 +797,221 @@ frappe.ui.form.on("Production Log Sheet FG Table", {
 	}
 });
 
+/**
+ * Remove all non-manual rows from production_details, preserving manual entries
+ * (e.g. MIP items added by the user).
+ *
+ * @param {Object} frm - The form object
+ */
+function _clear_non_manual_production_details(frm) {
+	const manual_rows = [];
+	(frm.doc.production_details || []).forEach(function(row) {
+		if (row.manual_entry === 1 || row.manual_entry === "1" || row.manual_entry === true) {
+			manual_rows.push({
+				item_code: row.item_code,
+				item_name: row.item_name,
+				target_warehouse: row.target_warehouse,
+				manufactured_qty: row.manufactured_qty,
+				stock_uom: row.stock_uom,
+				manual_entry: 1,
+			});
+		}
+	});
+
+	frm.clear_table("production_details");
+
+	manual_rows.forEach(function(row_data) {
+		let new_row = frm.add_child("production_details");
+		new_row.item_code = row_data.item_code;
+		new_row.item_name = row_data.item_name;
+		new_row.target_warehouse = row_data.target_warehouse;
+		new_row.manufactured_qty = row_data.manufactured_qty;
+		new_row.stock_uom = row_data.stock_uom;
+		new_row.manual_entry = 1;
+	});
+}
+
+/**
+ * Rebuild raw_material_consumption and production_details tables from ALL
+ * Finished Good Details (table_foun) rows.
+ *
+ * This is the central function for multi-row FG support.  It:
+ *  1. Collects every BOM referenced in table_foun.
+ *  2. Fetches combined raw-material + manufacturing-item data in ONE server
+ *     call (get_combined_bom_data).
+ *  3. Clears and rebuilds raw_material_consumption (deduped by item_code),
+ *     preserving user-entered consumption / source_warehouse values.
+ *  4. Clears non-manual production_details rows and rebuilds with one row per
+ *     unique manufacturing item, whose manufactured_qty is the SUM of matching
+ *     FG rows.
+ *  5. Sets manufacturing_item on each FG row.
+ *  6. Refreshes all dependent calculations without redundant refresh calls.
+ *
+ * @param {Object} frm - The form object
+ */
+function rebuild_tables_from_fg_details(frm) {
+	const fg_details = frm.doc.table_foun || [];
+
+	// ── Collect unique BOMs ──────────────────────────────────────────
+	const boms = [];
+	fg_details.forEach(function(row) {
+		if (row.bom && boms.indexOf(row.bom) === -1) {
+			boms.push(row.bom);
+		}
+	});
+
+	if (boms.length === 0) {
+		// No BOMs selected — clear dependent tables
+		frm.clear_table("raw_material_consumption");
+		frm.refresh_field("raw_material_consumption");
+
+		_clear_non_manual_production_details(frm);
+		frm.refresh_field("production_details");
+
+		// Clear manufacturing_item on any FG rows without BOM
+		fg_details.forEach(function(fg_row) {
+			if (!fg_row.bom && fg_row.manufacturing_item) {
+				frappe.model.set_value(fg_row.doctype, fg_row.name, "manufacturing_item", "");
+			}
+		});
+		frm.refresh_field("table_foun");
+
+		calculate_total_rm_consumption(frm);
+		calculate_total_production_weight(frm);
+		calculate_closing_qty_for_mip(frm);
+		return;
+	}
+
+	// ── Save current user-entered RM values before clearing ──────────
+	const saved_rm_values = {};
+	(frm.doc.raw_material_consumption || []).forEach(function(row) {
+		if (row.item_code) {
+			saved_rm_values[row.item_code] = {
+				consumption: row.consumption,
+				source_warehouse: row.source_warehouse,
+			};
+			// Preserve optional custom fields if they exist
+			if (row.avl_in_plant !== undefined) {
+				saved_rm_values[row.item_code].avl_in_plant = row.avl_in_plant;
+			}
+			if (row.issued !== undefined) {
+				saved_rm_values[row.item_code].issued = row.issued;
+			}
+			if (row.closing_stock !== undefined) {
+				saved_rm_values[row.item_code].closing_stock = row.closing_stock;
+			}
+		}
+	});
+
+	// ── Fetch combined data from server (ONE call) ───────────────────
+	frappe.call({
+		method: "hexplastics.api.production_log_book.get_combined_bom_data",
+		args: { bom_names: boms },
+		callback: function(r) {
+			if (!r.message) return;
+
+			const data = r.message;
+			const raw_materials = data.raw_materials || [];
+			// { bom_name: {item_code, item_name, stock_uom}, … }
+			const manufacturing_items = data.manufacturing_items || {};
+
+			// ── Rebuild raw_material_consumption ─────────────────────
+			frm.clear_table("raw_material_consumption");
+
+			raw_materials.forEach(function(item) {
+				if (!item.item_code) return;
+
+				let row = frm.add_child("raw_material_consumption");
+				row.item_code = item.item_code;
+				if (item.item_name) row.item_name = item.item_name;
+				if (item.uom) row.stock_uom = item.uom;
+
+				// Restore saved user-entered values
+				const saved = saved_rm_values[item.item_code];
+				if (saved) {
+					if (saved.consumption) row.consumption = saved.consumption;
+					if (saved.source_warehouse) row.source_warehouse = saved.source_warehouse;
+					if (saved.avl_in_plant !== undefined) row.avl_in_plant = saved.avl_in_plant;
+					if (saved.issued !== undefined) row.issued = saved.issued;
+					if (saved.closing_stock !== undefined) row.closing_stock = saved.closing_stock;
+				} else {
+					// Set default source warehouse for new items
+					row.source_warehouse = "Production - Hex";
+				}
+			});
+
+			frm.refresh_field("raw_material_consumption");
+
+			// ── Set manufacturing_item on each FG row & build qty map ─
+			const item_qty_map = {};     // item_code → total manufactured_qty
+			const item_details_map = {}; // item_code → {item_name, stock_uom}
+
+			fg_details.forEach(function(fg_row) {
+				if (!fg_row.bom) {
+					// Clear manufacturing_item for rows without BOM
+					if (fg_row.manufacturing_item) {
+						frappe.model.set_value(
+							fg_row.doctype, fg_row.name,
+							"manufacturing_item", ""
+						);
+					}
+					return;
+				}
+
+				const mfg_data = manufacturing_items[fg_row.bom];
+				if (!mfg_data) return;
+
+				// Set manufacturing_item on FG row
+				if (fg_row.manufacturing_item !== mfg_data.item_code) {
+					frappe.model.set_value(
+						fg_row.doctype, fg_row.name,
+						"manufacturing_item", mfg_data.item_code
+					);
+				}
+
+				// Accumulate qty per unique manufacturing item
+				const ic = mfg_data.item_code;
+				item_qty_map[ic] = (item_qty_map[ic] || 0) + (flt(fg_row.manufactured_qty) || 0);
+				item_details_map[ic] = mfg_data;
+			});
+
+			// ── Rebuild production_details (non-manual rows) ─────────
+			_clear_non_manual_production_details(frm);
+
+			// Add one production_details row per unique manufacturing item
+			Object.keys(item_qty_map).forEach(function(item_code) {
+				const details = item_details_map[item_code];
+				let pd_row = frm.add_child("production_details");
+				pd_row.item_code = item_code;
+				if (details.item_name) pd_row.item_name = details.item_name;
+				pd_row.manufactured_qty = item_qty_map[item_code];
+				if (details.stock_uom) pd_row.stock_uom = details.stock_uom;
+				pd_row.target_warehouse = "Finished Goods - HEX";
+			});
+
+			frm.refresh_field("production_details");
+			frm.refresh_field("table_foun");
+
+			// ── Recalculate all totals ───────────────────────────────
+			calculate_total_rm_consumption(frm);
+			calculate_total_production_weight(frm);
+			calculate_closing_qty_for_mip(frm);
+
+			// Auto-fill avl_in_plant if date and shift are available
+			if (frm.doc.production_date && frm.doc.shift_type) {
+				fill_avl_in_plant_for_items(frm);
+			}
+		},
+	});
+}
+
 // Handle child table field changes for Finished Good Details
 // This mirrors the old header logic for gross_weight/weight_of_fabric_packing → net_weight.
 frappe.ui.form.on("Production Log Sheet FG Details Table", {
 	bom(frm, cdt, cdn) {
-		const row = locals[cdt] && locals[cdt][cdn];
-		const bom_name = row && row.bom;
-
-		// Mirror old header `bom(frm)` logic, but use child row BOM.
-		if (bom_name) {
-			// Clear existing rows in raw_material_consumption table
-			frm.clear_table("raw_material_consumption");
-
-			// Preserve manually added rows in production_details
-			const rows_to_keep = [];
-			(frm.doc.production_details || []).forEach(function(p_row) {
-				if (
-					p_row.manual_entry === 1 ||
-					p_row.manual_entry === "1" ||
-					p_row.manual_entry === true
-				) {
-					rows_to_keep.push({
-						item_code: p_row.item_code,
-						item_name: p_row.item_name,
-						target_warehouse: p_row.target_warehouse,
-						manufactured_qty: p_row.manufactured_qty,
-						stock_uom: p_row.stock_uom,
-						manual_entry: 1,
-					});
-				}
-			});
-
-			frm.clear_table("production_details");
-
-			// Restore manual rows
-			rows_to_keep.forEach(function(row_data) {
-				let new_row = frm.add_child("production_details");
-				new_row.item_code = row_data.item_code;
-				new_row.item_name = row_data.item_name;
-				new_row.target_warehouse = row_data.target_warehouse;
-				new_row.manufactured_qty = row_data.manufactured_qty;
-				new_row.stock_uom = row_data.stock_uom;
-				new_row.manual_entry = 1;
-			});
-
-			// Fetch BOM items from server
-			frappe.call({
-				method: "hexplastics.api.production_log_book.get_bom_items_only",
-				args: { bom_name: bom_name },
-				callback: function(r) {
-					if (r.message && r.message.length > 0) {
-						add_bom_items_to_table(frm, r.message);
-						frm.refresh_field("raw_material_consumption");
-						calculate_total_rm_consumption(frm);
-
-						// Auto-fill avl_in_plant after adding BOM items
-						if (frm.doc.production_date && frm.doc.shift_type) {
-							fill_avl_in_plant_for_items(frm);
-						}
-					}
-				},
-			});
-
-			// Fetch manufacturing item (main item) from BOM and add it to production_details
-			fetch_and_add_manufacturing_item(frm, bom_name);
-		} else {
-			// BOM cleared: clear raw_material_consumption
-			frm.clear_table("raw_material_consumption");
-			frm.refresh_field("raw_material_consumption");
-
-			// Preserve manually added items in production_details
-			const manual_rows_to_keep = [];
-			(frm.doc.production_details || []).forEach(function(p_row) {
-				if (
-					p_row.manual_entry === 1 ||
-					p_row.manual_entry === "1" ||
-					p_row.manual_entry === true
-				) {
-					manual_rows_to_keep.push({
-						item_code: p_row.item_code,
-						item_name: p_row.item_name,
-						target_warehouse: p_row.target_warehouse,
-						manufactured_qty: p_row.manufactured_qty,
-						stock_uom: p_row.stock_uom,
-						manual_entry: 1,
-					});
-				}
-			});
-
-			frm.clear_table("production_details");
-
-			manual_rows_to_keep.forEach(function(row_data) {
-				let new_row = frm.add_child("production_details");
-				new_row.item_code = row_data.item_code;
-				new_row.item_name = row_data.item_name;
-				new_row.target_warehouse = row_data.target_warehouse;
-				new_row.manufactured_qty = row_data.manufactured_qty;
-				new_row.stock_uom = row_data.stock_uom;
-				new_row.manual_entry = 1;
-			});
-
-			frm.refresh_field("production_details");
-			calculate_total_rm_consumption(frm);
-			calculate_total_production_weight(frm);
-			calculate_closing_qty_for_mip(frm);
-		}
+		// Multi-row aware: rebuild both raw_material_consumption and
+		// production_details from ALL FG Detail rows in one go.
+		rebuild_tables_from_fg_details(frm);
 	},
 	gross_weight(frm, cdt, cdn) {
 		calculate_finished_good_details_net_weight(frm, cdt, cdn);
@@ -897,11 +1037,9 @@ frappe.ui.form.on("Production Log Sheet FG Details Table", {
 		frm.refresh_field("production_details");
 	},
 	table_foun_remove(frm, cdt, cdn) {
-		// Recalculate totals when FG details rows are added/removed.
-		update_production_details_manufactured_qty(frm);
-		calculate_closing_qty_for_mip(frm);
-		calculate_total_production_weight(frm);
-		frm.refresh_field("production_details");
+		// When a FG row is removed its BOM items must also be removed.
+		// Rebuild everything from the remaining FG rows.
+		rebuild_tables_from_fg_details(frm);
 	}
 });
 
