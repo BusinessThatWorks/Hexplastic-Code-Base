@@ -9,7 +9,6 @@ const PLANT_BALANCE_FIELDS = [
 	"trim_available_in_plant",
 	"staple_available_in_plant",
 	"tape_available_in_plant",
-	"sticker_available_in_plant",
 ];
 
 const CARRY_FORWARD_METHOD =
@@ -27,14 +26,17 @@ function cint_nonneg(value) {
 function apply_derived_box_production_quantities(frm) {
 	const d = frm.doc;
 	const in_area = cint_nonneg(d.in_area_checked);
+	const rejected_for_dry = cint_nonneg(d.rejected_for_dry_problem);
+	const rejected_for_printing = cint_nonneg(d.rejected_for_printing);
+	const rejected_for_broken = cint_nonneg(d.rejected_for_broken);
 	const front = cint_nonneg(d.front_printed);
 	const back = cint_nonneg(d.back_printed);
-	const printing_rejects =
-		in_area +
-		cint_nonneg(d.rejected_for_dry_problem) +
-		cint_nonneg(d.rejected_for_printing) +
-		cint_nonneg(d.rejected_for_broken);
-	const recv_printing = Math.max(0, front + back - printing_rejects);
+	// Transfer to clean sheet excludes "Rejected for Broken".
+	const transfer_to_clean_sheet = in_area + rejected_for_dry + rejected_for_printing;
+	const recv_printing = Math.max(
+		0,
+		front + back - (transfer_to_clean_sheet + rejected_for_broken)
+	);
 
 	const die_done = cint_nonneg(d.die_checked);
 	const die_rej = cint_nonneg(d.die_rejected);
@@ -46,24 +48,14 @@ function apply_derived_box_production_quantities(frm) {
 	const staple_rej = cint_nonneg(d.staple_rejected);
 	const box_produced = Math.max(0, staple_done - staple_rej) / 2;
 
-	const tape_done = cint_nonneg(d.tape_checked);
-	const tape_rej = cint_nonneg(d.tape_rejected);
-	const recv_tape = Math.max(0, tape_done - tape_rej);
-
-	const sticker_done = cint_nonneg(d.sticker_checked);
-	const sticker_rej = cint_nonneg(d.sticker_rejected);
-	const total_fg = Math.max(0, sticker_done - sticker_rej);
-
 	Object.assign(d, {
-		transfer_to_clean_sheet: in_area,
-		sheet_cleaning_qty: in_area,
+		transfer_to_clean_sheet: transfer_to_clean_sheet,
+		sheet_cleaning_qty: transfer_to_clean_sheet,
 		received_from_printing_dept: recv_printing,
 		received_from_die_punching_dept: recv_die,
 		received_from_trimming_dept: trim_done,
 		box_produced: Math.floor(box_produced),
 		received_from_stapling_dept: Math.floor(box_produced),
-		received_from_taping_dept: recv_tape,
-		total_box_produced: total_fg,
 	});
 
 	frm.refresh_fields([
@@ -74,8 +66,6 @@ function apply_derived_box_production_quantities(frm) {
 		"received_from_trimming_dept",
 		"received_from_stapling_dept",
 		"box_produced",
-		"received_from_taping_dept",
-		"total_box_produced",
 	]);
 }
 
@@ -127,10 +117,6 @@ const DERIVATION_SOURCE_FIELDS = [
 	"trim_checked",
 	"staple_checked",
 	"staple_rejected",
-	"tape_checked",
-	"tape_rejected",
-	"sticker_checked",
-	"sticker_rejected",
 ];
 
 frappe.ui.form.on("Box Production", {

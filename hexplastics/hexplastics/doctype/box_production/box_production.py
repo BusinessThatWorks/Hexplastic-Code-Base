@@ -15,7 +15,6 @@ OPENING_BALANCE_FIELDS = (
 	"trim_available_in_plant",
 	"staple_available_in_plant",
 	"tape_available_in_plant",
-	"sticker_available_in_plant",
 )
 
 CARRY_FORWARD_SOURCE_FIELDS = (
@@ -32,8 +31,7 @@ CARRY_FORWARD_SOURCE_FIELDS = (
 	"staple_rejected",
 	"received_from_stapling_dept",
 	"tape_checked",
-	"received_from_taping_dept",
-	"sticker_checked",
+	"tape_rejected",
 )
 
 USER_COUNT_FIELDS = (
@@ -52,8 +50,6 @@ USER_COUNT_FIELDS = (
 	"staple_rejected",
 	"tape_checked",
 	"tape_rejected",
-	"sticker_checked",
-	"sticker_rejected",
 	"sheet_cleaning_qty",
 )
 
@@ -238,13 +234,82 @@ def _validate_department_dependencies(doc):
 		doc.tape_checked,
 		doc.tape_rejected,
 	)
-	_validate_stage(
-		_("Stickering Dept"),
-		doc.sticker_available_in_plant,
-		doc.received_from_taping_dept,
-		doc.sticker_checked,
-		doc.sticker_rejected,
-	)
+
+
+def _finished_goods_rows(doc):
+	return [row for row in (doc.table_aqtt or []) if row]
+
+
+def _validate_finished_goods_table(doc):
+	rows = _finished_goods_rows(doc)
+	if not rows:
+		frappe.throw(
+			_("Add at least one row in Finished Goods with quantities."),
+			title=_("Finished Goods required"),
+		)
+
+	tape_checked = cint(doc.tape_checked)
+	tape_rejected = cint(doc.tape_rejected)
+	tape_net_good = tape_checked - tape_rejected
+	if tape_net_good < 0:
+		frappe.throw(
+			_("Taping rejected ({0}) cannot be greater than taping checked ({1}).").format(
+				tape_rejected, tape_checked
+			),
+			title=_("Invalid taping quantities"),
+		)
+
+	if tape_net_good <= 0:
+		frappe.throw(
+			_("Net good tape (checked - rejected) must be greater than zero."),
+			title=_("No finished goods quantity available"),
+		)
+
+	total_fg = 0
+	finished_items = set()
+	for row in rows:
+		qty = cint(row.finished_qty)
+		if qty <= 0:
+			frappe.throw(
+				_("Finished Qty must be greater than zero for each finished goods row."),
+				title=_("Invalid finished quantity"),
+			)
+		if not row.finished_item:
+			frappe.throw(_("Finished Item is required on each row."), title=_("Missing finished item"))
+		if not row.fg_target_warehouse:
+			frappe.throw(
+				_("FG Target Warehouse is required on each row."),
+				title=_("Missing warehouse"),
+			)
+		finished_items.add(row.finished_item)
+		total_fg += qty
+
+	# User must distribute the full good-tape quantity across finished items.
+	if total_fg > tape_net_good:
+		frappe.throw(
+			_(
+				"Total Finished Qty ({0}) cannot be greater than Net Good Tape (checked - rejected) ({1})."
+			).format(total_fg, tape_net_good),
+			title=_("Finished quantity exceeds net good tape"),
+		)
+
+	if total_fg != tape_net_good:
+		frappe.throw(
+			_("Total Finished Qty ({0}) must exactly equal Net Good Tape (checked - rejected) ({1}).").format(
+				total_fg, tape_net_good
+			),
+			title=_("Finished quantity mismatch"),
+		)
+
+	# ERPNext 'Manufacture' supports multiple finished-goods rows as long
+	# as they're the same finished item code.
+	if len(finished_items) > 1:
+		frappe.throw(
+			_(
+				"Finished Goods must use a single Finished Item code for Manufacture (multiple finished items cannot be marked as finished)."
+			),
+			title=_("Invalid finished goods"),
+		)
 
 
 def _validate_submit_required_fields(doc):
@@ -258,8 +323,6 @@ def _validate_submit_required_fields(doc):
 		"in_area_checked",
 		"raw_material",
 		"rm_source_warehouse",
-		"finished_item",
-		"fg_target_warehouse",
 		"cleaning_item",
 		"sheet_cleaning_qty",
 		"target_warehouse",
@@ -274,21 +337,24 @@ def _validate_submit_required_fields(doc):
 				_("{0} is mandatory before submit.").format(label),
 				title=_("Missing mandatory field"),
 			)
+	_validate_finished_goods_table(doc)
 
 
 def apply_derived_quantities(doc) -> None:
 	reject_in_area = cint(doc.in_area_checked)
-	doc.transfer_to_clean_sheet = reject_in_area
-	doc.sheet_cleaning_qty = reject_in_area
+	rejected_for_dry = cint(doc.rejected_for_dry_problem)
+	rejected_for_printing = cint(doc.rejected_for_printing)
+	rejected_for_broken = cint(doc.rejected_for_broken)
+
+	# Printing dept "Transfer to Clean Sheet" excludes "Rejected for Broken".
+	transfer_to_clean_sheet = reject_in_area + rejected_for_dry + rejected_for_printing
+	doc.transfer_to_clean_sheet = transfer_to_clean_sheet
+	doc.sheet_cleaning_qty = transfer_to_clean_sheet
 
 	front = cint(doc.front_printed)
 	back = cint(doc.back_printed)
-	printing_outbound_rejects = (
-		reject_in_area
-		+ cint(doc.rejected_for_dry_problem)
-		+ cint(doc.rejected_for_printing)
-		+ cint(doc.rejected_for_broken)
-	)
+	# All rejects that leave printing must reduce sheets forwarded to die punching.
+	printing_outbound_rejects = transfer_to_clean_sheet + rejected_for_broken
 	doc.received_from_printing_dept = max(0, front + back - printing_outbound_rejects)
 
 	die_ok = cint(doc.die_checked)
@@ -302,14 +368,6 @@ def apply_derived_quantities(doc) -> None:
 	net_staple_ok = max(0, staple_ok - staple_fail)
 	doc.box_produced = net_staple_ok // 2
 	doc.received_from_stapling_dept = max(0, doc.box_produced)
-
-	tape_ok = cint(doc.tape_checked)
-	tape_fail = cint(doc.tape_rejected)
-	doc.received_from_taping_dept = max(0, tape_ok - tape_fail)
-
-	sticker_ok = cint(doc.sticker_checked)
-	sticker_fail = cint(doc.sticker_rejected)
-	doc.total_box_produced = max(0, sticker_ok - sticker_fail)
 
 
 def _get_company_from_warehouses(*warehouses):
@@ -341,7 +399,6 @@ def apply_closing_balances(doc) -> None:
 	opening_trim = cint(doc.trim_available_in_plant)
 	opening_staple = cint(doc.staple_available_in_plant)
 	opening_tape = cint(doc.tape_available_in_plant)
-	opening_sticker = cint(doc.sticker_available_in_plant)
 
 	sheet_received = cint(doc.sheet_received)
 	front_printed = cint(doc.front_printed)
@@ -355,8 +412,6 @@ def apply_closing_balances(doc) -> None:
 	staple_rejected = cint(doc.staple_rejected)
 	recv_staple = max(0, staple_checked - staple_rejected) // 2
 	tape_checked = cint(doc.tape_checked)
-	recv_tape = cint(doc.received_from_taping_dept)
-	sticker_checked = cint(doc.sticker_checked)
 
 	# One odd usable sheet can remain in stapling since 2 sheets make 1 box.
 	staple_odd_remainder = max(0, staple_checked - staple_rejected) % 2
@@ -366,7 +421,6 @@ def apply_closing_balances(doc) -> None:
 	doc.trim_available_in_plant = max(0, opening_trim + recv_die - trim_checked)
 	doc.staple_available_in_plant = max(0, opening_staple + recv_trim - staple_checked + staple_odd_remainder)
 	doc.tape_available_in_plant = max(0, opening_tape + recv_staple - tape_checked)
-	doc.sticker_available_in_plant = max(0, opening_sticker + recv_tape - sticker_checked)
 
 
 def _compute_next_opening_from_doc(doc) -> dict:
@@ -375,7 +429,6 @@ def _compute_next_opening_from_doc(doc) -> dict:
 	opening_trim = cint(doc.get("trim_available_in_plant"))
 	opening_staple = cint(doc.get("staple_available_in_plant"))
 	opening_tape = cint(doc.get("tape_available_in_plant"))
-	opening_sticker = cint(doc.get("sticker_available_in_plant"))
 
 	sheet_received = cint(doc.get("sheet_received"))
 	front_printed = cint(doc.get("front_printed"))
@@ -389,8 +442,6 @@ def _compute_next_opening_from_doc(doc) -> dict:
 	staple_rejected = cint(doc.get("staple_rejected"))
 	recv_staple = max(0, staple_checked - staple_rejected) // 2
 	tape_checked = cint(doc.get("tape_checked"))
-	recv_tape = cint(doc.get("received_from_taping_dept"))
-	sticker_checked = cint(doc.get("sticker_checked"))
 
 	staple_odd_remainder = max(0, staple_checked - staple_rejected) % 2
 
@@ -402,7 +453,6 @@ def _compute_next_opening_from_doc(doc) -> dict:
 			0, opening_staple + recv_trim - staple_checked + staple_odd_remainder
 		),
 		"tape_available_in_plant": max(0, opening_tape + recv_staple - tape_checked),
-		"sticker_available_in_plant": max(0, opening_sticker + recv_tape - sticker_checked),
 	}
 
 
@@ -443,45 +493,54 @@ class BoxProduction(Document):
 			return
 
 		raw_qty = cint(self.sheet_received)
-		fg_qty = cint(self.total_box_produced)
+		rows = _finished_goods_rows(self)
+		fg_qty = sum(cint(r.finished_qty) for r in rows)
 		cleaning_qty = cint(self.sheet_cleaning_qty)
 
 		if raw_qty <= 0:
 			frappe.throw(_("Sheet Received must be greater than zero for Stock Entry."))
 		if fg_qty <= 0:
-			frappe.throw(_("Total Box Produced must be greater than zero for Stock Entry."))
+			frappe.throw(_("Total Finished Qty must be greater than zero for Stock Entry."))
 		if cleaning_qty < 0:
 			frappe.throw(_("Sheet Cleaning Qty cannot be negative for Stock Entry."))
 
+		fg_warehouses = [r.fg_target_warehouse for r in rows]
 		company = _get_company_from_warehouses(
 			self.rm_source_warehouse,
-			self.fg_target_warehouse,
 			self.target_warehouse,
+			*fg_warehouses,
 		)
-		posting_time = nowtime()
 
 		if not self.box_stock_entry_id:
+			items = [
+				{
+					"item_code": self.raw_material,
+					"qty": raw_qty,
+					"s_warehouse": self.rm_source_warehouse,
+				}
+			]
+			for row in rows:
+				items.append(
+					{
+						"item_code": row.finished_item,
+						"qty": cint(row.finished_qty),
+						"t_warehouse": row.fg_target_warehouse,
+						"is_finished_item": 1,
+					}
+				)
+
 			manufacture = frappe.get_doc(
 				{
 					"doctype": "Stock Entry",
 					"stock_entry_type": "Manufacture",
+					# Prevent ERPNext from overriding posting_date with "today"
+					# (see TransactionBase.validate_posting_time).
+					"set_posting_time": 1,
 					"posting_date": self.production_date,
-					"posting_time": posting_time,
+					"posting_time": nowtime(),
 					"company": company,
 					"remarks": _("Auto-created from Box Production {0}").format(self.name),
-					"items": [
-						{
-							"item_code": self.raw_material,
-							"qty": raw_qty,
-							"s_warehouse": self.rm_source_warehouse,
-						},
-						{
-							"item_code": self.finished_item,
-							"qty": fg_qty,
-							"t_warehouse": self.fg_target_warehouse,
-							"is_finished_item": 1,
-						},
-					],
+					"items": items,
 				}
 			)
 			manufacture.insert()
@@ -493,8 +552,9 @@ class BoxProduction(Document):
 				{
 					"doctype": "Stock Entry",
 					"stock_entry_type": "Material Receipt",
+					"set_posting_time": 1,
 					"posting_date": self.production_date,
-					"posting_time": posting_time,
+					"posting_time": nowtime(),
 					"company": company,
 					"remarks": _("Created from Box Production {0}").format(self.name),
 					"items": [
