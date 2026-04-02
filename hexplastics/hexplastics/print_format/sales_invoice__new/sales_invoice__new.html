@@ -309,7 +309,15 @@
       /* invoice-cell inside the right-side details table: keep left/right overrides */
       .print-format .invoice-cell.no-left { border-left: none !important; }
       .print-format .invoice-cell.no-right { border-right: none !important; }
-    </style>
+    /* e-Waybill (embedded) label/value emphasis */
+.attribute {
+  font-weight: 400 !important;
+}
+.attribute-value {
+  font-weight: 700 !important;
+}
+
+</style>
   </head>
   <body class="text-12">
 
@@ -455,22 +463,22 @@
             <table class="invoice-details-table">
               <tr>
                 <td class="invoice-cell no-left">
-                  <span class="text-12" style="font-weight: 700;">Invoice No.</span><br />
-                  <span>{{ doc.name or '' }}</span>
+                  <span class="text-12" style="font-weight: 400;">Invoice No.</span><br />
+                  <span style="font-weight: 700 !important;">{{ doc.name or '' }}</span>
                 </td>
                 <td class="invoice-cell">
-                  <span class="text-12" style="font-weight: 700;">e-Way Bill No.</span><br />
-                  <span>{{ doc.ewaybill or '' }}</span>
+                  <span class="text-12" style="font-weight: 400;">e-Way Bill No.</span><br />
+                  <span style="font-weight: 700 !important;">{{ doc.ewaybill or '' }}</span>
                 </td>
                 <td class="invoice-cell no-right">
-                  <span class="text-12" style="font-weight: 700;">Dated</span><br />
-                  <span>{{ frappe.utils.formatdate(doc.posting_date, "dd-MMM-yy") if doc.posting_date else '' }}</span>
+                  <span class="text-12" style="font-weight: 400;">Dated</span><br />
+                  <span style="font-weight: 700 !important;">{{ frappe.utils.formatdate(doc.posting_date, "dd-MMM-yy") if doc.posting_date else '' }}</span>
                 </td>
               </tr>
               <tr>
                 <td class="invoice-cell no-left" colspan="2">
-                  <span class="text-12" style="font-weight: 700;">Delivery Note</span><br />
-                  <span>
+                  <span class="text-12" style="font-weight: 400;">Delivery Note</span><br />
+                  <span style="font-weight: 700 !important;">
                     {% set dn_set = namespace(values=[]) %}
                     {% for it in doc.items %}
                       {% if it.delivery_note and it.delivery_note not in dn_set.values %}
@@ -481,58 +489,58 @@
                   </span>
                 </td>
                 <td class="invoice-cell no-right">
-                  <span class="text-12" style="font-weight: 700;">Mode/Terms of Payment</span><br />
-                  <span>{{ doc.payment_schedule[0].payment_term if doc.payment_schedule else doc.payment_term or '' }}</span>
+                  <span class="text-12" style="font-weight: 400;">Mode/Terms of Payment</span><br />
+                  <span style="font-weight: 700 !important;">{{ doc.payment_schedule[0].payment_term if doc.payment_schedule else doc.payment_term or '' }}</span>
                 </td>
               </tr>
               <tr>
                 <td class="invoice-cell no-left" colspan="2">
-                  <span class="text-12" style="font-weight: 700;">Sales Order No.</span><br />
-                  <span>{% if doc.items and doc.items[0].sales_order %}{{ doc.items[0].sales_order }}{% if doc.items[0].sales_order_date %} dt. {{ frappe.utils.formatdate(doc.items[0].sales_order_date, "dd-MMM-yy") }}{% endif %}{% endif %}</span>
+                  <span class="text-12" style="font-weight: 400;">Sales Order No.</span><br />
+                  <span style="font-weight: 700 !important;">{% if doc.items and doc.items[0].sales_order %}{{ doc.items[0].sales_order }}{% if doc.items[0].sales_order_date %} dt. {{ frappe.utils.formatdate(doc.items[0].sales_order_date, "dd-MMM-yy") }}{% endif %}{% endif %}</span>
                 </td>
                 <td class="invoice-cell no-right">
-                  <span class="text-12" style="font-weight: 700;">Other References</span><br />
-                  <span>{{ doc.custom_other_references or '' }}</span>
+                  <span class="text-12" style="font-weight: 400;">Other References</span><br />
+                  <span style="font-weight: 700 !important;">{{ doc.custom_other_references or '' }}</span>
                 </td>
               </tr>
               <tr>
                 <td class="invoice-cell no-left" colspan="2">
-                  <span class="text-12" style="font-weight: 700;">Buyer's Order No.</span><br />
-                  <span>{{ doc.po_no or doc.customer_po or '' }}</span>
+                  <span class="text-12" style="font-weight: 400;">Buyer's Order No.</span><br />
+                  <span style="font-weight: 700 !important;">{{ doc.po_no or doc.customer_po or '' }}</span>
                 </td>
                 <td class="invoice-cell no-right">
-                  <span class="text-12" style="font-weight: 700;">Dated</span><br />
-                  <span>{{ frappe.utils.formatdate(doc.po_date, "dd-MMM-yy") if doc.po_date else '' }}</span>
+                  <span class="text-12" style="font-weight: 400;">Dated</span><br />
+                  <span style="font-weight: 700 !important;">{{ frappe.utils.formatdate(doc.po_date, "dd-MMM-yy") if doc.po_date else '' }}</span>
                 </td>
               </tr>
               <tr>
                 <td class="invoice-cell no-left" colspan="2">
-                  <span class="text-12" style="font-weight: 700;">Dispatch Doc No.</span><br />
-                  <span>{{ doc.custom_dispatch_doc_no or '' }}</span>
+                  <span class="text-12" style="font-weight: 400;">Dispatch Doc No.</span><br />
+                  <span style="font-weight: 700 !important;">{{ doc.custom_dispatch_doc_no or '' }}</span>
                 </td>
                 <td class="invoice-cell no-right">
-                  <span class="text-12" style="font-weight: 700;">Delivery Note Dated</span><br />
-                  <span>{{ frappe.utils.formatdate(doc.custom_delivery_note_date, "dd-MMM-yy") if doc.custom_delivery_note_date else '' }}</span>
+                  <span class="text-12" style="font-weight: 400;">Delivery Note Dated</span><br />
+                  <span style="font-weight: 700 !important;">{{ frappe.utils.formatdate(doc.custom_delivery_note_date, "dd-MMM-yy") if doc.custom_delivery_note_date else '' }}</span>
                 </td>
               </tr>
               <tr>
                 <td class="invoice-cell no-left" colspan="2">
-                  <span class="text-12" style="font-weight: 700;">Dispatched through</span><br />
-                  <span>{{ doc.custom_dispatch_through or '' }}</span>
+                  <span class="text-12" style="font-weight: 400;">Dispatched through</span><br />
+                  <span style="font-weight: 700 !important;">{{ doc.custom_dispatch_through or '' }}</span>
                 </td>
                 <td class="invoice-cell no-right">
-                  <span class="text-12" style="font-weight: 700;">Destination</span><br />
-                  <span>{{ doc.custom_destination or '' }}</span>
+                  <span class="text-12" style="font-weight: 400;">Destination</span><br />
+                  <span style="font-weight: 700 !important;">{{ doc.custom_destination or '' }}</span>
                 </td>
               </tr>
               <tr>
                 <td class="invoice-cell no-left" colspan="2">
-                  <span class="text-12" style="font-weight: 700;">Bill of Lading/LR-RR No.</span><br />
-                  <span>{{ doc.custom_bill_of_lading_or_lr_rr_no or ""}}</span>
+                  <span class="text-12" style="font-weight: 400;">Bill of Lading/LR-RR No.</span><br />
+                  <span style="font-weight: 700 !important;">{{ doc.custom_bill_of_lading_or_lr_rr_no or ""}}</span>
                 </td>
                 <td class="invoice-cell no-right">
-                  <span class="text-12" style="font-weight: 700;">Motor Vehicle No.</span><br />
-                  <span>{{ doc.vehicle_no or doc.lr_no or '' }}</span>
+                  <span class="text-12" style="font-weight: 400;">Motor Vehicle No.</span><br />
+                  <span style="font-weight: 700 !important;">{{ doc.vehicle_no or doc.lr_no or '' }}</span>
                 </td>
               </tr>
             </table>
