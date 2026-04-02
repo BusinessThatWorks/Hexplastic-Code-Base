@@ -60,8 +60,9 @@
   "tape_checked",
   "tape_rejected",
   "column_break_tgky",
-  "finished_goods_details_section",
+  "finished_goods_section",
   "table_aqtt",
+  "empty_section",
   "sheet_cleaning_tab",
   "cleaning_item",
   "sheet_cleaning_qty",
@@ -196,7 +197,8 @@
   {
    "fieldname": "trim_available_in_plant",
    "fieldtype": "Int",
-   "label": "Available in Plant"
+   "label": "Available in Plant",
+   "read_only": 1
   },
   {
    "fieldname": "received_from_die_punching_dept",
@@ -221,12 +223,14 @@
   {
    "fieldname": "print_available_in_plant",
    "fieldtype": "Int",
-   "label": "Available in Plant"
+   "label": "Available in Plant",
+   "read_only": 1
   },
   {
    "fieldname": "die_available_in_plant",
    "fieldtype": "Int",
-   "label": "Available in Plant"
+   "label": "Available in Plant",
+   "read_only": 1
   },
   {
    "collapsible": 1,
@@ -237,7 +241,8 @@
   {
    "fieldname": "staple_available_in_plant",
    "fieldtype": "Int",
-   "label": "Available in Plant"
+   "label": "Available in Plant",
+   "read_only": 1
   },
   {
    "fieldname": "received_from_trimming_dept",
@@ -274,7 +279,8 @@
   {
    "fieldname": "tape_available_in_plant",
    "fieldtype": "Int",
-   "label": "Available in Plant"
+   "label": "Available in Plant",
+   "read_only": 1
   },
   {
    "fieldname": "received_from_stapling_dept",
@@ -407,25 +413,30 @@
    "label": "Rejected for Broken"
   },
   {
-   "fieldname": "finished_goods_details_section",
+   "fieldname": "finished_goods_section",
    "fieldtype": "Section Break",
-   "label": "Finished Goods Details"
+   "label": "Finished Goods"
   },
   {
    "fieldname": "table_aqtt",
    "fieldtype": "Table",
+   "label": "Items",
    "options": "Box Production Table"
+  },
+  {
+   "fieldname": "empty_section",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-01 17:23:15.449645",
+ "modified": "2026-04-02 13:33:49.434857",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Box Production",
- "naming_rule": "Expression",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
