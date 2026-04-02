@@ -233,6 +233,7 @@ class TestBoxProduction(FrappeTestCase):
 		self.assertEqual(len(created_docs), 2)
 		manufacture_payload = created_docs[0].payload
 		self.assertEqual(manufacture_payload["stock_entry_type"], "Manufacture")
+		self.assertEqual(manufacture_payload["set_posting_time"], 1)
 		self.assertEqual(manufacture_payload["posting_date"], "2026-04-01")
 		self.assertEqual(manufacture_payload["posting_time"], "10:10:10")
 		self.assertEqual(manufacture_payload["items"][0]["item_code"], "RAW-ITEM-001")
@@ -248,6 +249,7 @@ class TestBoxProduction(FrappeTestCase):
 
 		cleaning_payload = created_docs[1].payload
 		self.assertEqual(cleaning_payload["stock_entry_type"], "Material Receipt")
+		self.assertEqual(cleaning_payload["set_posting_time"], 1)
 		self.assertEqual(cleaning_payload["posting_date"], "2026-04-01")
 		self.assertEqual(cleaning_payload["posting_time"], "10:10:10")
 		self.assertEqual(cleaning_payload["items"][0]["item_code"], "CLEAN-ITEM-001")
