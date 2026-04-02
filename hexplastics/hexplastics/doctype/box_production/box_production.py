@@ -266,7 +266,6 @@ def _validate_finished_goods_table(doc):
 		)
 
 	total_fg = 0
-	finished_items = set()
 	for row in rows:
 		qty = cint(row.finished_qty)
 		if qty <= 0:
@@ -281,34 +280,21 @@ def _validate_finished_goods_table(doc):
 				_("FG Target Warehouse is required on each row."),
 				title=_("Missing warehouse"),
 			)
-		finished_items.add(row.finished_item)
 		total_fg += qty
 
 	# User must distribute the full good-tape quantity across finished items.
 	if total_fg > tape_net_good:
 		frappe.throw(
 			_(
-				"Total Finished Qty ({0}) cannot be greater than Net Good Tape (checked - rejected) ({1})."
+				"Total Finished Qty ({0}) cannot be greater than {1}."
 			).format(total_fg, tape_net_good),
-			title=_("Finished quantity exceeds net good tape"),
+			title=_("Finished quantity exceeded"),
 		)
 
 	if total_fg != tape_net_good:
 		frappe.throw(
-			_("Total Finished Qty ({0}) must exactly equal Net Good Tape (checked - rejected) ({1}).").format(
-				total_fg, tape_net_good
-			),
+			_("Total Finished Qty ({0}) must exactly equal {1}.").format(total_fg, tape_net_good),
 			title=_("Finished quantity mismatch"),
-		)
-
-	# ERPNext 'Manufacture' supports multiple finished-goods rows as long
-	# as they're the same finished item code.
-	if len(finished_items) > 1:
-		frappe.throw(
-			_(
-				"Finished Goods must use a single Finished Item code for Manufacture (multiple finished items cannot be marked as finished)."
-			),
-			title=_("Invalid finished goods"),
 		)
 
 
@@ -519,22 +505,22 @@ class BoxProduction(Document):
 					"s_warehouse": self.rm_source_warehouse,
 				}
 			]
+			first_fg = True
 			for row in rows:
 				items.append(
 					{
 						"item_code": row.finished_item,
 						"qty": cint(row.finished_qty),
 						"t_warehouse": row.fg_target_warehouse,
-						"is_finished_item": 1,
+						"is_finished_item": 1 if first_fg else 0,
 					}
 				)
+				first_fg = False
 
 			manufacture = frappe.get_doc(
 				{
 					"doctype": "Stock Entry",
 					"stock_entry_type": "Manufacture",
-					# Prevent ERPNext from overriding posting_date with "today"
-					# (see TransactionBase.validate_posting_time).
 					"set_posting_time": 1,
 					"posting_date": self.production_date,
 					"posting_time": nowtime(),
