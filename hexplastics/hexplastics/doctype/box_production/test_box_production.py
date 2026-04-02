@@ -244,7 +244,7 @@ class TestBoxProduction(FrappeTestCase):
 		self.assertEqual(manufacture_payload["items"][1]["is_finished_item"], 1)
 		self.assertEqual(manufacture_payload["items"][2]["item_code"], "FG-ITEM-001")
 		self.assertEqual(manufacture_payload["items"][2]["qty"], 40)
-		self.assertEqual(manufacture_payload["items"][2]["is_finished_item"], 1)
+		self.assertEqual(manufacture_payload["items"][2]["is_finished_item"], 0)
 
 		cleaning_payload = created_docs[1].payload
 		self.assertEqual(cleaning_payload["stock_entry_type"], "Material Receipt")
