@@ -520,12 +520,19 @@ class BoxProduction(Document):
 				}
 			]
 			for row in rows:
+				# ERPNext expects only one finished item row to be marked as finished
+				# for Manufacture stock entries. Multiple finished rows with the
+				# same item can still be present, but we keep only the first one
+				# as `is_finished_item=1`.
+				#
+				# All rows still move inventory to their respective warehouses.
+				first_finished_item = len(items) == 1
 				items.append(
 					{
 						"item_code": row.finished_item,
 						"qty": cint(row.finished_qty),
 						"t_warehouse": row.fg_target_warehouse,
-						"is_finished_item": 1,
+						"is_finished_item": 1 if first_finished_item else 0,
 					}
 				)
 
