@@ -285,9 +285,7 @@ def _validate_finished_goods_table(doc):
 	# User must distribute the full good-tape quantity across finished items.
 	if total_fg > tape_net_good:
 		frappe.throw(
-			_(
-				"Total Finished Qty ({0}) cannot be greater than {1}."
-			).format(total_fg, tape_net_good),
+			_("Total Finished Qty ({0}) cannot be greater than {1}.").format(total_fg, tape_net_good),
 			title=_("Finished quantity exceeded"),
 		)
 
