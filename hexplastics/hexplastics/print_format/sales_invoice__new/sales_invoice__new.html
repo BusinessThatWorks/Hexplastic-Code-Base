@@ -31,7 +31,7 @@
         max-width: 210mm;
         margin: 0 auto;
         page-break-after: always;
-        padding: 6mm;
+        padding: 3mm;
         box-sizing: border-box;
         
       }
@@ -89,15 +89,20 @@
   /* Ensure table headers repeat across pages so borders don't "disappear" at page breaks. */
   thead { display: table-header-group; }
   .items-table th {
-    padding: 2px 1px !important;   /* was bigger */
+    padding: 1px 1px !important;   /* was bigger */
     line-height: 1.1 !important;
   }
   .items-table td {
-    padding: 2px 1px !important;   /* was 5px */
+    padding: 1px 1px !important;   /* was 5px */
     line-height: 1.1 !important;
   }
 
   .items-cell {
+      .items-table tbody td:nth-child(3),
+      .items-table tbody td:nth-child(4),
+      .items-table tbody td:nth-child(5),
+      .items-table tbody td:nth-child(6),
+      .items-table tbody td:nth-child(7) { vertical-align: middle !important; }
     padding: 1px 1px !important;    /* shrink inner whitespace */
   }
   .items-cell.right {
@@ -152,14 +157,14 @@
       .address-left { width: 60%; border-right: 1px solid #000; overflow: hidden; }
       .address-right { width: 40%; }
 
-      .company-section { display: flex; border-bottom: 1px solid #000; padding: 6px 8px; gap: 10px; align-items: flex-start; }
-      .company-logo { flex-shrink: 0; margin-right: 10px; width: 110px; height: 110px; max-width: 110px; max-height: 110px; overflow: hidden; box-sizing: border-box; }
-      .company-logo img { width: 110px !important; height: 110px !important; max-width: 110px !important; max-height: 110px !important; display: block; object-fit: contain; }
+      .company-section { display: flex; border-bottom: 1px solid #000; padding: 2px 4px; gap: 10px; align-items: flex-start; }
+      .company-logo { flex-shrink: 0; margin-right: 10px; width: 80px; height: 80px; max-width: 80px; max-height: 80px; overflow: hidden; box-sizing: border-box; }
+      .company-logo img { width: 80px !important; height: 80px !important; max-width: 80px !important; max-height: 80px !important; display: block; object-fit: contain; }
       .company-details { margin-left: 5px; flex: 1; padding-top: 2px; font-size: small; }
-      .company-details p { font-size: 14px !important; line-height: 1.3; margin-bottom: 2px; }
+      .company-details p { font-size: 14px !important; line-height: 1.12; margin-bottom: 1px; }
       .company-name { font-weight: 600 !important; font-size: 12px !important; margin-bottom: 3px; }
 
-      .address-section { display: flex; flex-direction: column; padding: 6px 8px; gap: 2px; }
+      .address-section { display: flex; flex-direction: column; padding: 3px 4px; gap: 2px; }
       .address-section.with-border { border-bottom: 1px solid #000; }
 
       .terms-delivery-section { padding: 4px 0; margin: 4px 0; }
@@ -169,26 +174,26 @@
       .terms-item::before { content: counter(terms-counter) "."; counter-increment: terms-counter; position: absolute; left: 0; font-weight: 600; }
       .terms-delivery-section { counter-reset: terms-counter; }
 
-      .address-section p { margin-bottom: 2px; line-height: 1.4; }
-      .address-info { display: flex; font-size: 12px !important; line-height: 1.4; margin-bottom: 2px; }
+      .address-section p { margin-bottom: 0px; line-height: 1.22; }
+      .address-info { display: flex; font-size: 12px !important; line-height: 1.2; margin-bottom: 0px; }
       .address-label { width: 110px; font-size: 12px !important; flex-shrink: 0; }
       .address-value { flex: 1; margin-left: 5px; font-size: 12px !important; line-height: 1.4; }
 
       .invoice-details-table { width: 100%; border-collapse: collapse; border: none !important; border-top: none !important; }
-      .invoice-cell { border: 1px solid #000 !important; padding: 4px 6px !important; border-top: none !important; line-height: 1.4; font-size: 11px !important; }
+      .invoice-cell { border: 1px solid #000 !important; padding: 3px 4px !important; border-top: none !important; line-height: 1.4; font-size: 11px !important; }
       .invoice-cell.no-left { border-left: none !important; }
       .invoice-cell.no-right { border-right: none !important; }
       .invoice-cell span { font-size: 11px !important; }
-      .terms-section { padding: 4px 6px; }
+      .terms-section { padding: 2px 4px; }
 
       .items-table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000 !important; table-layout: fixed !important; }
-      .items-header { border: 1px solid #000 !important; padding: 6px 4px !important; text-align: center !important; font-size: 11px !important; font-weight: 700 !important; background-color: #f5f5f5 !important; vertical-align: middle !important; line-height: 1.3 !important; }
-      .items-cell { border: 1px solid #000 !important; padding: 4px !important; vertical-align: top !important; font-size: 12px !important; line-height: 1.3 !important; font-weight: 400 !important; }
+      .items-header { border: 1px solid #000 !important; padding: 3px 2px !important; text-align: center !important; font-size: 11px !important; font-weight: 700 !important; background-color: #f5f5f5 !important; vertical-align: middle !important; line-height: 1.3 !important; }
+      .items-cell { border: 1px solid #000 !important; padding: 2px !important; vertical-align: top !important; font-size: 12px !important; line-height: 1.3 !important; font-weight: 400 !important; }
       .items-table tbody tr td:nth-child(2) { font-size: 10px !important; }
       .items-table tbody tr td:nth-child(2) * { font-size: 10px !important; }
-      .items-cell.center { text-align: center !important; padding: 0px 6px !important; }
+      .items-cell.center { text-align: center !important; padding: 0px 4px !important; }
       .items-cell.center .item-values { text-align: center !important; }
-      .items-cell.right { text-align: right !important; padding-right: 12px !important; }
+      .items-cell.right { text-align: right !important; padding-right: 8px !important; }
 
       .item-description { display: flex; flex-direction: column; gap: 3px; min-height: 45px; }
       .item-name { font-weight: 400 !important; font-size: 10px !important; line-height: 1.3 !important; }
@@ -208,17 +213,18 @@
       .amount-text { font-weight: 700 !important; text-transform: capitalize; font-size: 12px !important; }
 
       .tax-table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000 !important; margin-top: 0 !important; table-layout: fixed !important; }
-      .tax-header { border: 1px solid #000 !important; padding: 6px 4px !important; text-align: center !important; font-size: 11px !important; font-weight: 600 !important; background-color: #f5f5f5 !important; vertical-align: middle !important; }
-      .tax-cell { border: 1px solid #000 !important; padding: 6px !important; font-size: 11px !important; vertical-align: middle !important; line-height: 1.4 !important; }
-      .tax-cell.left { text-align: left !important; padding-left: 12px !important; }
-      .tax-cell.right { text-align: right !important; padding-right: 12px !important; }
+      .tax-header { border: 1px solid #000 !important; padding: 3px 2px !important; text-align: center !important; font-size: 11px !important; font-weight: 600 !important; background-color: #f5f5f5 !important; vertical-align: middle !important; }
+      .tax-cell { border: 1px solid #000 !important; padding: 3px 4px !important; font-size: 11px !important; vertical-align: middle !important; line-height: 1.4 !important; }
+      .tax-cell.left { text-align: left !important; padding-left: 8px !important; }
+      .tax-cell.right { text-align: right !important; padding-right: 8px !important; }
       .tax-cell.center { text-align: center !important; }
       .tax-total-row { font-weight: 700 !important; background-color: #f0f0f0 !important; border-top: 2px solid #000 !important; }
       .tax-total-row .tax-cell { font-weight: 700 !important; padding-top: 6px !important; padding-bottom: 6px !important; }
       .tax-table .text-12 { font-size: 11px !important; }
+      .tax-total-row .tax-cell:first-child { font-size: 14px !important; }
 
       .bottom-section { width: 100%; border-collapse: collapse; border: 1px solid #000; }
-      .bottom-cell { border: 1px solid #000; padding: 6px; vertical-align: top; width: 60%; border-right: 1px solid #000; }
+      .bottom-cell { border: 1px solid #000; padding: 3px 4px; vertical-align: top; width: 60%; border-right: 1px solid #000; }
       .section-margin { margin-bottom: 3px; }
       .terms-list { margin-left: 20px; margin-bottom: 3px; }
       .terms-item { margin-bottom: 2px; font-size: 12px !important; }
@@ -235,10 +241,10 @@
         display: flex;
         flex-direction: column;
         align-items: flex-end;
-        gap: 5px;
+        gap: 2px;
         border: 1px solid #000;
-        padding: 5px 8px;
-        min-height: 45px;
+        padding: 2px 4px;
+        min-height: 18px;
       }
 
       /* ===== HIGH-SPECIFICITY OVERRIDES =====
@@ -316,6 +322,8 @@
 .attribute-value {
   font-weight: 700 !important;
 }
+
+      .items-table tbody tr:last-child td:nth-child(2) { font-size: 14px !important; }
 
 </style>
   </head>
@@ -410,7 +418,7 @@
 
       <table class="main-table">
         <tr>
-          <td class="table-cell address-left" style="padding: 0px !important">
+          <td class="table-cell address-left" style="padding: 0px !important; width: 54%;">
             <div class="company-section">
               <div class="company-logo">
                 <img src="/files/g.png" alt="{{ doc.company }}" />
@@ -459,7 +467,7 @@
             </div>
           </td>
 
-          <td class="table-cell address-right" style="padding: 0px !important">
+          <td class="table-cell address-right" style="padding: 0px !important; width: 46%;">
             <table class="invoice-details-table">
               <tr>
                 <td class="invoice-cell no-left">
@@ -639,7 +647,7 @@
 
           <tr style="background-color: #f0f0f0; border-top: 2px solid #000;">
             <td class="items-cell"></td>
-            <td class="items-cell right"><span class="text-12"><strong>Total</strong></span></td>
+            <td class="items-cell right" style="font-size: 14px !important;"><strong style="font-size: 14px !important;">Total</strong></td>
             <td class="items-cell"></td>
             <td class="items-cell center"><span class="text-12"><strong>{{ "%.0f"|format(doc.total_qty or 0) }}</strong></span></td>
             <td class="items-cell"></td>
@@ -787,7 +795,7 @@
         <p class="font-bold text-12" style="margin-bottom: 0 !important">
           For {{ doc.company or 'Hooghly Extrusions Limited' }}
         </p>
-        <img src="/files/WhatsApp Image 2025-10-16 at 5.46.54 PM.jpeg" alt="Signature" style="width: 100px; height: auto; margin: 3px 0;" />
+        <img src="/files/WhatsApp Image 2025-10-16 at 5.46.54 PM.jpeg" alt="Signature" style="width: 80px; height: auto; margin: 2px 0;" />
         <p class="text-12" style="margin-bottom: 0 !important">Authorized Signatory</p>
       </div>
 
