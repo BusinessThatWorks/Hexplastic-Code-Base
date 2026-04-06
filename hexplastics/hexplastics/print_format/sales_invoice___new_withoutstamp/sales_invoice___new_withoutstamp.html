@@ -5,14 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tax Invoice - HOOGHLY EXTRUSIONS LIMITED</title>
     <style>
-      @page {
-        size: A4;
-        margin: 6mm;
+      /* Universal zero-spacing rule */
+      .invoice-copy,
+      .invoice-copy * {
+        padding: 0 !important;
+        margin: 0 !important;
+        line-height: 1.05 !important;
+        gap: 0 !important;
+        min-height: 0 !important;
       }
+      @page { size: A4; margin: 3mm !important; }
+      .invoice-copy { padding: 2mm !important; }
 
-      * {
+      
+
+      .invoice-copy,
+      .invoice-copy * {
         margin: 0;
-        padding: 0;
         box-sizing: border-box;
       }
 
@@ -22,16 +31,13 @@
         color: #000;
         font-weight: 400;
         margin: 0;
-        padding: 0;
-        line-height: 1.4;
-      }
+        }
 
       .invoice-copy {
         width: 100%;
         max-width: 210mm;
         margin: 0 auto;
         page-break-after: always;
-        padding: 3mm;
         box-sizing: border-box;
         
       }
@@ -62,8 +68,6 @@
         font-size: 13px !important;
         font-weight: 700 !important;
         letter-spacing: 2px;
-        padding: 2px 0;
-        margin-bottom: 4px;
         text-transform: uppercase;
       }
 
@@ -75,7 +79,6 @@
 
       @media screen {
         body {
-          padding: 10px;
           background: #e0e0e0;
         }
         .invoice-copy {
@@ -86,40 +89,16 @@
       }
 
      @media print {
-  /* Ensure table headers repeat across pages so borders don't "disappear" at page breaks. */
+  /* Keep header visible and value columns vertically centered */
   thead { display: table-header-group; }
-  .items-table th {
-    padding: 1px 1px !important;   /* was bigger */
-    line-height: 1.1 !important;
-  }
-  .items-table td {
-    padding: 1px 1px !important;   /* was 5px */
-    line-height: 1.1 !important;
-  }
-
-  .items-cell {
-      .items-table tbody td:nth-child(3),
-      .items-table tbody td:nth-child(4),
-      .items-table tbody td:nth-child(5),
-      .items-table tbody td:nth-child(6),
-      .items-table tbody td:nth-child(7) { vertical-align: middle !important; }
-    padding: 1px 1px !important;    /* shrink inner whitespace */
-  }
-  .items-cell.right {
-    padding-right: 3px !important;
-  }
-
-  /* main whitespace reducer */
-  .item-values {
-    min-height: 26px !important;   /* was 40/70 depending on your edits */
-    line-height: 1.1 !important;
-  }
-
-  .item-name {
-    line-height: 1.15 !important;
+  .items-table tbody td:nth-child(3),
+  .items-table tbody td:nth-child(4),
+  .items-table tbody td:nth-child(5),
+  .items-table tbody td:nth-child(6),
+  .items-table tbody td:nth-child(7) {
+    vertical-align: middle !important;
   }
 }
-      .print-format td { padding: 2px !important; }
 
       .invoice-container {
         max-width: 210mm;
@@ -131,9 +110,7 @@
         font-size: 16px !important;
         font-weight: 700 !important;
         text-align: center;
-        margin-bottom: 3px;
-        margin-top: 0;
-      }
+        }
 
       .text-12 { font-size: 12px !important; }
       .font-bold { font-weight: 700 !important; }
@@ -143,7 +120,7 @@
         justify-content: space-between;
         align-items: flex-end;
       }
-      .header-left { flex: 0.5; padding-bottom: 10px; }
+      .header-left { flex: 0.5; }
       .header-right { flex: 0.5; display: flex; justify-content: flex-end; align-items: center; }
       .header-info { display: flex; font-size: 12px !important; }
       .header-label { width: 100px; font-size: 12px !important; }
@@ -153,83 +130,81 @@
       .qr-image { width: 80px !important; height: 80px !important; }
 
       .main-table { width: 100% !important; border: 1px solid #000 !important; border-collapse: collapse !important; }
-      .table-cell { vertical-align: top !important; border: 1px solid #000 !important; padding: 0px !important; overflow: hidden; }
+      .table-cell { vertical-align: top !important; border: 1px solid #000 !important; overflow: hidden; }
       .address-left { width: 60%; border-right: 1px solid #000; overflow: hidden; }
       .address-right { width: 40%; }
 
-      .company-section { display: flex; border-bottom: 1px solid #000; padding: 2px 4px; gap: 10px; align-items: flex-start; }
-      .company-logo { flex-shrink: 0; margin-right: 10px; width: 80px; height: 80px; max-width: 80px; max-height: 80px; overflow: hidden; box-sizing: border-box; }
-      .company-logo img { width: 80px !important; height: 80px !important; max-width: 80px !important; max-height: 80px !important; display: block; object-fit: contain; }
-      .company-details { margin-left: 5px; flex: 1; padding-top: 2px; font-size: small; }
-      .company-details p { font-size: 14px !important; line-height: 1.12; margin-bottom: 1px; }
-      .company-name { font-weight: 600 !important; font-size: 12px !important; margin-bottom: 3px; }
+      .company-section { display: flex; border-bottom: 1px solid #000; align-items: flex-start; }
+      .company-logo { flex-shrink: 0; margin-right: 10px; width: 80px; height: 80px; max-width: 80px; max-height: 80px; overflow: hidden; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
+      .company-logo img { width: 100% !important; height: 100% !important; max-width: 100% !important; max-height: 100% !important; display: block; object-fit: contain; object-position: center center; }
+      .company-details { margin-left: 5px; flex: 1; font-size: small; }
+      .company-details p { font-size: 14px !important; }
+      .company-name { font-weight: 600 !important; font-size: 12px !important; }
 
-      .address-section { display: flex; flex-direction: column; padding: 3px 4px; gap: 2px; }
+      .address-section { display: flex; flex-direction: column; }
       .address-section.with-border { border-bottom: 1px solid #000; }
 
-      .terms-delivery-section { padding: 4px 0; margin: 4px 0; }
-      .terms-delivery-title { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
-      .terms-list { margin: 0; padding: 0; list-style: none; }
-      .terms-item { font-size: 11px; line-height: 1.25; margin-bottom: 2px; padding-left: 12px; position: relative; }
+      .terms-delivery-section { margin: 4px 0; }
+      .terms-delivery-title { font-weight: 600; font-size: 12px; }
+      .terms-list { margin: 0; list-style: none; }
+      .terms-item { font-size: 11px; position: relative; }
       .terms-item::before { content: counter(terms-counter) "."; counter-increment: terms-counter; position: absolute; left: 0; font-weight: 600; }
       .terms-delivery-section { counter-reset: terms-counter; }
 
-      .address-section p { margin-bottom: 0px; line-height: 1.22; }
-      .address-info { display: flex; font-size: 12px !important; line-height: 1.2; margin-bottom: 0px; }
+      .address-info { display: flex; font-size: 12px !important; }
       .address-label { width: 110px; font-size: 12px !important; flex-shrink: 0; }
-      .address-value { flex: 1; margin-left: 5px; font-size: 12px !important; line-height: 1.4; }
+      .address-value { flex: 1; margin-left: 5px; font-size: 12px !important; }
 
       .invoice-details-table { width: 100%; border-collapse: collapse; border: none !important; border-top: none !important; }
-      .invoice-cell { border: 1px solid #000 !important; padding: 3px 4px !important; border-top: none !important; line-height: 1.4; font-size: 11px !important; }
+      .invoice-cell { border: 1px solid #000 !important; border-top: none !important; font-size: 11px !important; }
       .invoice-cell.no-left { border-left: none !important; }
       .invoice-cell.no-right { border-right: none !important; }
       .invoice-cell span { font-size: 11px !important; }
-      .terms-section { padding: 2px 4px; }
 
       .items-table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000 !important; table-layout: fixed !important; }
-      .items-header { border: 1px solid #000 !important; padding: 3px 2px !important; text-align: center !important; font-size: 11px !important; font-weight: 700 !important; background-color: #f5f5f5 !important; vertical-align: middle !important; line-height: 1.3 !important; }
-      .items-cell { border: 1px solid #000 !important; padding: 2px !important; vertical-align: top !important; font-size: 12px !important; line-height: 1.3 !important; font-weight: 400 !important; }
+      .items-header { border: 1px solid #000 !important; text-align: center !important; font-size: 11px !important; font-weight: 700 !important; background-color: #f5f5f5 !important; vertical-align: middle !important; }
+      .items-cell { border: 1px solid #000 !important; vertical-align: top !important; font-size: 12px !important; font-weight: 400 !important; }
       .items-table tbody tr td:nth-child(2) { font-size: 10px !important; }
       .items-table tbody tr td:nth-child(2) * { font-size: 10px !important; }
-      .items-cell.center { text-align: center !important; padding: 0px 4px !important; }
+      .items-cell.center { text-align: center !important; }
       .items-cell.center .item-values { text-align: center !important; }
-      .items-cell.right { text-align: right !important; padding-right: 8px !important; }
+      .items-cell.right { text-align: right !important; }
 
-      .item-description { display: flex; flex-direction: column; gap: 3px; min-height: 45px; }
-      .item-name { font-weight: 400 !important; font-size: 10px !important; line-height: 1.3 !important; }
+      .item-description { display: flex; flex-direction: column; }
+      .item-name { font-weight: 400 !important; font-size: 10px !important; }
       .item-name * { font-size: 10px !important; }
-      .item-details { font-style: normal; margin-left: 12px; font-size: 12px !important; color: #444; line-height: 1.3 !important; font-weight: 400 !important; }
-      .item-details p { font-size: 12px !important; font-weight: 400 !important; margin-bottom: 0 !important; }
+      .item-details { font-style: normal; margin-left: 12px; font-size: 12px !important; color: #444; font-weight: 400 !important; }
+      .item-details p { font-size: 12px !important; font-weight: 400 !important; }
       .item-details p, .item-details, .items-cell .item-details p, .items-cell .item-details,
       .item-details p.font-bold, .item-details .font-bold,
       .items-cell .item-details p.font-bold, .items-cell .item-details .font-bold { font-weight: 400 !important; font-size: 12px !important; }
 
-      .item-gst-details { display: flex; flex-direction: column; gap: 0; min-height: 45px; margin-left: auto; width: 60%; font-style: italic; font-weight: 700 !important; text-align: right; padding-right: 8px; line-height: 1.4 !important; }
-      .item-values { text-align: right; line-height: 1.4 !important; }
-      .item-gst-details p, .item-values p { font-size: 11px !important; margin: 0 !important; line-height: 14px !important; height: 14px !important; white-space: nowrap !important; }
-      .item-values.tax-values p, .item-values.tax-per p, .item-values.tax-amounts p { font-style: italic; font-weight: 700 !important; font-size: 11px !important; margin: 0 !important; line-height: 14px !important; height: 14px !important; white-space: nowrap !important; }
+      .item-gst-details { display: flex; flex-direction: column; margin-left: auto; width: 60%; font-style: italic; font-weight: 700 !important; text-align: right; }
+      .item-values { text-align: right; }
+      .item-gst-details p, .item-values p { font-size: 11px !important; margin: 0 !important; height: 14px !important; white-space: nowrap !important; }
+      .item-values.tax-values p, .item-values.tax-per p, .item-values.tax-amounts p { font-style: italic; font-weight: 700 !important; font-size: 11px !important; margin: 0 !important; height: 14px !important; white-space: nowrap !important; }
 
-      .amount-section { padding: 2px; border: 1px solid #000; display: flex; justify-content: space-between; }
+      .amount-section { border: 1px solid #000; display: flex; justify-content: space-between; }
       .amount-text { font-weight: 700 !important; text-transform: capitalize; font-size: 12px !important; }
 
-      .tax-table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000 !important; margin-top: 0 !important; table-layout: fixed !important; }
-      .tax-header { border: 1px solid #000 !important; padding: 3px 2px !important; text-align: center !important; font-size: 11px !important; font-weight: 600 !important; background-color: #f5f5f5 !important; vertical-align: middle !important; }
-      .tax-cell { border: 1px solid #000 !important; padding: 3px 4px !important; font-size: 11px !important; vertical-align: middle !important; line-height: 1.4 !important; }
-      .tax-cell.left { text-align: left !important; padding-left: 8px !important; }
-      .tax-cell.right { text-align: right !important; padding-right: 8px !important; }
+      .tax-table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000 !important; table-layout: fixed !important; }
+      .tax-header { border: 1px solid #000 !important; text-align: center !important; font-size: 11px !important; font-weight: 600 !important; background-color: #f5f5f5 !important; vertical-align: middle !important; }
+      .tax-cell { border: 1px solid #000 !important; font-size: 11px !important; vertical-align: middle !important; }
+      .tax-cell.left { text-align: left !important; }
+      .tax-cell.right { text-align: right !important; }
       .tax-cell.center { text-align: center !important; }
       .tax-total-row { font-weight: 700 !important; background-color: #f0f0f0 !important; border-top: 2px solid #000 !important; }
-      .tax-total-row .tax-cell { font-weight: 700 !important; padding-top: 6px !important; padding-bottom: 6px !important; }
+      .tax-total-row .tax-cell { font-weight: 700 !important; }
       .tax-table .text-12 { font-size: 11px !important; }
       .tax-total-row .tax-cell:first-child { font-size: 14px !important; }
 
       .bottom-section { width: 100%; border-collapse: collapse; border: 1px solid #000; }
-      .bottom-cell { border: 1px solid #000; padding: 3px 4px; vertical-align: top; width: 60%; border-right: 1px solid #000; }
-      .section-margin { margin-bottom: 3px; }
-      .terms-list { margin-left: 20px; margin-bottom: 3px; }
-      .terms-item { margin-bottom: 2px; font-size: 12px !important; }
+      .bottom-cell { border: 1px solid #000; vertical-align: top; width: 60%; border-right: 1px solid #000; }
 
-      .flex-section { display: flex; gap: 50px; }
+      .terms-list { margin-left: 20px; }
+      .terms-item { font-size: 12px !important; }
+
+      .flex-section { display: flex; }
       .declaration-section { align-content: flex-end; flex: 0.45; }
       .bank-section { flex: 0.55; }
       .bank-label { display: inline-block; width: 120px; font-size: 12px !important; }
@@ -241,11 +216,8 @@
         display: flex;
         flex-direction: column;
         align-items: flex-end;
-        gap: 2px;
         border: 1px solid #000;
-        padding: 2px 4px;
-        min-height: 18px;
-      }
+        }
 
       /* ===== HIGH-SPECIFICITY OVERRIDES =====
          Frappe wraps content in .print-format and loads its own CSS
@@ -332,6 +304,103 @@
       .items-table tbody td:nth-child(6),
       .items-table tbody td:nth-child(7) {
         vertical-align: middle !important;
+      }
+
+      /* Ultra-compact print spacing to fit on one page */
+      @media print {
+
+        .company-logo {
+          width: 70px !important;
+          height: 70px !important;
+          max-width: 70px !important;
+          max-height: 70px !important;
+          overflow: hidden !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+        .company-logo img {
+          width: 100% !important;
+          height: 100% !important;
+          max-width: 100% !important;
+          max-height: 100% !important;
+          object-fit: contain !important;
+          object-position: center center !important;
+        }
+
+        .signature-section img {
+          width: 70px !important;
+          margin: 1px 0 !important;
+        }
+      }
+
+      /* Zero-padding override (requested) */
+      
+
+      /* Extreme compact override: remove spaces, line heights, paddings */
+      @media print {
+
+        .invoice-copy,
+        .invoice-copy * {
+          margin: 0 !important;
+          border-spacing: 0 !important;
+        }
+
+        .invoice-copy,
+        .invoice-container,
+        .main-table,
+        .invoice-details-table,
+        .items-table,
+        .tax-table,
+        .bottom-section,
+        .company-section,
+        .address-section,
+        .terms-section,
+        .terms-delivery-section,
+        .amount-section,
+        .signature-section,
+        .item-description,
+        .item-values,
+        .item-gst-details,
+        .section-margin,
+        .copy-type-banner,
+        .invoice-title {
+          margin: 0 !important;
+          height: auto !important;
+          }
+
+        .invoice-copy table,
+        .invoice-copy tr,
+        .invoice-copy td,
+        .invoice-copy th,
+        .invoice-copy p,
+        .invoice-copy div,
+        .invoice-copy span,
+        .invoice-copy img {
+          margin: 0 !important;
+          }
+
+        .company-logo,
+        .company-logo img,
+        .signature-section img {
+          margin: 0 !important;
+        }
+      }
+
+      /* Safe print gutters to avoid clipping at top/left/right edges */
+      @media print {
+        .invoice-copy,
+        .invoice-container {
+          width: 100% !important;
+          max-width: none !important;
+          margin: 0 !important;
+          box-sizing: border-box !important;
+        }
+
+        .invoice-copy {
+          /* slightly more top/side breathing room so content doesn't get cut */
+          padding: 4mm 3mm 2mm 3mm !important;
+        }
       }
 
 </style>
@@ -429,8 +498,10 @@
         <tr>
           <td class="table-cell address-left" style="padding: 0px !important; width: 54%;">
             <div class="company-section">
-              <div class="company-logo">
-                <img src="/files/g.png" alt="{{ doc.company }}" />
+              <div class="company-logo"
+                   style="width: 70px !important; height: 70px !important; max-width: 70px !important; max-height: 70px !important; overflow: hidden !important; flex-shrink: 0 !important; margin-right: 6px !important; position: relative !important;">
+                <img src="/files/g.png" alt="{{ doc.company }}"
+                     style="position: absolute !important; top: 50% !important; left: 50% !important; transform: translate(-50%, -50%) !important; width: 68px !important; height: 68px !important; max-width: 68px !important; max-height: 68px !important; object-fit: contain !important; display: block !important;" />
               </div>
               <div class="company-details">
                 <p class="company-name" style="margin-bottom: 0 !important">
