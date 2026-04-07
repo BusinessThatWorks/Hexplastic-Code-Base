@@ -748,19 +748,31 @@
       </div>
 
       <table class="tax-table">
+        {% set has_igst = namespace(value=false) %}
+        {% for tax in doc.taxes %}
+          {% if tax.account_head and ('IGST' in tax.account_head or 'igst' in tax.account_head.lower()) and (tax.rate or tax.tax_amount) %}
+            {% set has_igst.value = true %}
+          {% endif %}
+        {% endfor %}
         <thead>
           <tr>
             <th rowspan="2" class="tax-header" style="width: 12%;">HSN/SAC</th>
             <th rowspan="2" class="tax-header" style="width: 18%;">Taxable Value</th>
+            {% if has_igst.value %}
+            <th colspan="2" class="tax-header" style="width: 50%; border-bottom: 1px solid #000 !important;">IGST</th>
+            {% else %}
             <th colspan="2" class="tax-header" style="width: 25%; border-bottom: 1px solid #000 !important;">CGST</th>
             <th colspan="2" class="tax-header" style="width: 25%; border-bottom: 1px solid #000 !important;">SGST/UTGST</th>
+            {% endif %}
             <th rowspan="2" class="tax-header" style="width: 20%;">Total Tax Amount</th>
           </tr>
           <tr>
-            <th class="tax-header" style="width: 12.5%;">Rate</th>
-            <th class="tax-header" style="width: 12.5%;">Amount</th>
-            <th class="tax-header" style="width: 12.5%;">Rate</th>
-            <th class="tax-header" style="width: 12.5%;">Amount</th>
+            <th class="tax-header">Rate</th>
+            <th class="tax-header">Amount</th>
+            {% if not has_igst.value %}
+            <th class="tax-header">Rate</th>
+            <th class="tax-header">Amount</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
@@ -795,20 +807,30 @@
           <tr>
             <td class="tax-cell left"><span class="text-12">{{ hsn }}</span></td>
             <td class="tax-cell right"><span class="text-12">{{ format_inr(values['taxable_value']) }}</span></td>
+            {% if has_igst.value %}
+            <td class="tax-cell center"><span class="text-12">{% if values['igst_rate'] %}{{ "%.2f"|format(values['igst_rate']) }}%{% endif %}</span></td>
+            <td class="tax-cell right">{% if values['igst_amount'] %}<span class="text-12">{{ format_inr(values['igst_amount']) }}</span>{% endif %}</td>
+            {% else %}
             <td class="tax-cell center"><span class="text-12">{% if values['cgst_rate'] %}{{ "%.2f"|format(values['cgst_rate']) }}%{% endif %}</span></td>
             <td class="tax-cell right">{% if values['cgst_amount'] %}<span class="text-12">{{ format_inr(values['cgst_amount']) }}</span>{% endif %}</td>
-            <td class="tax-cell center"><span class="text-12">{% if values['sgst_rate'] %}{{ "%.2f"|format(values['sgst_rate']) }}%{% elif values['igst_rate'] %}{{ "%.2f"|format(values['igst_rate']) }}%{% endif %}</span></td>
-            <td class="tax-cell right">{% if values['sgst_amount'] or values['igst_amount'] %}<span class="text-12">{{ format_inr(values['sgst_amount'] if values['sgst_amount'] else values['igst_amount']) }}</span>{% endif %}</td>
+            <td class="tax-cell center"><span class="text-12">{% if values['sgst_rate'] %}{{ "%.2f"|format(values['sgst_rate']) }}%{% endif %}</span></td>
+            <td class="tax-cell right">{% if values['sgst_amount'] %}<span class="text-12">{{ format_inr(values['sgst_amount']) }}</span>{% endif %}</td>
+            {% endif %}
             <td class="tax-cell right"><span class="text-12">{{ format_inr(values['total_tax']) }}</span></td>
           </tr>
             {% endfor %}
           <tr class="tax-total-row">
             <td class="tax-cell right">Total</td>
             <td class="tax-cell right"><span class="text-12">{{ format_inr(totals.taxable) }}</span></td>
+            {% if has_igst.value %}
+            <td class="tax-cell right"></td>
+            <td class="tax-cell right">{% if totals.igst %}<span class="text-12">{{ format_inr(totals.igst) }}</span>{% endif %}</td>
+            {% else %}
             <td class="tax-cell right"></td>
             <td class="tax-cell right">{% if totals.cgst %}<span class="text-12">{{ format_inr(totals.cgst) }}</span>{% endif %}</td>
             <td class="tax-cell right"></td>
-            <td class="tax-cell right">{% if totals.sgst or totals.igst %}<span class="text-12">{{ format_inr(totals.sgst if totals.sgst else totals.igst) }}</span>{% endif %}</td>
+            <td class="tax-cell right">{% if totals.sgst %}<span class="text-12">{{ format_inr(totals.sgst) }}</span>{% endif %}</td>
+            {% endif %}
             <td class="tax-cell right"><span class="text-12">{{ format_inr(totals.cgst + totals.sgst + totals.igst) }}</span></td>
           </tr>
           {% endif %}
