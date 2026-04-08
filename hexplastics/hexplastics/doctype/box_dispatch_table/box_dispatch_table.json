@@ -60,7 +60,7 @@
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Dispatched Qty",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "columns": 2,

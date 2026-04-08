@@ -6,30 +6,44 @@ function cint(value) {
 	return Number.isFinite(n) ? n : 0;
 }
 
-function set_dispatched_qty(frm) {
-	const checked = cint(frm.doc.no_of_boxes_checked);
-	const rejected = cint(frm.doc.no_of_boxes_rejected);
-	frm.set_value("dispatched_qty", Math.max(0, checked - rejected));
+function set_totals_from_items(frm) {
+	let totalRejected = 0;
+	let totalDispatched = 0;
+
+	(frm.doc.table_azko || []).forEach((row) => {
+		const stickerApplied = cint(row.sticker_applied_qty);
+		const rejected = cint(row.rejected_qty);
+		const dispatched = stickerApplied - rejected;
+
+		frappe.model.set_value(row.doctype, row.name, "dispatched_qty", dispatched);
+		totalRejected += rejected;
+		totalDispatched += dispatched;
+	});
+
+	frm.set_value("total_rejected_qty", totalRejected);
+	frm.set_value("total_dispatched_qty", totalDispatched);
 }
 
 frappe.ui.form.on("Box Dispatch", {
-	box_production_id(frm) {
-		if (!frm.doc.box_production_id) {
-			return;
-		}
-		frappe.db.get_doc("Box Production", frm.doc.box_production_id).then((bp) => {
-			frm.set_value("date", bp.production_date);
-			frm.set_value("shift_type", bp.shift_type);
-			const received = cint(bp.tape_checked) - cint(bp.tape_rejected);
-			frm.set_value("received_from_taping_dept", Math.max(0, received));
-		});
+	refresh(frm) {
+		set_totals_from_items(frm);
+	},
+});
+
+frappe.ui.form.on("Box Dispatch Table", {
+	sticker_applied_qty(frm) {
+		set_totals_from_items(frm);
 	},
 
-	no_of_boxes_checked(frm) {
-		set_dispatched_qty(frm);
+	rejected_qty(frm) {
+		set_totals_from_items(frm);
 	},
 
-	no_of_boxes_rejected(frm) {
-		set_dispatched_qty(frm);
+	table_azko_add(frm) {
+		set_totals_from_items(frm);
+	},
+
+	table_azko_remove(frm) {
+		set_totals_from_items(frm);
 	},
 });
