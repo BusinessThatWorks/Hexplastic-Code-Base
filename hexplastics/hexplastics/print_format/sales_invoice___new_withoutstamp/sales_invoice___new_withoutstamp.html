@@ -66,7 +66,7 @@
         background-color: transparent;
         color: #000;
         font-size: 13px !important;
-        font-weight: 700 !important;
+        font-weight: 400 !important;
         letter-spacing: 2px;
         text-transform: uppercase;
       }
@@ -137,16 +137,16 @@
       .company-section { display: flex; border-bottom: 1px solid #000; align-items: flex-start; }
       .company-logo { flex-shrink: 0; margin-right: 10px; width: 80px; height: 80px; max-width: 80px; max-height: 80px; overflow: hidden; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
       .company-logo img { width: 100% !important; height: 100% !important; max-width: 100% !important; max-height: 100% !important; display: block; object-fit: contain; object-position: center center; }
-      .company-details { margin-left: 5px; flex: 1; font-size: small; }
+      .company-details { margin-left: 5px; flex: 1; font-size: small; line-height: 1.18 !important; }
       .company-details p { font-size: 14px !important; }
       .company-name { font-weight: 600 !important; font-size: 12px !important; }
 
-      .address-section { display: flex; flex-direction: column; }
+      .address-section { display: flex; flex-direction: column; line-height: 1.18 !important; }
       .address-section.with-border { border-bottom: 1px solid #000; }
 
-      .terms-delivery-section { margin: 4px 0; }
-      .terms-delivery-title { font-weight: 600; font-size: 12px; }
-      .terms-list { margin: 0; list-style: none; }
+      .terms-delivery-section { margin: 4px 0; padding-left: 4px !important; }
+      .terms-delivery-title { font-weight: 400 !important; font-size: 12px; }
+      .terms-list { margin: 0; list-style: none; font-weight: 700 !important; }
       .terms-item { font-size: 11px; position: relative; }
       .terms-item::before { content: counter(terms-counter) "."; counter-increment: terms-counter; position: absolute; left: 0; font-weight: 600; }
       .terms-delivery-section { counter-reset: terms-counter; }
@@ -156,10 +156,12 @@
       .address-value { flex: 1; margin-left: 5px; font-size: 12px !important; }
 
       .invoice-details-table { width: 100%; border-collapse: collapse; border: none !important; border-top: none !important; }
-      .invoice-cell { border: 1px solid #000 !important; border-top: none !important; font-size: 11px !important; }
+      .invoice-cell { border: 1px solid #000 !important; border-top: none !important; font-size: 11px !important; line-height: 1.2 !important; padding: 1px 2px !important; }
       .invoice-cell.no-left { border-left: none !important; }
       .invoice-cell.no-right { border-right: none !important; }
       .invoice-cell span { font-size: 11px !important; }
+      .invoice-cell span.text-12 { display: inline-block !important; line-height: 1.12 !important; padding-bottom: 1px !important; }
+      .invoice-cell br { line-height: 1.1 !important; }
 
       .items-table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000 !important; table-layout: fixed !important; }
       .items-header { border: 1px solid #000 !important; text-align: center !important; font-size: 11px !important; font-weight: 700 !important; background-color: #f5f5f5 !important; vertical-align: middle !important; }
@@ -169,6 +171,19 @@
       .items-cell.center { text-align: center !important; }
       .items-cell.center .item-values { text-align: center !important; }
       .items-cell.right { text-align: right !important; }
+      /* Keep "Per" column values right-aligned even when cell has .center */
+      .items-table tbody td:nth-child(6) .item-values,
+      .items-table tbody td:nth-child(6) .item-values p {
+        text-align: right !important;
+      }
+      /* Right-align all item value columns in body rows */
+      .items-table tbody td:nth-child(3),
+      .items-table tbody td:nth-child(4),
+      .items-table tbody td:nth-child(5),
+      .items-table tbody td:nth-child(6),
+      .items-table tbody td:nth-child(7) {
+        text-align: right !important;
+      }
 
       .item-description { display: flex; flex-direction: column; }
       .item-name { font-weight: 400 !important; font-size: 10px !important; }
@@ -188,13 +203,23 @@
       .amount-text { font-weight: 700 !important; text-transform: capitalize; font-size: 12px !important; }
 
       .tax-table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000 !important; table-layout: fixed !important; }
-      .tax-header { border: 1px solid #000 !important; text-align: center !important; font-size: 11px !important; font-weight: 600 !important; background-color: #f5f5f5 !important; vertical-align: middle !important; }
+      .tax-header { border: 1px solid #000 !important; text-align: center !important; font-size: 11px !important; font-weight: 600 !important; background-color: #f5f5f5 !important; vertical-align: middle !important; line-height: 1.05 !important; padding-top: 1px !important; padding-bottom: 1px !important; }
       .tax-cell { border: 1px solid #000 !important; font-size: 11px !important; vertical-align: middle !important; }
       .tax-cell.left { text-align: left !important; }
       .tax-cell.right { text-align: right !important; }
       .tax-cell.center { text-align: center !important; }
+      /* Tax table formatting requested: values right, key headers centered, total label centered */
+      .tax-table tbody .tax-cell { text-align: center !important; }
+      .tax-table thead th[rowspan] { text-align: center !important; }
+      .tax-total-row .tax-cell:first-child { text-align: center !important; }
       .tax-total-row { font-weight: 700 !important; background-color: #f0f0f0 !important; border-top: 2px solid #000 !important; }
-      .tax-total-row .tax-cell { font-weight: 700 !important; }
+      .tax-total-row .tax-cell { font-weight: 700 !important; line-height: 1.1 !important; padding-top: 2px !important; padding-bottom: 2px !important; vertical-align: middle !important; }
+      .tax-total-row .tax-cell strong,
+      .tax-total-row .tax-cell span {
+        display: inline-block !important;
+        line-height: 1.1 !important;
+        vertical-align: middle !important;
+      }
       .tax-table .text-12 { font-size: 11px !important; }
       .tax-total-row .tax-cell:first-child { font-size: 14px !important; }
 
@@ -205,8 +230,8 @@
       .terms-item { font-size: 12px !important; }
 
       .flex-section { display: flex; }
-      .declaration-section { align-content: flex-end; flex: 0.45; }
-      .bank-section { flex: 0.55; }
+      .declaration-section { align-content: flex-end; flex: 1 1 auto; padding-right: 8px; }
+      .bank-section { flex: 0 0 255px; display: flex; justify-content: flex-end; margin-left: auto; }
       .bank-label { display: inline-block; width: 120px; font-size: 12px !important; }
       .underline { text-decoration: underline; }
 
@@ -296,6 +321,15 @@
 }
 
       .items-table tbody tr:last-child td:nth-child(2) { font-size: 14px !important; }
+      .items-table tbody tr.items-total-row td {
+        padding-top: 1px !important;
+        padding-bottom: 1px !important;
+        line-height: 1.08 !important;
+      }
+      .items-table tbody tr.items-total-row td strong,
+      .items-table tbody tr.items-total-row td span {
+        line-height: 1.08 !important;
+      }
 
       /* Center numeric columns (HSN/SAC, Qty, Rate, Per, Amount) */
       .items-table tbody td:nth-child(3),
@@ -468,26 +502,26 @@
           <td style="vertical-align: top; font-size: 12px; line-height: 1.8; border: none !important;">
             <table style="border: none; border-collapse: collapse;">
               <tr>
-                <td style="padding: 2px 8px 2px 0; font-weight: bold; white-space: nowrap; vertical-align: top; border: none !important;">IRN</td>
-                <td style="padding: 2px 8px; vertical-align: top; border: none !important;">:</td>
-                <td style="padding: 2px 0; word-break: break-all; border: none !important;">{{ invoice_data.Irn }}</td>
+                <td style="padding: 1px 6px 1px 0 !important; white-space: nowrap; vertical-align: top; border: none !important;">IRN</td>
+                <td style="padding: 1px 6px !important; vertical-align: top; border: none !important;">:</td>
+                <td style="padding: 1px 0 !important; word-break: break-all; border: none !important;">{{ invoice_data.Irn }}</td>
               </tr>
               <tr>
-                <td style="padding: 2px 8px 2px 0; font-weight: bold; white-space: nowrap; vertical-align: top; border: none !important;">Ack No.</td>
-                <td style="padding: 2px 8px; vertical-align: top; border: none !important;">:</td>
-                <td style="padding: 2px 0; border: none !important;">{{ invoice_data.AckNo or '-' }}</td>
+                <td style="padding: 1px 6px 1px 0 !important; white-space: nowrap; vertical-align: top; border: none !important;">Ack No.</td>
+                <td style="padding: 1px 6px !important; vertical-align: top; border: none !important;">:</td>
+                <td style="padding: 1px 0 !important; border: none !important;">{{ invoice_data.AckNo or '-' }}</td>
               </tr>
               <tr>
-                <td style="padding: 2px 8px 2px 0; font-weight: bold; white-space: nowrap; vertical-align: top; border: none !important;">Ack Date</td>
-                <td style="padding: 2px 8px; vertical-align: top; border: none !important;">:</td>
-                <td style="padding: 2px 0; border: none !important;">{{ frappe.utils.format_datetime(invoice_data.AckDt, "dd-MMM-yy") if invoice_data.AckDt else '-' }}</td>
+                <td style="padding: 1px 6px 1px 0 !important; white-space: nowrap; vertical-align: top; border: none !important;">Ack Date</td>
+                <td style="padding: 1px 6px !important; vertical-align: top; border: none !important;">:</td>
+                <td style="padding: 1px 0 !important; border: none !important;">{{ frappe.utils.format_datetime(invoice_data.AckDt, "dd-MMM-yy") if invoice_data.AckDt else '-' }}</td>
               </tr>
             </table>
           </td>
           {% if e_invoice_log.signed_qr_code %}
           <td style="width: 100px; vertical-align: top; text-align: center; border: none !important;">
             <div style="font-size: 11px; font-weight: bold; font-style: italic; margin-bottom: 3px;">e-Invoice</div>
-            <img src="data:image/png;base64,{{ get_qr_code(e_invoice_log.signed_qr_code, scale=5) }}" alt="QR" style="width: 90px; height: 90px;" />
+            <img src="data:image/png;base64,{{ get_qr_code(e_invoice_log.signed_qr_code, scale=5) }}" alt="QR" style="width: 62px; height: 62px;" />
           </td>
           {% endif %}
         </tr>
@@ -725,7 +759,7 @@
           </tr>
           {% endif %}
 
-          <tr style="background-color: #f0f0f0; border-top: 2px solid #000;">
+          <tr class="items-total-row" style="background-color: #f0f0f0; border-top: 2px solid #000;">
             <td class="items-cell"></td>
             <td class="items-cell right" style="font-size: 14px !important;"><strong style="font-size: 14px !important;">Total</strong></td>
             <td class="items-cell"></td>
@@ -870,23 +904,25 @@
               </div>
               <div class="bank-section">
                 {% set bank = frappe.db.get_value("Bank Account", {"company": doc.company, "is_default": 1}, ["bank", "bank_account_no", "branch_code", "iban"], as_dict=1) %}
-                <p class="section-margin text-12" style="margin-bottom: 0 !important">Company's Bank Details</p>
-                <p class="section-margin text-12" style="margin-bottom: 0 !important">
-                  <span class="bank-label">Bank Name</span>:
-                  <strong class="text-12">{{ bank.bank if bank else 'AXIS BANK LTD' }}</strong>
-                </p>
-                <p class="section-margin text-12" style="margin-bottom: 0 !important">
-                  <span class="bank-label">A/c No.</span>:
-                  <strong class="text-12">{{ bank.bank_account_no if bank else '921030047945778' }}</strong>
-                </p>
-                <p class="section-margin text-12" style="margin-bottom: 0 !important">
-                  <span class="bank-label">Branch</span>:
-                  <strong class="text-12">CBB Kolkata</strong>
-                </p>
-                 <p class="section-margin text-12" style="margin-bottom: 0 !important">
-                  <span class="bank-label">IFSC Code</span>:
-                  <strong class="text-12">UTIB0001164</strong>
-                </p>
+                <div>
+                  <p class="section-margin text-12" style="margin-bottom: 0 !important; text-decoration: underline;">Company's Bank Details</p>
+                  <p class="section-margin text-12" style="margin-bottom: 0 !important">
+                    <span class="bank-label">Bank Name</span>:
+                    <strong class="text-12">{{ bank.bank if bank else 'AXIS BANK LTD' }}</strong>
+                  </p>
+                  <p class="section-margin text-12" style="margin-bottom: 0 !important">
+                    <span class="bank-label">A/c No.</span>:
+                    <strong class="text-12">{{ bank.bank_account_no if bank else '921030047945778' }}</strong>
+                  </p>
+                  <p class="section-margin text-12" style="margin-bottom: 0 !important">
+                    <span class="bank-label">Branch</span>:
+                    <strong class="text-12">CBB Kolkata</strong>
+                  </p>
+                   <p class="section-margin text-12" style="margin-bottom: 0 !important">
+                    <span class="bank-label">IFSC Code</span>:
+                    <strong class="text-12">UTIB0001164</strong>
+                  </p>
+                </div>
               </div>
             </div>
           </td>
@@ -894,7 +930,7 @@
       </table>
 
       <div class="signature-section">
-        <p class="font-bold text-12" style="margin-bottom: 20px !important">
+        <p class="font-bold text-12" style="margin-bottom: 35px !important">
           For {{ doc.company or 'Hooghly Extrusions Limited' }}
         </p >
         
