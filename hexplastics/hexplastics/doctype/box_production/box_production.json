@@ -24,45 +24,62 @@
   "back_printed",
   "column_break_oyxw",
   "in_area_checked",
+  "back_rejected_by_in_area",
   "column_break_gxir",
   "transfer_to_clean_sheet",
   "out_area_checking",
   "rejected_for_dry_problem",
-  "column_break_pegv",
-  "rejected_for_printing",
-  "column_break_wnic",
   "rejected_for_broken",
+  "rejected_for_printing",
+  "column_break_pegv",
+  "back_rejected_for_dry_problem",
+  "back_rejected_for_broken",
+  "back_rejected_for_printing",
+  "column_break_wnic",
   "die_punching_dept_section",
   "die_available_in_plant",
-  "received_from_printing_dept",
+  "die_back_available_in_plant",
   "column_break_vyon",
-  "die_checked",
-  "die_rejected",
+  "received_from_printing_dept",
+  "back_received_from_printing_dept",
   "column_break_srzv",
+  "die_checked",
+  "die_back_completed",
+  "column_break_tnnf",
+  "die_rejected",
+  "back_rejected",
   "trimming_dept_section",
   "trim_available_in_plant",
-  "received_from_die_punching_dept",
+  "trim_back_available_in_plant",
   "column_break_euji",
-  "trim_checked",
+  "received_from_die_punching_dept",
+  "back_received_from_die_punching_dept",
   "column_break_bznl",
+  "trim_checked",
+  "trim_back",
+  "column_break_qgjn",
   "stapling_dept_section",
   "staple_available_in_plant",
-  "received_from_trimming_dept",
+  "staple_back_available_in_plant",
   "column_break_mojd",
-  "staple_checked",
-  "staple_rejected",
+  "received_from_trimming_dept",
+  "staple_back_received_from_trimming_dept",
   "column_break_cdvs",
+  "staple_checked",
+  "staple_back_completed",
+  "column_break_mzce",
+  "staple_rejected",
+  "staple_back_rejected",
+  "column_break_gvkm",
   "box_produced",
   "taping_dept_section",
   "tape_available_in_plant",
   "received_from_stapling_dept",
   "column_break_hgtt",
   "tape_checked",
-  "tape_rejected",
   "column_break_tgky",
   "finished_goods_section",
   "table_aqtt",
-  "empty_section",
   "sheet_cleaning_tab",
   "cleaning_item",
   "sheet_cleaning_qty",
@@ -134,6 +151,7 @@
    "fieldname": "sheet_received",
    "fieldtype": "Int",
    "label": "Sheet Received",
+   "read_only": 1,
    "reqd": 1
   },
   {
@@ -165,7 +183,7 @@
   {
    "fieldname": "received_from_printing_dept",
    "fieldtype": "Int",
-   "label": "Received from Printing Dept",
+   "label": "Front Received from Printing Dept",
    "read_only": 1
   },
   {
@@ -175,13 +193,13 @@
   {
    "fieldname": "die_checked",
    "fieldtype": "Int",
-   "label": "Work Completed",
+   "label": "Front Completed",
    "mandatory_depends_on": "eval:((doc.die_available_in_plant||0)+(doc.received_from_printing_dept||0)>0)"
   },
   {
    "fieldname": "die_rejected",
    "fieldtype": "Int",
-   "label": "Rejected",
+   "label": "Front Rejected",
    "mandatory_depends_on": "eval:((doc.die_available_in_plant||0)+(doc.received_from_printing_dept||0)>0)"
   },
   {
@@ -197,13 +215,13 @@
   {
    "fieldname": "trim_available_in_plant",
    "fieldtype": "Int",
-   "label": "Available in Plant",
+   "label": "Front Available in Plant",
    "read_only": 1
   },
   {
    "fieldname": "received_from_die_punching_dept",
    "fieldtype": "Int",
-   "label": "Received from Die Punching Dept",
+   "label": "Front Received from Die Punching Dept",
    "read_only": 1
   },
   {
@@ -213,7 +231,7 @@
   {
    "fieldname": "trim_checked",
    "fieldtype": "Int",
-   "label": "Work Completed",
+   "label": "Front Completed",
    "mandatory_depends_on": "eval:((doc.trim_available_in_plant||0)+(doc.received_from_die_punching_dept||0)>0)"
   },
   {
@@ -229,7 +247,7 @@
   {
    "fieldname": "die_available_in_plant",
    "fieldtype": "Int",
-   "label": "Available in Plant",
+   "label": "Front Available in Plant",
    "read_only": 1
   },
   {
@@ -241,13 +259,13 @@
   {
    "fieldname": "staple_available_in_plant",
    "fieldtype": "Int",
-   "label": "Available in Plant",
+   "label": "Front Available in Plant",
    "read_only": 1
   },
   {
    "fieldname": "received_from_trimming_dept",
    "fieldtype": "Int",
-   "label": "Received from Trimming Dept",
+   "label": "Front Received from Trimming Dept",
    "read_only": 1
   },
   {
@@ -257,13 +275,13 @@
   {
    "fieldname": "staple_checked",
    "fieldtype": "Int",
-   "label": "Work Completed",
+   "label": "Front Completed",
    "mandatory_depends_on": "eval:((doc.staple_available_in_plant||0)+(doc.received_from_trimming_dept||0)>0)"
   },
   {
    "fieldname": "staple_rejected",
    "fieldtype": "Int",
-   "label": "Rejected",
+   "label": "Front Rejected",
    "mandatory_depends_on": "eval:((doc.staple_available_in_plant||0)+(doc.received_from_trimming_dept||0)>0)"
   },
   {
@@ -296,12 +314,6 @@
    "fieldname": "tape_checked",
    "fieldtype": "Int",
    "label": "Work Completed",
-   "mandatory_depends_on": "eval:((doc.tape_available_in_plant||0)+(doc.received_from_stapling_dept||0)>0)"
-  },
-  {
-   "fieldname": "tape_rejected",
-   "fieldtype": "Int",
-   "label": "Rejected",
    "mandatory_depends_on": "eval:((doc.tape_available_in_plant||0)+(doc.received_from_stapling_dept||0)>0)"
   },
   {
@@ -381,7 +393,7 @@
   {
    "fieldname": "in_area_checked",
    "fieldtype": "Int",
-   "label": "Rejected by In-Area",
+   "label": "Front Rejected by In-Area",
    "reqd": 1
   },
   {
@@ -392,7 +404,7 @@
   {
    "fieldname": "rejected_for_dry_problem",
    "fieldtype": "Int",
-   "label": "Rejected for Dry Problem"
+   "label": "Front Rejected for Dry Problem"
   },
   {
    "fieldname": "column_break_pegv",
@@ -401,7 +413,7 @@
   {
    "fieldname": "rejected_for_printing",
    "fieldtype": "Int",
-   "label": "Rejected for Printing"
+   "label": "Front Rejected for Printing"
   },
   {
    "fieldname": "column_break_wnic",
@@ -410,7 +422,7 @@
   {
    "fieldname": "rejected_for_broken",
    "fieldtype": "Int",
-   "label": "Rejected for Broken"
+   "label": "Front Rejected for Broken"
   },
   {
    "fieldname": "finished_goods_section",
@@ -424,15 +436,109 @@
    "options": "Box Production Table"
   },
   {
-   "fieldname": "empty_section",
-   "fieldtype": "Section Break"
+   "fieldname": "back_rejected_by_in_area",
+   "fieldtype": "Int",
+   "label": "Back Rejected by In-Area",
+   "reqd": 1
+  },
+  {
+   "fieldname": "back_rejected_for_dry_problem",
+   "fieldtype": "Int",
+   "label": "Back Rejected for Dry Problem"
+  },
+  {
+   "fieldname": "back_rejected_for_broken",
+   "fieldtype": "Int",
+   "label": "Back Rejected for Broken"
+  },
+  {
+   "fieldname": "back_rejected_for_printing",
+   "fieldtype": "Int",
+   "label": "Back Rejected for Printing"
+  },
+  {
+   "fieldname": "back_received_from_printing_dept",
+   "fieldtype": "Int",
+   "label": "Back Received from Printing Dept",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_tnnf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "back_rejected",
+   "fieldtype": "Int",
+   "label": "Back Rejected"
+  },
+  {
+   "fieldname": "trim_back_available_in_plant",
+   "fieldtype": "Int",
+   "label": "Back Available in Plant",
+   "read_only": 1
+  },
+  {
+   "fieldname": "back_received_from_die_punching_dept",
+   "fieldtype": "Int",
+   "label": "Back Received from Die Punching Dept",
+   "read_only": 1
+  },
+  {
+   "fieldname": "trim_back",
+   "fieldtype": "Int",
+   "label": "Back Completed"
+  },
+  {
+   "fieldname": "column_break_qgjn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_mzce",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "die_back_available_in_plant",
+   "fieldtype": "Int",
+   "label": "Back Available in Plant",
+   "read_only": 1
+  },
+  {
+   "fieldname": "die_back_completed",
+   "fieldtype": "Int",
+   "label": "Back Completed"
+  },
+  {
+   "fieldname": "staple_back_rejected",
+   "fieldtype": "Int",
+   "label": "Back Rejected"
+  },
+  {
+   "fieldname": "column_break_gvkm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "staple_back_available_in_plant",
+   "fieldtype": "Int",
+   "label": "Back Available in Plant",
+   "read_only": 1
+  },
+  {
+   "fieldname": "staple_back_received_from_trimming_dept",
+   "fieldtype": "Int",
+   "label": "Back Received from Trimming Dept",
+   "read_only": 1
+  },
+  {
+   "fieldname": "staple_back_completed",
+   "fieldtype": "Int",
+   "label": "Back Completed"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-02 13:33:49.434857",
+ "modified": "2026-04-08 14:26:23.244103",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Box Production",
@@ -451,10 +557,40 @@
    "share": 1,
    "submit": 1,
    "write": 1
+  },
+  {
+   "amend": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing User",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

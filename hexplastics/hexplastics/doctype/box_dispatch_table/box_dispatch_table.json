@@ -1,0 +1,98 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-04-06 17:55:42.828617",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "box_without_stickering",
+  "source_warehouse",
+  "sticker_applied_qty",
+  "rejected_qty",
+  "column_break_grfs",
+  "dispatched_qty",
+  "sticker_applied_item",
+  "target_warehouse"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "fieldname": "box_without_stickering",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Box without Stickering",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "source_warehouse",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Source Warehouse",
+   "options": "Warehouse",
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "sticker_applied_qty",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Sticker Applied Qty",
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "rejected_qty",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Rejected Qty",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_grfs",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 1,
+   "fieldname": "dispatched_qty",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Dispatched Qty",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "sticker_applied_item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Sticker Applied Item",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "target_warehouse",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Target Warehouse",
+   "options": "Warehouse",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-08 13:14:01.401291",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "Box Dispatch Table",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
