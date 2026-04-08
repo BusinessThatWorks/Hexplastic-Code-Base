@@ -12,8 +12,11 @@ SHIFT_RANK = {"Day": 0, "Night": 1}
 OPENING_BALANCE_FIELDS = (
 	"print_available_in_plant",
 	"die_available_in_plant",
+	"die_back_available_in_plant",
 	"trim_available_in_plant",
+	"trim_back_available_in_plant",
 	"staple_available_in_plant",
+	"staple_back_available_in_plant",
 	"tape_available_in_plant",
 )
 
@@ -23,15 +26,22 @@ CARRY_FORWARD_SOURCE_FIELDS = (
 	"front_printed",
 	"back_printed",
 	"received_from_printing_dept",
+	"back_received_from_printing_dept",
 	"die_checked",
+	"die_back_completed",
+	"back_rejected",
 	"received_from_die_punching_dept",
+	"back_received_from_die_punching_dept",
 	"trim_checked",
+	"trim_back",
 	"received_from_trimming_dept",
+	"staple_back_received_from_trimming_dept",
 	"staple_checked",
 	"staple_rejected",
+	"staple_back_completed",
+	"staple_back_rejected",
 	"received_from_stapling_dept",
 	"tape_checked",
-	"tape_rejected",
 )
 
 USER_COUNT_FIELDS = (
@@ -40,16 +50,24 @@ USER_COUNT_FIELDS = (
 	"front_printed",
 	"back_printed",
 	"in_area_checked",
+	"back_rejected_by_in_area",
 	"rejected_for_dry_problem",
 	"rejected_for_printing",
 	"rejected_for_broken",
+	"back_rejected_for_dry_problem",
+	"back_rejected_for_printing",
+	"back_rejected_for_broken",
 	"die_checked",
 	"die_rejected",
+	"die_back_completed",
+	"back_rejected",
 	"trim_checked",
+	"trim_back",
 	"staple_checked",
 	"staple_rejected",
+	"staple_back_completed",
+	"staple_back_rejected",
 	"tape_checked",
-	"tape_rejected",
 	"sheet_cleaning_qty",
 )
 
@@ -154,22 +172,44 @@ def _validate_printing_limits(doc):
 		)
 
 	in_area_reject = cint(doc.in_area_checked)
+	back_in_area_reject = cint(doc.back_rejected_by_in_area)
 	out_area_reject = (
 		cint(doc.rejected_for_dry_problem) + cint(doc.rejected_for_printing) + cint(doc.rejected_for_broken)
 	)
+	back_out_area_reject = (
+		cint(doc.back_rejected_for_dry_problem)
+		+ cint(doc.back_rejected_for_printing)
+		+ cint(doc.back_rejected_for_broken)
+	)
 
-	if in_area_reject > total_printed:
+	if in_area_reject > front_printed:
 		frappe.throw(
-			_("Rejected by In-Area ({0}) cannot be greater than printed total ({1}).").format(
-				in_area_reject, total_printed
+			_("Front Rejected by In-Area ({0}) cannot be greater than Front Printed ({1}).").format(
+				in_area_reject, front_printed
 			),
 			title=_("Invalid rejection quantity"),
 		)
 
-	if out_area_reject > total_printed:
+	if back_in_area_reject > back_printed:
 		frappe.throw(
-			_("Out-Area rejection total ({0}) cannot be greater than printed total ({1}).").format(
-				out_area_reject, total_printed
+			_("Back Rejected by In-Area ({0}) cannot be greater than Back Printed ({1}).").format(
+				back_in_area_reject, back_printed
+			),
+			title=_("Invalid rejection quantity"),
+		)
+
+	if out_area_reject > front_printed:
+		frappe.throw(
+			_("Front Out-Area rejection total ({0}) cannot be greater than Front Printed ({1}).").format(
+				out_area_reject, front_printed
+			),
+			title=_("Invalid rejection quantity"),
+		)
+
+	if back_out_area_reject > back_printed:
+		frappe.throw(
+			_("Back Out-Area rejection total ({0}) cannot be greater than Back Printed ({1}).").format(
+				back_out_area_reject, back_printed
 			),
 			title=_("Invalid rejection quantity"),
 		)
@@ -215,10 +255,23 @@ def _validate_department_dependencies(doc):
 		doc.die_rejected,
 	)
 	_validate_stage(
+		_("Die Punching Dept (Back)"),
+		doc.die_back_available_in_plant,
+		doc.back_received_from_printing_dept,
+		doc.die_back_completed,
+		doc.back_rejected,
+	)
+	_validate_stage(
 		_("Trimming Dept"),
 		doc.trim_available_in_plant,
 		doc.received_from_die_punching_dept,
 		doc.trim_checked,
+	)
+	_validate_stage(
+		_("Trimming Dept (Back)"),
+		doc.trim_back_available_in_plant,
+		doc.back_received_from_die_punching_dept,
+		doc.trim_back,
 	)
 	_validate_stage(
 		_("Stapling Dept"),
@@ -228,11 +281,17 @@ def _validate_department_dependencies(doc):
 		doc.staple_rejected,
 	)
 	_validate_stage(
+		_("Stapling Dept (Back)"),
+		doc.staple_back_available_in_plant,
+		doc.staple_back_received_from_trimming_dept,
+		doc.staple_back_completed,
+		doc.staple_back_rejected,
+	)
+	_validate_stage(
 		_("Taping Dept"),
 		doc.tape_available_in_plant,
 		doc.received_from_stapling_dept,
 		doc.tape_checked,
-		doc.tape_rejected,
 	)
 
 
@@ -249,15 +308,7 @@ def _validate_finished_goods_table(doc):
 		)
 
 	tape_checked = cint(doc.tape_checked)
-	tape_rejected = cint(doc.tape_rejected)
-	tape_net_good = tape_checked - tape_rejected
-	if tape_net_good < 0:
-		frappe.throw(
-			_("Taping rejected ({0}) cannot be greater than taping checked ({1}).").format(
-				tape_rejected, tape_checked
-			),
-			title=_("Invalid taping quantities"),
-		)
+	tape_net_good = tape_checked
 
 	if tape_net_good <= 0:
 		frappe.throw(
@@ -325,32 +376,52 @@ def _validate_submit_required_fields(doc):
 
 
 def apply_derived_quantities(doc) -> None:
-	reject_in_area = cint(doc.in_area_checked)
-	rejected_for_dry = cint(doc.rejected_for_dry_problem)
-	rejected_for_printing = cint(doc.rejected_for_printing)
-	rejected_for_broken = cint(doc.rejected_for_broken)
+	front_in_area = cint(doc.in_area_checked)
+	front_rejected_for_dry = cint(doc.rejected_for_dry_problem)
+	front_rejected_for_printing = cint(doc.rejected_for_printing)
+	front_rejected_for_broken = cint(doc.rejected_for_broken)
+	back_in_area = cint(doc.back_rejected_by_in_area)
+	back_rejected_for_dry = cint(doc.back_rejected_for_dry_problem)
+	back_rejected_for_printing = cint(doc.back_rejected_for_printing)
+	back_rejected_for_broken = cint(doc.back_rejected_for_broken)
 
 	# Printing dept "Transfer to Clean Sheet" excludes "Rejected for Broken".
-	transfer_to_clean_sheet = reject_in_area + rejected_for_dry + rejected_for_printing
+	transfer_to_clean_sheet = (
+		front_in_area
+		+ front_rejected_for_dry
+		+ front_rejected_for_printing
+		+ back_in_area
+		+ back_rejected_for_dry
+		+ back_rejected_for_printing
+	)
 	doc.transfer_to_clean_sheet = transfer_to_clean_sheet
 	doc.sheet_cleaning_qty = transfer_to_clean_sheet
 
 	front = cint(doc.front_printed)
 	back = cint(doc.back_printed)
 	# All rejects that leave printing must reduce sheets forwarded to die punching.
-	printing_outbound_rejects = transfer_to_clean_sheet + rejected_for_broken
-	doc.received_from_printing_dept = max(0, front + back - printing_outbound_rejects)
+	front_printing_outbound_rejects = front_in_area + front_rejected_for_dry + front_rejected_for_printing + front_rejected_for_broken
+	back_printing_outbound_rejects = back_in_area + back_rejected_for_dry + back_rejected_for_printing + back_rejected_for_broken
+	doc.received_from_printing_dept = max(0, front - front_printing_outbound_rejects)
+	doc.back_received_from_printing_dept = max(0, back - back_printing_outbound_rejects)
 
 	die_ok = cint(doc.die_checked)
 	die_fail = cint(doc.die_rejected)
+	back_die_ok = cint(doc.die_back_completed)
+	back_die_fail = cint(doc.back_rejected)
 	doc.received_from_die_punching_dept = max(0, die_ok - die_fail)
+	doc.back_received_from_die_punching_dept = max(0, back_die_ok - back_die_fail)
 
 	doc.received_from_trimming_dept = cint(doc.trim_checked)
+	doc.staple_back_received_from_trimming_dept = cint(doc.trim_back)
 
 	staple_ok = cint(doc.staple_checked)
 	staple_fail = cint(doc.staple_rejected)
+	staple_back_ok = cint(doc.staple_back_completed)
+	staple_back_fail = cint(doc.staple_back_rejected)
 	net_staple_ok = max(0, staple_ok - staple_fail)
-	doc.box_produced = net_staple_ok // 2
+	net_staple_back_ok = max(0, staple_back_ok - staple_back_fail)
+	doc.box_produced = min(net_staple_ok, net_staple_back_ok)
 	doc.received_from_stapling_dept = max(0, doc.box_produced)
 
 
@@ -380,61 +451,93 @@ def _get_company_from_warehouses(*warehouses):
 def apply_closing_balances(doc) -> None:
 	opening_print = cint(doc.print_available_in_plant)
 	opening_die = cint(doc.die_available_in_plant)
+	opening_die_back = cint(doc.die_back_available_in_plant)
 	opening_trim = cint(doc.trim_available_in_plant)
+	opening_trim_back = cint(doc.trim_back_available_in_plant)
 	opening_staple = cint(doc.staple_available_in_plant)
+	opening_staple_back = cint(doc.staple_back_available_in_plant)
 	opening_tape = cint(doc.tape_available_in_plant)
 
 	sheet_received = cint(doc.sheet_received)
 	front_printed = cint(doc.front_printed)
 	back_printed = cint(doc.back_printed)
 	recv_printing = cint(doc.received_from_printing_dept)
+	recv_printing_back = cint(doc.back_received_from_printing_dept)
 	die_checked = cint(doc.die_checked)
+	die_back_checked = cint(doc.die_back_completed)
 	recv_die = cint(doc.received_from_die_punching_dept)
+	recv_die_back = cint(doc.back_received_from_die_punching_dept)
 	trim_checked = cint(doc.trim_checked)
+	trim_back_checked = cint(doc.trim_back)
 	recv_trim = cint(doc.received_from_trimming_dept)
+	recv_trim_back = cint(doc.staple_back_received_from_trimming_dept)
 	staple_checked = cint(doc.staple_checked)
 	staple_rejected = cint(doc.staple_rejected)
-	recv_staple = max(0, staple_checked - staple_rejected) // 2
+	staple_back_checked = cint(doc.staple_back_completed)
+	staple_back_rejected = cint(doc.staple_back_rejected)
+	recv_staple = cint(doc.received_from_stapling_dept)
 	tape_checked = cint(doc.tape_checked)
 
 	# One odd usable sheet can remain in stapling since 2 sheets make 1 box.
 	staple_odd_remainder = max(0, staple_checked - staple_rejected) % 2
+	staple_back_odd_remainder = max(0, staple_back_checked - staple_back_rejected) % 2
 
 	doc.print_available_in_plant = max(0, opening_print + sheet_received - front_printed - back_printed)
 	doc.die_available_in_plant = max(0, opening_die + recv_printing - die_checked)
+	doc.die_back_available_in_plant = max(0, opening_die_back + recv_printing_back - die_back_checked)
 	doc.trim_available_in_plant = max(0, opening_trim + recv_die - trim_checked)
+	doc.trim_back_available_in_plant = max(0, opening_trim_back + recv_die_back - trim_back_checked)
 	doc.staple_available_in_plant = max(0, opening_staple + recv_trim - staple_checked + staple_odd_remainder)
+	doc.staple_back_available_in_plant = max(
+		0, opening_staple_back + recv_trim_back - staple_back_checked + staple_back_odd_remainder
+	)
 	doc.tape_available_in_plant = max(0, opening_tape + recv_staple - tape_checked)
 
 
 def _compute_next_opening_from_doc(doc) -> dict:
 	opening_print = cint(doc.get("print_available_in_plant"))
 	opening_die = cint(doc.get("die_available_in_plant"))
+	opening_die_back = cint(doc.get("die_back_available_in_plant"))
 	opening_trim = cint(doc.get("trim_available_in_plant"))
+	opening_trim_back = cint(doc.get("trim_back_available_in_plant"))
 	opening_staple = cint(doc.get("staple_available_in_plant"))
+	opening_staple_back = cint(doc.get("staple_back_available_in_plant"))
 	opening_tape = cint(doc.get("tape_available_in_plant"))
 
 	sheet_received = cint(doc.get("sheet_received"))
 	front_printed = cint(doc.get("front_printed"))
 	back_printed = cint(doc.get("back_printed"))
 	recv_printing = cint(doc.get("received_from_printing_dept"))
+	recv_printing_back = cint(doc.get("back_received_from_printing_dept"))
 	die_checked = cint(doc.get("die_checked"))
+	die_back_checked = cint(doc.get("die_back_completed"))
 	recv_die = cint(doc.get("received_from_die_punching_dept"))
+	recv_die_back = cint(doc.get("back_received_from_die_punching_dept"))
 	trim_checked = cint(doc.get("trim_checked"))
+	trim_back_checked = cint(doc.get("trim_back"))
 	recv_trim = cint(doc.get("received_from_trimming_dept"))
+	recv_trim_back = cint(doc.get("staple_back_received_from_trimming_dept"))
 	staple_checked = cint(doc.get("staple_checked"))
 	staple_rejected = cint(doc.get("staple_rejected"))
-	recv_staple = max(0, staple_checked - staple_rejected) // 2
+	staple_back_checked = cint(doc.get("staple_back_completed"))
+	staple_back_rejected = cint(doc.get("staple_back_rejected"))
+	recv_staple = cint(doc.get("received_from_stapling_dept"))
 	tape_checked = cint(doc.get("tape_checked"))
 
 	staple_odd_remainder = max(0, staple_checked - staple_rejected) % 2
+	staple_back_odd_remainder = max(0, staple_back_checked - staple_back_rejected) % 2
 
 	return {
 		"print_available_in_plant": max(0, opening_print + sheet_received - front_printed - back_printed),
 		"die_available_in_plant": max(0, opening_die + recv_printing - die_checked),
+		"die_back_available_in_plant": max(0, opening_die_back + recv_printing_back - die_back_checked),
 		"trim_available_in_plant": max(0, opening_trim + recv_die - trim_checked),
+		"trim_back_available_in_plant": max(0, opening_trim_back + recv_die_back - trim_back_checked),
 		"staple_available_in_plant": max(
 			0, opening_staple + recv_trim - staple_checked + staple_odd_remainder
+		),
+		"staple_back_available_in_plant": max(
+			0, opening_staple_back + recv_trim_back - staple_back_checked + staple_back_odd_remainder
 		),
 		"tape_available_in_plant": max(0, opening_tape + recv_staple - tape_checked),
 	}
