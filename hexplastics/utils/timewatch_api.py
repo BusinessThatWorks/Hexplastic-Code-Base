@@ -249,6 +249,15 @@ def _sync_attendance_for_date(att_date: str, employee: str | None = None):
 		doc.custom_attendance_in_time = in_time.strftime("%Y-%m-%d %H:%M:%S") if in_time else None
 		doc.custom_attendance_out_time = out_time.strftime("%Y-%m-%d %H:%M:%S") if out_time else None
 
+		if in_time and out_time:
+			delta = out_time - in_time
+			total_seconds = int(delta.total_seconds())
+			hours, remainder = divmod(total_seconds, 3600)
+			minutes, seconds = divmod(remainder, 60)
+			doc.custom_working_hours = f"{hours} h {minutes} m {seconds} s"
+		else:
+			doc.custom_working_hours = None
+
 		doc.flags.ignore_permissions = True
 		doc.save()
 
