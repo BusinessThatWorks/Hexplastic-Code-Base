@@ -22,47 +22,69 @@ class TestBoxProduction(FrappeTestCase):
 	def test_apply_derived_quantities(self):
 		doc = frappe._dict(
 			in_area_checked=5,
+			back_rejected_by_in_area=4,
 			front_printed=40,
 			back_printed=30,
 			rejected_for_dry_problem=2,
 			rejected_for_printing=3,
 			rejected_for_broken=1,
+			back_rejected_for_dry_problem=1,
+			back_rejected_for_printing=2,
+			back_rejected_for_broken=3,
 			die_checked=50,
 			die_rejected=8,
+			die_back_completed=35,
+			back_rejected=5,
 			trim_checked=42,
+			trim_back=30,
 			staple_checked=100,
 			staple_rejected=4,
+			staple_back_completed=100,
+			staple_back_rejected=10,
 			tape_checked=90,
-			tape_rejected=10,
 		)
 
 		apply_derived_quantities(doc)
 
-		self.assertEqual(doc.transfer_to_clean_sheet, 10)
-		# 40 + 30 - ((5 + 2 + 3) + 1) = 59
-		self.assertEqual(doc.received_from_printing_dept, 59)
+		self.assertEqual(doc.transfer_to_clean_sheet, 17)
+		# 40 - (5 + 2 + 3 + 1) = 29
+		self.assertEqual(doc.received_from_printing_dept, 29)
+		# 30 - (4 + 1 + 2 + 3) = 20
+		self.assertEqual(doc.back_received_from_printing_dept, 20)
 		self.assertEqual(doc.received_from_die_punching_dept, 42)
+		self.assertEqual(doc.back_received_from_die_punching_dept, 30)
 		self.assertEqual(doc.received_from_trimming_dept, 42)
-		self.assertEqual(doc.received_from_stapling_dept, 48)
-		self.assertEqual(doc.box_produced, 48)  # (100 - 4) // 2
+		self.assertEqual(doc.staple_back_received_from_trimming_dept, 30)
+		self.assertEqual(doc.received_from_stapling_dept, 90)
+		self.assertEqual(doc.box_produced, 90)
 
 	def test_apply_closing_balances(self):
 		doc = frappe._dict(
 			print_available_in_plant=0,
 			die_available_in_plant=0,
+			die_back_available_in_plant=0,
 			trim_available_in_plant=0,
+			trim_back_available_in_plant=0,
 			staple_available_in_plant=0,
+			staple_back_available_in_plant=0,
 			tape_available_in_plant=3,
 			sheet_received=7000,
 			front_printed=3000,
 			back_printed=3400,
 			received_from_printing_dept=6400,
+			back_received_from_printing_dept=0,
 			die_checked=6300,
+			die_back_completed=0,
 			received_from_die_punching_dept=6200,
+			back_received_from_die_punching_dept=0,
 			trim_checked=6000,
+			trim_back=0,
 			received_from_trimming_dept=6001,
+			staple_back_received_from_trimming_dept=0,
 			staple_checked=6001,
 			staple_rejected=0,
+			staple_back_completed=0,
+			staple_back_rejected=0,
 			received_from_stapling_dept=2997,
 			tape_checked=2996,
 		)
@@ -71,9 +93,12 @@ class TestBoxProduction(FrappeTestCase):
 
 		self.assertEqual(doc.print_available_in_plant, 600)
 		self.assertEqual(doc.die_available_in_plant, 100)
+		self.assertEqual(doc.die_back_available_in_plant, 0)
 		self.assertEqual(doc.trim_available_in_plant, 200)
+		self.assertEqual(doc.trim_back_available_in_plant, 0)
 		self.assertEqual(doc.staple_available_in_plant, 1)  # odd usable sheet remainder
-		self.assertEqual(doc.tape_available_in_plant, 7)  # 3 + (6001 // 2) - 2996
+		self.assertEqual(doc.staple_back_available_in_plant, 0)
+		self.assertEqual(doc.tape_available_in_plant, 4)  # 3 + 2997 - 2996
 
 	def _row(self, name, date, shift, **plant_overrides):
 		r = {fn: 0 for fn in OPENING_BALANCE_FIELDS}
@@ -134,23 +159,34 @@ class TestBoxProduction(FrappeTestCase):
 			shift_type="Night",
 			print_available_in_plant=10,
 			die_available_in_plant=5,
+			die_back_available_in_plant=6,
 			trim_available_in_plant=0,
+			trim_back_available_in_plant=0,
 			staple_available_in_plant=0,
+			staple_back_available_in_plant=0,
 			tape_available_in_plant=4,
 			sheet_received=100,
 			front_printed=40,
 			back_printed=40,
 			in_area_checked=5,
+			back_rejected_by_in_area=4,
 			rejected_for_dry_problem=3,
+			back_rejected_for_dry_problem=2,
 			rejected_for_printing=2,
+			back_rejected_for_printing=1,
 			rejected_for_broken=0,
+			back_rejected_for_broken=0,
 			die_checked=60,
 			die_rejected=5,
+			die_back_completed=30,
+			back_rejected=5,
 			trim_checked=50,
+			trim_back=20,
 			staple_checked=40,
 			staple_rejected=0,
+			staple_back_completed=40,
+			staple_back_rejected=0,
 			tape_checked=18,
-			tape_rejected=2,
 		)
 		apply_derived_quantities(prior)
 		expected_opening = _compute_next_opening_from_doc(prior)
@@ -170,10 +206,13 @@ class TestBoxProduction(FrappeTestCase):
 		# Explicitly validate that all departments carry previous available stock
 		# into new-doc opening balances while applying net movement from prior shift.
 		self.assertEqual(new_doc.print_available_in_plant, 30)  # 10 + 100 - 40 - 40
-		self.assertEqual(new_doc.die_available_in_plant, 15)  # 5 + 70 - 60
+		self.assertEqual(new_doc.die_available_in_plant, 0)  # 5 + 30 - 60
+		self.assertEqual(new_doc.die_back_available_in_plant, 9)  # 6 + 33 - 30
 		self.assertEqual(new_doc.trim_available_in_plant, 5)  # 0 + 55 - 50
+		self.assertEqual(new_doc.trim_back_available_in_plant, 5)  # 0 + 25 - 20
 		self.assertEqual(new_doc.staple_available_in_plant, 10)  # 0 + 50 - 40 + 0
-		self.assertEqual(new_doc.tape_available_in_plant, 6)  # 4 + (40 // 2) - 18
+		self.assertEqual(new_doc.staple_back_available_in_plant, 0)  # 0 + 20 - 40 + 0
+		self.assertEqual(new_doc.tape_available_in_plant, 26)  # 4 + 40 - 18
 
 		for fieldname in OPENING_BALANCE_FIELDS:
 			self.assertEqual(new_doc[fieldname], expected_opening[fieldname])
@@ -370,10 +409,9 @@ class TestBoxProduction(FrappeTestCase):
 		self.assertEqual(updates["stock_entry_id"], "STE-1")
 
 	def test_validate_finished_goods_table_requires_exact_net_tape(self):
-		# net good tape = 100 - 20 = 80
+		# net good tape equals tape_checked since tape rejection is removed.
 		doc = frappe._dict(
 			tape_checked=100,
-			tape_rejected=20,
 			table_aqtt=[
 				frappe._dict(finished_item="FG-1", finished_qty=60, fg_target_warehouse="WH-1"),
 				frappe._dict(finished_item="FG-1", finished_qty=10, fg_target_warehouse="WH-1"),
@@ -384,8 +422,7 @@ class TestBoxProduction(FrappeTestCase):
 
 	def test_validate_finished_goods_table_allows_exact_net_tape_distribution(self):
 		doc = frappe._dict(
-			tape_checked=100,
-			tape_rejected=20,
+			tape_checked=80,
 			table_aqtt=[
 				frappe._dict(finished_item="FG-1", finished_qty=50, fg_target_warehouse="WH-1"),
 				frappe._dict(finished_item="FG-1", finished_qty=30, fg_target_warehouse="WH-2"),
