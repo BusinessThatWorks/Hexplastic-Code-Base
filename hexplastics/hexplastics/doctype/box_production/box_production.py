@@ -44,6 +44,9 @@ CARRY_FORWARD_SOURCE_FIELDS = (
 	"tape_checked",
 )
 
+# Int fields where 0 is a valid value on submit (not treated as "missing").
+SUBMIT_FIELDS_ALLOWING_ZERO = frozenset(("sheet_cleaning_qty", "in_area_checked"))
+
 USER_COUNT_FIELDS = (
 	*OPENING_BALANCE_FIELDS,
 	"sheet_received",
@@ -364,7 +367,7 @@ def _validate_submit_required_fields(doc):
 	)
 	for fieldname in required_fields:
 		value = doc.get(fieldname)
-		if value in (None, "") or (value == 0 and fieldname != "sheet_cleaning_qty"):
+		if value in (None, "") or (value == 0 and fieldname not in SUBMIT_FIELDS_ALLOWING_ZERO):
 			label = doc.meta.get_label(fieldname)
 			if not label or str(label).strip().lower() == "no label":
 				label = fieldname.replace("_", " ").title()
@@ -448,53 +451,8 @@ def _get_company_from_warehouses(*warehouses):
 	return default_company
 
 
-def apply_closing_balances(doc) -> None:
-	opening_print = cint(doc.print_available_in_plant)
-	opening_die = cint(doc.die_available_in_plant)
-	opening_die_back = cint(doc.die_back_available_in_plant)
-	opening_trim = cint(doc.trim_available_in_plant)
-	opening_trim_back = cint(doc.trim_back_available_in_plant)
-	opening_staple = cint(doc.staple_available_in_plant)
-	opening_staple_back = cint(doc.staple_back_available_in_plant)
-	opening_tape = cint(doc.tape_available_in_plant)
-
-	sheet_received = cint(doc.sheet_received)
-	front_printed = cint(doc.front_printed)
-	back_printed = cint(doc.back_printed)
-	recv_printing = cint(doc.received_from_printing_dept)
-	recv_printing_back = cint(doc.back_received_from_printing_dept)
-	die_checked = cint(doc.die_checked)
-	die_back_checked = cint(doc.die_back_completed)
-	recv_die = cint(doc.received_from_die_punching_dept)
-	recv_die_back = cint(doc.back_received_from_die_punching_dept)
-	trim_checked = cint(doc.trim_checked)
-	trim_back_checked = cint(doc.trim_back)
-	recv_trim = cint(doc.received_from_trimming_dept)
-	recv_trim_back = cint(doc.staple_back_received_from_trimming_dept)
-	staple_checked = cint(doc.staple_checked)
-	staple_rejected = cint(doc.staple_rejected)
-	staple_back_checked = cint(doc.staple_back_completed)
-	staple_back_rejected = cint(doc.staple_back_rejected)
-	recv_staple = cint(doc.received_from_stapling_dept)
-	tape_checked = cint(doc.tape_checked)
-
-	# One odd usable sheet can remain in stapling since 2 sheets make 1 box.
-	staple_odd_remainder = max(0, staple_checked - staple_rejected) % 2
-	staple_back_odd_remainder = max(0, staple_back_checked - staple_back_rejected) % 2
-
-	doc.print_available_in_plant = max(0, opening_print + sheet_received - front_printed - back_printed)
-	doc.die_available_in_plant = max(0, opening_die + recv_printing - die_checked)
-	doc.die_back_available_in_plant = max(0, opening_die_back + recv_printing_back - die_back_checked)
-	doc.trim_available_in_plant = max(0, opening_trim + recv_die - trim_checked)
-	doc.trim_back_available_in_plant = max(0, opening_trim_back + recv_die_back - trim_back_checked)
-	doc.staple_available_in_plant = max(0, opening_staple + recv_trim - staple_checked + staple_odd_remainder)
-	doc.staple_back_available_in_plant = max(
-		0, opening_staple_back + recv_trim_back - staple_back_checked + staple_back_odd_remainder
-	)
-	doc.tape_available_in_plant = max(0, opening_tape + recv_staple - tape_checked)
-
-
-def _compute_next_opening_from_doc(doc) -> dict:
+def _compute_plant_closing_balances(doc) -> dict:
+	"""End-of-shift plant balances (same values carried forward as the next doc's opening)."""
 	opening_print = cint(doc.get("print_available_in_plant"))
 	opening_die = cint(doc.get("die_available_in_plant"))
 	opening_die_back = cint(doc.get("die_back_available_in_plant"))
@@ -524,6 +482,7 @@ def _compute_next_opening_from_doc(doc) -> dict:
 	recv_staple = cint(doc.get("received_from_stapling_dept"))
 	tape_checked = cint(doc.get("tape_checked"))
 
+	# One odd usable sheet can remain in stapling since 2 sheets make 1 box.
 	staple_odd_remainder = max(0, staple_checked - staple_rejected) % 2
 	staple_back_odd_remainder = max(0, staple_back_checked - staple_back_rejected) % 2
 
@@ -541,6 +500,15 @@ def _compute_next_opening_from_doc(doc) -> dict:
 		),
 		"tape_available_in_plant": max(0, opening_tape + recv_staple - tape_checked),
 	}
+
+
+def apply_closing_balances(doc) -> None:
+	for fieldname, value in _compute_plant_closing_balances(doc).items():
+		setattr(doc, fieldname, value)
+
+
+def _compute_next_opening_from_doc(doc) -> dict:
+	return _compute_plant_closing_balances(doc)
 
 
 class BoxProduction(Document):
@@ -575,6 +543,16 @@ class BoxProduction(Document):
 	def on_submit(self):
 		self._create_submit_stock_entries()
 
+	def on_cancel(self):
+		# Reverse order of creation: Material Receipt then Manufacture.
+		for field in ("stock_entry_id", "box_stock_entry_id"):
+			name = self.get(field)
+			if not name or not frappe.db.exists("Stock Entry", name):
+				continue
+			se = frappe.get_doc("Stock Entry", name)
+			if se.docstatus == 1:
+				se.cancel()
+
 	def _create_submit_stock_entries(self):
 		if self.box_stock_entry_id and self.stock_entry_id:
 			return
@@ -585,11 +563,20 @@ class BoxProduction(Document):
 		cleaning_qty = cint(self.sheet_cleaning_qty)
 
 		if raw_qty <= 0:
-			frappe.throw(_("Sheet Received must be greater than zero for Stock Entry."))
+			frappe.throw(
+				_("Sheet Received must be greater than zero for Stock Entry."),
+				title=_("Stock Entry"),
+			)
 		if fg_qty <= 0:
-			frappe.throw(_("Total Finished Qty must be greater than zero for Stock Entry."))
+			frappe.throw(
+				_("Total Finished Qty must be greater than zero for Stock Entry."),
+				title=_("Stock Entry"),
+			)
 		if cleaning_qty < 0:
-			frappe.throw(_("Sheet Cleaning Qty cannot be negative for Stock Entry."))
+			frappe.throw(
+				_("Sheet Cleaning Qty cannot be negative for Stock Entry."),
+				title=_("Stock Entry"),
+			)
 
 		fg_warehouses = [r.fg_target_warehouse for r in rows]
 		company = _get_company_from_warehouses(
