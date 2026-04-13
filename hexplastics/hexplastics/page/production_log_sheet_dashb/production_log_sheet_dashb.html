@@ -22,13 +22,13 @@
 				</select>
 			</div>
 			<div class="filter-group filter-group-wide">
-				<label class="filter-label">Manufacturing Item</label>
-				<div class="awesomplete-wrapper" id="item-filter-wrapper">
+				<label class="filter-label">Grade</label>
+				<div class="awesomplete-wrapper" id="grade-filter-wrapper">
 					<input
 						type="text"
 						class="filter-input"
-						id="manufacturing-item"
-						placeholder="Select Item..."
+						id="grade-filter"
+						placeholder="All grades..."
 						autocomplete="off"
 					/>
 				</div>
@@ -210,13 +210,14 @@
 								<th>Production Log Sheet ID</th>
 								<th>Date</th>
 								<th>Shift</th>
+								<th>Grade</th>
 								<th>Manufactured Qty</th>
 								<th>Net Weight</th>
 								<th>Total RM Consumption</th>
-								<th>Prime Used</th>
 								<th>MIP Used</th>
 								<!-- <th>Per Piece Rate</th> -->
 								<th>Process Loss</th>
+								<th>Total Production Wt</th>
 							</tr>
 						</thead>
 						<tbody id="entries-tbody">
@@ -312,8 +313,21 @@
 		<!-- Actual vs Planned Tab -->
 		<div class="tab-pane" id="actual-vs-planned-tab">
 			<div class="entries-section">
-				<div class="section-header">
+				<div class="section-header section-header-with-actions">
 					<h3>Planned vs Actual Comparison</h3>
+					<div class="export-actions">
+						<button class="export-btn export-btn-primary" id="export-planned-actual-btn" title="Export">
+							<svg class="export-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+								<polyline points="7 10 12 15 17 10"></polyline>
+								<line x1="12" y1="15" x2="12" y2="3"></line>
+							</svg>
+							Export
+							<svg class="export-dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<polyline points="6 9 12 15 18 9"></polyline>
+							</svg>
+						</button>
+					</div>
 				</div>
 				<div class="entries-table-container">
 					<div class="table-loading" id="actual-vs-planned-loading">
@@ -323,7 +337,7 @@
 					<table class="entries-table" id="actual-vs-planned-table">
 						<thead>
 							<tr>
-								<th>Item</th>
+								<th>Grade</th>
 								<th class="text-right">Planned FG Qty</th>
 								<th class="text-right">Planned FG Weight</th>
 								<th class="text-right">Planned RM Consumption</th>

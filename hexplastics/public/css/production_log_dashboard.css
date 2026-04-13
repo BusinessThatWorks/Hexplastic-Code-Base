@@ -97,20 +97,21 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
 .production-log-dashboard .filter-group {
     display: flex;
     flex-direction: column;
-    flex: 0 0 auto;
-    min-width: 180px;
+    flex: 1 1 0;
+    min-width: 170px;
 }
 
 .production-log-dashboard .filter-group-wide {
-    flex: 1 1 auto;
-    min-width: 220px;
-    max-width: 350px;
+    flex: 1.35 1 0;
+    min-width: 230px;
+    max-width: none;
 }
 
 .production-log-dashboard .filter-group-btn {
     flex: 0 0 auto;
     align-self: flex-end;
     margin-left: 0;
+    min-width: 0;
 }
 
 .production-log-dashboard .filter-label {
@@ -162,19 +163,20 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     background: #1f272e;
     color: #fff;
     border: none;
-    padding: 10px 24px;
-    border-radius: 8px;
-    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s ease;
-    height: 40px;
-    display: flex;
+    height: 38px;
+    min-width: auto;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 4px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    letter-spacing: 0.3px;
+    letter-spacing: 0.2px;
     white-space: nowrap;
 }
 
