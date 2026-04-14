@@ -55,7 +55,22 @@ class DailyProductionDashboard {
 					toInput.addEventListener("change", () => self.refresh_data());
 				}
 
-				setTimeout(() => self.refresh_data(), 150);
+				frappe.call({
+					method: "hexplastics.api.daily_production_dashboard.get_default_dashboard_date",
+					callback: function (r) {
+						const defaultDate =
+							r?.message?.default_date || frappe.datetime.get_today();
+						if (fromInput && !fromInput.value) fromInput.value = defaultDate;
+						if (toInput && !toInput.value) toInput.value = defaultDate;
+						self.refresh_data();
+					},
+					error: function () {
+						const today = frappe.datetime.get_today();
+						if (fromInput && !fromInput.value) fromInput.value = today;
+						if (toInput && !toInput.value) toInput.value = today;
+						self.refresh_data();
+					},
+				});
 			}
 		);
 	}
@@ -78,7 +93,7 @@ class DailyProductionDashboard {
 			},
 			callback: function (r) {
 				if (r.message) {
-					self.render_production(r.message.production);
+					self.render_sheet_line(r.message.sheet_line);
 					self.render_dispatch(r.message.dispatch);
 					self.render_mip(r.message.mip);
 				}
@@ -118,6 +133,14 @@ class DailyProductionDashboard {
 		if (el) el.textContent = text;
 	}
 
+	fmt_date(v) {
+		if (!v) return "-";
+		const s = String(v);
+		// Keep range labels (e.g. "2026-03-01 to 2026-03-31") as-is
+		if (s.includes(" to ")) return s;
+		return frappe.datetime.str_to_user(s);
+	}
+
 	set_loading(on) {
 		if (on) {
 			this.wrapper.find(".daily-production-dashboard").addClass("dp-loading");
@@ -127,69 +150,43 @@ class DailyProductionDashboard {
 	}
 
 
-	/* ── Section 1 — Production Summary ───────────────────────── */
-	render_production(d) {
-		if (!d) return;
+	/* ── Section 1 — Sheet Line / EXIDE BOXES tables ──────────── */
+	render_sheet_line(rows) {
+		const sheetRows = rows || [];
+		const sheetBody = document.getElementById("sheet-line-tbody");
+		const exideBody = document.getElementById("exide-boxes-tbody");
 
-		this.set_el("sheets-produced", this.fmt(d.sheets_produced));
-		this.set_el("boxes-produced", this.fmt(d.boxes_produced));
-		this.set_el(
-			"sheets-produced-change",
-			this.change_text(d.sheets_produced, d.sheets_produced_yesterday)
-		);
-		this.set_el(
-			"boxes-produced-change",
-			this.change_text(d.boxes_produced, d.boxes_produced_yesterday)
-		);
-
-		// Rejection
-		this.set_el("sheets-rejected", this.fmt(d.sheets_rejected));
-		this.set_el("boxes-rejected", this.fmt(d.boxes_rejected));
-		this.set_el(
-			"sheets-reject-rate",
-			`${this.pct(d.sheets_rejected, d.sheets_produced)}% reject rate`
-		);
-		this.set_el(
-			"boxes-reject-rate",
-			`${this.pct(d.boxes_rejected, d.boxes_produced)}% reject rate`
-		);
-
-		// Production Plan Overview table
-		const planBody = document.getElementById("production-plan-tbody");
-		if (planBody) {
-			const rows = d.plan_overview || [];
-			if (!rows.length) {
-				planBody.innerHTML =
-					'<tr><td colspan="3" class="text-muted">No data for selected period</td></tr>';
+		if (sheetBody) {
+			if (!sheetRows.length) {
+				sheetBody.innerHTML =
+					'<tr><td colspan="4" class="text-muted">No data for selected period</td></tr>';
 			} else {
-				planBody.innerHTML = rows
+				sheetBody.innerHTML = sheetRows
 					.map(
 						(row) => `
 					<tr>
-						<td>${frappe.utils.escape_html(row.item_name || "-")}</td>
-						<td>${frappe.utils.escape_html(row.production_plan || "-")}</td>
-						<td>${this.fmt(row.manufactured_qty || 0)}</td>
+						<td>${frappe.utils.escape_html(row.shift || "-")}</td>
+						<td>${this.fmt(row.target || 0)}</td>
+						<td>${this.fmt(row.produced || 0)}</td>
+						<td>${this.fmt(row.rejected || 0)}</td>
 					</tr>`
 					)
 					.join("");
 			}
 		}
 
-		// Rejection Overview table
-		const rejBody = document.getElementById("rejection-overview-tbody");
-		if (rejBody) {
-			const rows = d.rejection_overview || [];
-			if (!rows.length) {
-				rejBody.innerHTML =
+		if (exideBody) {
+			if (!sheetRows.length) {
+				exideBody.innerHTML =
 					'<tr><td colspan="3" class="text-muted">No data for selected period</td></tr>';
 			} else {
-				rejBody.innerHTML = rows
+				exideBody.innerHTML = sheetRows
 					.map(
 						(row) => `
 					<tr>
-						<td>${frappe.utils.escape_html(row.rejection_id || "-")}</td>
-						<td>${this.fmt(row.rejected_qty || 0)}</td>
-						<td>${(row.rejection_pct || 0).toFixed(2)}%</td>
+						<td>${frappe.utils.escape_html(row.shift || "-")}</td>
+						<td>0</td>
+						<td>0</td>
 					</tr>`
 					)
 					.join("");
@@ -199,59 +196,48 @@ class DailyProductionDashboard {
 
 	/* ── Section 2 — Dispatch Summary ─────────────────────────── */
 	render_dispatch(d) {
-		if (!d) return;
+		const rows = d?.sheet_line_rows || [];
+		const summaryBody = document.getElementById("dispatch-summary-tbody");
 
-		const total = (d.sheets_dispatched || 0) + (d.exide_dispatched || 0);
+		if (!summaryBody) return;
+		if (!rows.length) {
+			summaryBody.innerHTML =
+				'<tr><td>0</td><td>0</td></tr>';
+			return;
+		}
 
-		this.set_el("total-dispatched", this.fmt(total));
-		this.set_el("dispatch-sheets", this.fmt(d.sheets_dispatched));
-		this.set_el("dispatch-exide", this.fmt(d.exide_dispatched));
-
-		// Mini-table in total card
-		this.set_el("dispatch-sheets-mini", this.fmt(d.sheets_dispatched));
-		this.set_el("dispatch-exide-mini", this.fmt(d.exide_dispatched));
-		this.set_el(
-			"dispatch-sheets-pct-mini",
-			`${this.pct(d.sheets_dispatched, total)}%`
-		);
-		this.set_el(
-			"dispatch-exide-pct-mini",
-			`${this.pct(d.exide_dispatched, total)}%`
-		);
-
-		// Sub cards
+		summaryBody.innerHTML = rows
+			.map(
+				(row) => `
+			<tr>
+				<td>${this.fmt(row.qty || 0)} ${frappe.utils.escape_html(row.uom || "")}</td>
+				<td>0</td>
+			</tr>`
+			)
+			.join("");
 	}
 
 	/* ── Section 3 — MIP ──────────────────────────────────────── */
 	render_mip(d) {
-		if (!d) return;
-
-		const consumed = d.total_consumed || 0;
-		const generated = d.total_generated || 0;
-		const net = generated - consumed;
-
-		this.set_el("mip-consumed", this.fmt(consumed));
-		this.set_el("mip-generated", this.fmt(generated));
-
-		// Net balance
-		const sign = net >= 0 ? "+" : "";
-		this.set_el("mip-net-balance", `${sign}${this.fmt(net)}`);
-
-		// Mini-table
-		this.set_el("mip-gen-mini", this.fmt(generated));
-		this.set_el("mip-con-mini", this.fmt(consumed));
-		this.set_el("mip-net-mini", `${sign}${this.fmt(net)}`);
-
-		// Dynamic colour for net balance card
-		const netCard = this.wrapper.find("#mip-net-balance").closest(".dp-card");
-		if (net >= 0) {
-			netCard
-				.removeClass("dp-card-red-gradient")
-				.addClass("dp-card-green-gradient");
-		} else {
-			netCard
-				.removeClass("dp-card-green-gradient")
-				.addClass("dp-card-red-gradient");
+		const body = document.getElementById("mip-summary-tbody");
+		if (!body) return;
+		const rows = d?.rows || [];
+		if (!rows.length) {
+			body.innerHTML =
+				'<tr><td colspan="4" class="text-muted">No data for selected period</td></tr>';
+			return;
 		}
+		body.innerHTML = rows
+			.map(
+				(row) => `
+			<tr>
+				<td>${frappe.utils.escape_html(row.shift || "-")}</td>
+				<td>${this.fmt(row.total_issued || 0)}</td>
+				<td>${this.fmt(row.total_consumed || 0)}</td>
+				<td>${this.fmt(row.net_balance || 0)}</td>
+			</tr>
+		`
+			)
+			.join("");
 	}
 }

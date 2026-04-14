@@ -95,6 +95,14 @@ body[data-page-route*="daily-production"] .page-content-wrapper {
     margin: 8px 24px 4px;
 }
 
+.daily-production-dashboard .dp-section-header-filters {
+    align-items: flex-end;
+}
+
+.daily-production-dashboard .dp-section-header-filters .dp-global-filters {
+    margin: 0;
+}
+
 .daily-production-dashboard .dp-date-filter {
     display: flex;
     flex-direction: column;
@@ -107,9 +115,17 @@ body[data-page-route*="daily-production"] .page-content-wrapper {
 .daily-production-dashboard .dp-date-filter input[type="date"] {
     padding: 6px 10px;
     border-radius: 6px;
-    border: 1px solid #d0d7e2;
+    border: 1px solid #7ea9f2;
     font-size: 12px;
     min-width: 140px;
+    background: #eaf2ff;
+    color: #12325c;
+}
+
+.daily-production-dashboard .dp-date-filter input[type="date"]:focus {
+    outline: none;
+    border-color: #4f86e8;
+    box-shadow: 0 0 0 2px rgba(79, 134, 232, 0.2);
 }
 
 .daily-production-dashboard .dp-refresh-btn {
@@ -512,6 +528,15 @@ body[data-page-route*="daily-production"] .page-content-wrapper {
     max-height: 320px;
 }
 
+.daily-production-dashboard .dp-summary-table-card-wide {
+    max-height: 380px;
+    margin-bottom: 18px;
+}
+
+.daily-production-dashboard .dp-summary-table-card-wide:last-child {
+    margin-bottom: 0;
+}
+
 .daily-production-dashboard .dp-summary-table-header {
     font-size: 13px;
     font-weight: 700;
@@ -549,12 +574,12 @@ body[data-page-route*="daily-production"] .page-content-wrapper {
 
 .daily-production-dashboard .dp-summary-table th {
     font-weight: 700;
-    color: #6b7b8d;
-    border-bottom: 2px solid #e2e7ee;
+    color: #6f4a1f;
+    border-bottom: 2px solid #e6d7c7;
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.6px;
-    background: #ffffff;
+    background: #f8efe5;
     text-align: center; /* center header label text */
 }
 
@@ -562,6 +587,8 @@ body[data-page-route*="daily-production"] .page-content-wrapper {
     color: #1f2933;
     border-bottom: 1px solid #f1f4f8;
     text-align: center; /* center values under header */
+    font-weight: 600;
+    font-size: 13px;
 }
 
 /* Column sizing + alignment for the 3-column dashboard tables */
@@ -577,6 +604,55 @@ body[data-page-route*="daily-production"] .page-content-wrapper {
 .daily-production-dashboard .dp-summary-table th:nth-child(3),
 .daily-production-dashboard .dp-summary-table td:nth-child(3) {
     width: 26%;
+}
+
+.daily-production-dashboard .dp-line-table th:nth-child(1),
+.daily-production-dashboard .dp-line-table td:nth-child(1) {
+    width: 18%;
+}
+.daily-production-dashboard .dp-line-table th:nth-child(2),
+.daily-production-dashboard .dp-line-table td:nth-child(2) {
+    width: 16%;
+}
+.daily-production-dashboard .dp-line-table th:nth-child(3),
+.daily-production-dashboard .dp-line-table td:nth-child(3) {
+    width: 22%;
+}
+.daily-production-dashboard .dp-line-table th:nth-child(4),
+.daily-production-dashboard .dp-line-table td:nth-child(4) {
+    width: 22%;
+}
+.daily-production-dashboard .dp-line-table th:nth-child(5),
+.daily-production-dashboard .dp-line-table td:nth-child(5) {
+    width: 22%;
+}
+
+.daily-production-dashboard .dp-dispatch-table th:nth-child(1),
+.daily-production-dashboard .dp-dispatch-table td:nth-child(1) {
+    width: 32%;
+}
+.daily-production-dashboard .dp-dispatch-table th:nth-child(2),
+.daily-production-dashboard .dp-dispatch-table td:nth-child(2) {
+    width: 20%;
+}
+.daily-production-dashboard .dp-dispatch-table th:nth-child(3),
+.daily-production-dashboard .dp-dispatch-table td:nth-child(3) {
+    width: 48%;
+}
+
+.daily-production-dashboard .dp-mip-table th:nth-child(1),
+.daily-production-dashboard .dp-mip-table td:nth-child(1),
+.daily-production-dashboard .dp-mip-table th:nth-child(2),
+.daily-production-dashboard .dp-mip-table td:nth-child(2),
+.daily-production-dashboard .dp-mip-table th:nth-child(3),
+.daily-production-dashboard .dp-mip-table td:nth-child(3) {
+    width: 20%;
+}
+.daily-production-dashboard .dp-mip-table th:nth-child(4),
+.daily-production-dashboard .dp-mip-table td:nth-child(4),
+.daily-production-dashboard .dp-mip-table th:nth-child(5),
+.daily-production-dashboard .dp-mip-table td:nth-child(5) {
+    width: 20%;
 }
 
 /* Numeric alignment for body cells */

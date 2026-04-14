@@ -36,6 +36,7 @@ def get_daily_production_data(from_date=None, to_date=None):
 
     try:
         return {
+            "sheet_line": _get_sheet_line_table(from_dt, to_dt),
             "production": _get_production_summary(from_dt, to_dt, yesterday),
             "dispatch": _get_dispatch_summary(from_dt, to_dt),
             "mip": _get_mip_summary(from_dt, to_dt),
@@ -46,10 +47,192 @@ def get_daily_production_data(from_date=None, to_date=None):
             title=_("Daily Production Dashboard Error"),
         )
         return {
+            "sheet_line": [],
             "production": _empty_production(),
             "dispatch": _empty_dispatch(),
             "mip": _empty_mip(),
         }
+
+
+@frappe.whitelist()
+def get_default_dashboard_date():
+    """Return latest Production Log Sheet date for default filter."""
+    try:
+        latest_date = frappe.db.sql(
+            """
+            SELECT MAX(production_date) AS latest_date
+            FROM `tabProduction Log Sheet`
+            WHERE docstatus = 1
+            """,
+            as_dict=True,
+        )
+        date_value = (latest_date[0] or {}).get("latest_date") if latest_date else None
+        return {"default_date": str(date_value) if date_value else nowdate()}
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Default Dashboard Date Error"),
+        )
+        return {"default_date": nowdate()}
+
+
+def _get_sheet_line_table(from_date, to_date):
+    """Return rows for Sheet Line and EXIDE BOXES tables.
+
+    Default behavior (no date filters): show latest production date rows only.
+    If date range is provided: show rows in that range.
+    """
+    try:
+        params = []
+        if from_date and to_date:
+            where_sql = "pls.production_date BETWEEN %s AND %s"
+            params = [from_date, to_date]
+        elif from_date:
+            where_sql = "pls.production_date >= %s"
+            params = [from_date]
+        elif to_date:
+            where_sql = "pls.production_date <= %s"
+            params = [to_date]
+        else:
+            where_sql = (
+                "pls.production_date = ("
+                "SELECT MAX(x.production_date) "
+                "FROM `tabProduction Log Sheet` x "
+                "WHERE x.docstatus = 1)"
+            )
+
+        has_range_filter = bool(from_date or to_date)
+
+        if has_range_filter:
+            pls_rows = frappe.db.sql(
+                f"""
+                SELECT
+                    %s AS date,
+                    COALESCE(pls.shift_type, '') AS shift,
+                    COALESCE(SUM(pls.manufactured_qty), 0) AS produced,
+                    GROUP_CONCAT(DISTINCT pls.production_plan) AS production_plans
+                FROM `tabProduction Log Sheet` pls
+                WHERE pls.docstatus = 1
+                  AND {where_sql}
+                GROUP BY pls.shift_type
+                ORDER BY pls.shift_type ASC
+                """,
+                [
+                    f"{from_date or 'Start'} to {to_date or 'Latest'}",
+                    *params,
+                ],
+                as_dict=True,
+            )
+        else:
+            pls_rows = frappe.db.sql(
+                f"""
+                SELECT
+                    pls.production_date AS date,
+                    COALESCE(pls.shift_type, '') AS shift,
+                    COALESCE(SUM(pls.manufactured_qty), 0) AS produced,
+                    GROUP_CONCAT(DISTINCT pls.production_plan) AS production_plans
+                FROM `tabProduction Log Sheet` pls
+                WHERE pls.docstatus = 1
+                  AND {where_sql}
+                GROUP BY pls.production_date, pls.shift_type
+                ORDER BY pls.production_date DESC, pls.shift_type ASC
+                LIMIT 200
+                """,
+                params,
+                as_dict=True,
+            )
+
+        # Planned qty map from Production Plan Item (target column)
+        plan_names = set()
+        for row in pls_rows:
+            plans = (row.get("production_plans") or "").split(",")
+            for p in plans:
+                p = (p or "").strip()
+                if p:
+                    plan_names.add(p)
+
+        plan_qty_map = {}
+        if plan_names:
+            plan_rows = frappe.db.sql(
+                """
+                SELECT parent, COALESCE(SUM(planned_qty), 0) AS planned_qty
+                FROM `tabProduction Plan Item`
+                WHERE docstatus != 2
+                  AND parent IN %(plans)s
+                GROUP BY parent
+                """,
+                {"plans": tuple(plan_names)},
+                as_dict=True,
+            )
+            plan_qty_map = {
+                r.get("parent"): flt(r.get("planned_qty", 0), 0) for r in plan_rows
+            }
+
+        # Rejection map from Daily Rejection Data
+        rej_cond, rej_params = _date_condition("rejection_date", from_date, to_date)
+        rejection_rows = frappe.db.sql(
+            f"""
+            SELECT
+                rejection_date,
+                COALESCE(total_rejected_in_day_shift, 0) AS day_rejected,
+                COALESCE(total_rejected_in_night_shift, 0) AS night_rejected
+            FROM `tabDaily Rejection Data`
+            WHERE docstatus = 1
+              AND {rej_cond}
+            """,
+            rej_params,
+            as_dict=True,
+        )
+        rejection_map = {
+            r.get("rejection_date"): {
+                "day": flt(r.get("day_rejected", 0), 0),
+                "night": flt(r.get("night_rejected", 0), 0),
+            }
+            for r in rejection_rows
+        }
+        total_day_rejected = flt(
+            sum(r.get("day_rejected", 0) for r in rejection_rows),
+            0,
+        )
+        total_night_rejected = flt(
+            sum(r.get("night_rejected", 0) for r in rejection_rows),
+            0,
+        )
+
+        return [
+            {
+                "date": r.get("date"),
+                "shift": r.get("shift") or "-",
+                "target": flt(
+                    sum(
+                        plan_qty_map.get(p.strip(), 0)
+                        for p in (r.get("production_plans") or "").split(",")
+                        if p and p.strip()
+                    ),
+                    0,
+                ),
+                "produced": flt(r.get("produced", 0), 0),
+                "rejected": flt(
+                    total_night_rejected
+                    if has_range_filter and "night" in (r.get("shift") or "").strip().lower()
+                    else total_day_rejected
+                    if has_range_filter
+                    else (
+                        rejection_map.get(r.get("date"), {}).get("night", 0)
+                        if "night" in (r.get("shift") or "").strip().lower()
+                        else rejection_map.get(r.get("date"), {}).get("day", 0)
+                    ),
+                    0,
+                ),
+            }
+            for r in pls_rows
+        ]
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Sheet Line Table Error"),
+        )
+        return []
 
 
 def _date_condition(date_col, from_date, to_date):
@@ -282,49 +465,77 @@ def _empty_production():
 #  Section 2 – Dispatch Summary
 # ──────────────────────────────────────────────────────────────────
 def _get_dispatch_summary(from_date, to_date):
-    """Sheets and EXIDE quantities dispatched in the selected range.
+    """Dispatch table rows for Sheet Line from Sales Invoice.
 
-    Data comes from **Delivery Note Item** (parent DN is submitted and
-    ``posting_date`` = *target_date*).  Items whose ``item_group``
-    contains **Sheet** count as sheets; those whose group or name
-    contains **EXIDE** as EXIDE.
+    Sheet Line rows are fetched from submitted Sales Invoice Items where
+    item grade matches PP HOLLOW SHEET. Qty is returned with its UOM.
+    Shift does not exist in Sales Invoice, so it is kept as "-".
     """
     try:
-        dcond, dparams = _date_condition("dn.posting_date", from_date, to_date)
-        data = frappe.db.sql(
-            f"""
-            SELECT
-                CASE
-                    WHEN LOWER(i.item_group) LIKE '%%sheet%%'
-                         OR LOWER(i.item_name) LIKE '%%sheet%%'
-                        THEN 'sheets'
-                    WHEN LOWER(i.item_group) LIKE '%%exide%%'
-                         OR LOWER(i.item_name) LIKE '%%exide%%'
-                         OR LOWER(i.name) LIKE '%%exide%%'
-                        THEN 'exide'
-                    ELSE 'other'
-                END AS category,
-                COALESCE(SUM(dni.qty), 0) AS qty
-            FROM `tabDelivery Note Item` dni
-            INNER JOIN `tabDelivery Note` dn ON dn.name = dni.parent
-            LEFT  JOIN `tabItem` i         ON dni.item_code = i.name
-            WHERE dn.docstatus = 1
-              AND {dcond}
-            GROUP BY category
-            """,
-            dparams,
-            as_dict=True,
-        )
+        dcond, dparams = _date_condition("si.posting_date", from_date, to_date)
+        has_range_filter = bool(from_date or to_date)
+        if has_range_filter:
+            range_label = f"{from_date or 'Start'} to {to_date or 'Latest'}"
+            data = frappe.db.sql(
+                f"""
+                SELECT
+                    %s AS date,
+                    '-' AS shift,
+                    COALESCE(sii.uom, '') AS uom,
+                    COALESCE(SUM(sii.qty), 0) AS qty
+                FROM `tabSales Invoice Item` sii
+                INNER JOIN `tabSales Invoice` si ON si.name = sii.parent
+                LEFT JOIN `tabItem` i ON i.name = sii.item_code
+                WHERE si.docstatus = 1
+                  AND {dcond}
+                  AND (
+                        UPPER(TRIM(COALESCE(i.item_group, ''))) = 'PP HOLLOW SHEETS'
+                      )
+                GROUP BY sii.uom
+                ORDER BY sii.uom ASC
+                LIMIT 200
+                """,
+                [range_label, *dparams],
+                as_dict=True,
+            )
+        else:
+            data = frappe.db.sql(
+                """
+                SELECT
+                    si.posting_date AS date,
+                    '-' AS shift,
+                    COALESCE(sii.uom, '') AS uom,
+                    COALESCE(SUM(sii.qty), 0) AS qty
+                FROM `tabSales Invoice Item` sii
+                INNER JOIN `tabSales Invoice` si ON si.name = sii.parent
+                LEFT JOIN `tabItem` i ON i.name = sii.item_code
+                WHERE si.docstatus = 1
+                  AND si.posting_date = (
+                        SELECT MAX(sx.posting_date)
+                        FROM `tabSales Invoice` sx
+                        WHERE sx.docstatus = 1
+                    )
+                  AND (
+                        UPPER(TRIM(COALESCE(i.item_group, ''))) = 'PP HOLLOW SHEETS'
+                      )
+                GROUP BY si.posting_date, sii.uom
+                ORDER BY si.posting_date DESC, sii.uom ASC
+                LIMIT 200
+                """,
+                as_dict=True,
+            )
 
-        result = {"sheets_dispatched": 0, "exide_dispatched": 0}
-        for row in data:
-            cat = row.get("category", "other")
-            qty = int(flt(row.get("qty", 0)))
-            if cat == "sheets":
-                result["sheets_dispatched"] = qty
-            elif cat == "exide":
-                result["exide_dispatched"] = qty
-        return result
+        return {
+            "sheet_line_rows": [
+                {
+                    "date": row.get("date"),
+                    "shift": "-",
+                    "qty": flt(row.get("qty", 0), 0),
+                    "uom": row.get("uom") or "",
+                }
+                for row in data
+            ]
+        }
     except Exception:
         frappe.log_error(
             message=frappe.get_traceback(),
@@ -334,7 +545,7 @@ def _get_dispatch_summary(from_date, to_date):
 
 
 def _empty_dispatch():
-    return {"sheets_dispatched": 0, "exide_dispatched": 0}
+    return {"sheet_line_rows": []}
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -348,26 +559,65 @@ def _get_mip_summary(from_date, to_date):
     * **Total Generated** = SUM of ``closing_qty_for_mip`` from Production Log Sheet
     """
     try:
-        dcond, dparams = _date_condition("pls.production_date", from_date, to_date)
-        data = frappe.db.sql(
-            f"""
-            SELECT
-                COALESCE(SUM(pls.mip_used), 0)             AS total_consumed,
-                COALESCE(SUM(pls.closing_qty_for_mip), 0)  AS total_generated
-            FROM `tabProduction Log Sheet` pls
-            WHERE pls.docstatus = 1
-              AND {dcond}
-            """,
-            dparams,
-            as_dict=True,
-        )
+        has_range_filter = bool(from_date or to_date)
+        if has_range_filter:
+            dcond, dparams = _date_condition("pls.production_date", from_date, to_date)
+            range_label = f"{from_date or 'Start'} to {to_date or 'Latest'}"
+            rows = frappe.db.sql(
+                f"""
+                SELECT
+                    %s AS date,
+                    COALESCE(pls.shift_type, '') AS shift,
+                    COALESCE(SUM(pls.closing_qty_for_mip), 0) AS total_issued,
+                    COALESCE(SUM(pls.mip_used), 0) AS total_consumed
+                FROM `tabProduction Log Sheet` pls
+                WHERE pls.docstatus = 1
+                  AND {dcond}
+                GROUP BY pls.shift_type
+                ORDER BY pls.shift_type ASC
+                LIMIT 200
+                """,
+                [range_label, *dparams],
+                as_dict=True,
+            )
+        else:
+            rows = frappe.db.sql(
+                """
+                SELECT
+                    pls.production_date AS date,
+                    COALESCE(pls.shift_type, '') AS shift,
+                    COALESCE(SUM(pls.closing_qty_for_mip), 0) AS total_issued,
+                    COALESCE(SUM(pls.mip_used), 0) AS total_consumed
+                FROM `tabProduction Log Sheet` pls
+                WHERE pls.docstatus = 1
+                  AND pls.production_date = (
+                        SELECT MAX(x.production_date)
+                        FROM `tabProduction Log Sheet` x
+                        WHERE x.docstatus = 1
+                  )
+                GROUP BY pls.production_date, pls.shift_type
+                ORDER BY pls.shift_type ASC
+                """,
+                as_dict=True,
+            )
 
-        if data:
-            return {
-                "total_consumed": flt(data[0].get("total_consumed", 0), 2),
-                "total_generated": flt(data[0].get("total_generated", 0), 2),
-            }
-        return _empty_mip()
+        total_issued = flt(sum(r.get("total_issued", 0) for r in rows), 2)
+        total_consumed = flt(sum(r.get("total_consumed", 0) for r in rows), 2)
+        return {
+            "total_generated": total_issued,
+            "total_consumed": total_consumed,
+            "rows": [
+                {
+                    "date": r.get("date"),
+                    "shift": r.get("shift") or "-",
+                    "total_issued": flt(r.get("total_issued", 0), 2),
+                    "total_consumed": flt(r.get("total_consumed", 0), 2),
+                    "net_balance": flt(r.get("total_issued", 0), 2)
+                    - flt(r.get("total_consumed", 0), 2),
+                }
+                for r in rows
+            ],
+        }
     except Exception:
         frappe.log_error(
             message=frappe.get_traceback(),
@@ -377,4 +627,4 @@ def _get_mip_summary(from_date, to_date):
 
 
 def _empty_mip():
-    return {"total_consumed": 0, "total_generated": 0}
+    return {"total_consumed": 0, "total_generated": 0, "rows": []}
