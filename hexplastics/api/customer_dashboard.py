@@ -55,6 +55,7 @@ def get_customer_turnover_data(state=None, customer=None, item=None, year=None, 
                 si.customer,
                 si.posting_date,
                 sii.item_code,
+                sii.uom,
                 sii.qty,
                 COALESCE(sii.base_amount, sii.amount, sii.base_net_amount, sii.net_amount, 0) as amount
             FROM `tabSales Invoice` si
@@ -91,41 +92,72 @@ def get_customer_turnover_data(state=None, customer=None, item=None, year=None, 
                 continue  # Skip if outside financial year
             
             if customer_name not in customer_data:
+                if mode == "Quantity":
+                    months_data = {key: {"pcs": 0.0, "kgs": 0.0} for key in month_keys}
+                    total_data = {"pcs": 0.0, "kgs": 0.0}
+                else:
+                    months_data = {key: 0.0 for key in month_keys}
+                    total_data = 0.0
+
                 customer_data[customer_name] = {
                     "customer": customer_name,
-                    "months": {key: 0.0 for key in month_keys},
-                    "total": 0.0
+                    "months": months_data,
+                    "total": total_data
                 }
             
             # Calculate value based on mode
             if mode == "Quantity":
                 value = flt(record.get("qty", 0), 2)
+                uom_bucket = get_uom_bucket(record.get("uom"))
+                if not uom_bucket:
+                    continue
+
+                # Add quantity to the corresponding UOM bucket
+                customer_data[customer_name]["months"][month_key][uom_bucket] += value
+                customer_data[customer_name]["total"][uom_bucket] += value
             else:  # Value mode
                 # Use amount field (preferentially base_amount, then amount, etc.)
                 value = flt(record.get("amount", 0), 2)
-            
-            # Add to month total
-            customer_data[customer_name]["months"][month_key] += value
-            customer_data[customer_name]["total"] += value
+                # Add to month total
+                customer_data[customer_name]["months"][month_key] += value
+                customer_data[customer_name]["total"] += value
         
         # Convert to list and sort by customer name
         data_list = sorted(customer_data.values(), key=lambda x: x["customer"])
         
         # Calculate grand totals for each month
-        grand_totals = {key: 0.0 for key in month_keys}
-        for customer_row in data_list:
-            for month_key, value in customer_row["months"].items():
-                grand_totals[month_key] += value
-        
-        # Calculate grand total (sum of all month totals)
-        grand_total_sum = sum(grand_totals.values())
+        if mode == "Quantity":
+            grand_totals = {key: {"pcs": 0.0, "kgs": 0.0} for key in month_keys}
+            for customer_row in data_list:
+                for month_key in month_keys:
+                    month_value = customer_row["months"].get(month_key, {})
+                    grand_totals[month_key]["pcs"] += flt(month_value.get("pcs", 0), 2)
+                    grand_totals[month_key]["kgs"] += flt(month_value.get("kgs", 0), 2)
+
+            grand_total_sum = {
+                "pcs": sum(flt(grand_totals[key]["pcs"], 2) for key in month_keys),
+                "kgs": sum(flt(grand_totals[key]["kgs"], 2) for key in month_keys)
+            }
+        else:
+            grand_totals = {key: 0.0 for key in month_keys}
+            for customer_row in data_list:
+                for month_key, value in customer_row["months"].items():
+                    grand_totals[month_key] += value
+
+            # Calculate grand total (sum of all month totals)
+            grand_total_sum = sum(grand_totals.values())
         
         return {
             "months": month_labels,
             "month_keys": month_keys,
             "data": data_list,
             "grand_totals": grand_totals,
-            "grand_total": flt(grand_total_sum, 2)
+            "grand_total": (
+                {
+                    "pcs": flt(grand_total_sum.get("pcs", 0), 2),
+                    "kgs": flt(grand_total_sum.get("kgs", 0), 2)
+                } if mode == "Quantity" else flt(grand_total_sum, 2)
+            )
         }
         
     except Exception:
@@ -150,8 +182,12 @@ def get_customer_turnover_data(state=None, customer=None, item=None, year=None, 
             "months": month_labels,
             "month_keys": month_keys,
             "data": [],
-            "grand_totals": {key: 0.0 for key in month_keys},
-            "grand_total": 0.0
+            "grand_totals": (
+                {key: {"pcs": 0.0, "kgs": 0.0} for key in month_keys}
+                if mode == "Quantity"
+                else {key: 0.0 for key in month_keys}
+            ),
+            "grand_total": {"pcs": 0.0, "kgs": 0.0} if mode == "Quantity" else 0.0
         }
 
 
@@ -361,6 +397,23 @@ def get_fiscal_year_dates(fiscal_year_name):
             title=_("Fiscal Year Not Found")
         )
         return get_current_financial_year()
+
+
+def get_uom_bucket(uom):
+    """Map item UOM to dashboard buckets."""
+    if not uom:
+        return None
+
+    normalized = str(uom).strip().lower().replace(".", "")
+
+    pcs_aliases = {"pcs", "pc", "piece", "pieces", "nos", "no"}
+    kgs_aliases = {"kg", "kgs", "kilogram", "kilograms"}
+
+    if normalized in pcs_aliases:
+        return "pcs"
+    if normalized in kgs_aliases:
+        return "kgs"
+    return None
 
 
 def get_current_fiscal_year_name():
