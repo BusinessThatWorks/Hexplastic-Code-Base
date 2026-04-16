@@ -441,19 +441,37 @@ class CustomerDashboard {
 
 		const mode = this.get_filters().mode;
 		const isValueMode = mode === "Value";
+		const isQuantityMode = mode === "Quantity";
 
-		// Build header row
-		let headerHtml = "<tr>";
-		headerHtml += '<th class="sticky-col">Customer</th>';
+		// Build header rows
+		let headerHtml = "";
+		if (isQuantityMode) {
+			headerHtml += "<tr>";
+			headerHtml += '<th class="sticky-col" rowspan="2">Customer</th>';
+			data.months.forEach((month) => {
+				headerHtml += `<th class="month-col" colspan="2">${month}</th>`;
+			});
+			headerHtml += '<th class="total-col" colspan="2">Total</th>';
+			headerHtml += "</tr>";
+			headerHtml += "<tr>";
+			data.months.forEach(() => {
+				headerHtml += '<th class="month-col">Pcs</th><th class="month-col">Kgs</th>';
+			});
+			headerHtml += '<th class="total-col">Pcs</th><th class="total-col">Kgs</th>';
+			headerHtml += "</tr>";
+		} else {
+			headerHtml += "<tr>";
+			headerHtml += '<th class="sticky-col">Customer</th>';
 
-		// Add month columns
-		data.months.forEach((month) => {
-			headerHtml += `<th class="month-col">${month}</th>`;
-		});
+			// Add month columns
+			data.months.forEach((month) => {
+				headerHtml += `<th class="month-col">${month}</th>`;
+			});
 
-		// Add Total column
-		headerHtml += '<th class="total-col">Total</th>';
-		headerHtml += "</tr>";
+			// Add Total column
+			headerHtml += '<th class="total-col">Total</th>';
+			headerHtml += "</tr>";
+		}
 
 		thead.innerHTML = headerHtml;
 
@@ -464,21 +482,39 @@ class CustomerDashboard {
 			bodyHtml += "<tr>";
 			bodyHtml += `<td class="sticky-col customer-name">${this.escape_html(row.customer)}</td>`;
 
-			// Add month values
-			data.month_keys.forEach((monthKey) => {
-				const value = row.months[monthKey] || 0;
-				const formattedValue = isValueMode
-					? this.format_currency(value)
-					: this.format_number(value);
-				bodyHtml += `<td class="month-col text-right">${formattedValue}</td>`;
-			});
+			if (isQuantityMode) {
+				data.month_keys.forEach((monthKey) => {
+					const monthValues = row.months[monthKey] || {};
+					const pcsValue = this.format_number(monthValues.pcs || 0);
+					const kgsValue = this.format_number(monthValues.kgs || 0);
+					bodyHtml += `<td class="month-col text-right">${pcsValue}</td>`;
+					bodyHtml += `<td class="month-col text-right">${kgsValue}</td>`;
+				});
 
-			// Add row total
-			const rowTotal = row.total || 0;
-			const formattedTotal = isValueMode
-				? this.format_currency(rowTotal)
-				: this.format_number(rowTotal);
-			bodyHtml += `<td class="total-col text-right"><strong>${formattedTotal}</strong></td>`;
+				const rowTotal = row.total || {};
+				bodyHtml += `<td class="total-col text-right"><strong>${this.format_number(
+					rowTotal.pcs || 0
+				)}</strong></td>`;
+				bodyHtml += `<td class="total-col text-right"><strong>${this.format_number(
+					rowTotal.kgs || 0
+				)}</strong></td>`;
+			} else {
+				// Add month values
+				data.month_keys.forEach((monthKey) => {
+					const value = row.months[monthKey] || 0;
+					const formattedValue = isValueMode
+						? this.format_currency(value)
+						: this.format_number(value);
+					bodyHtml += `<td class="month-col text-right">${formattedValue}</td>`;
+				});
+
+				// Add row total
+				const rowTotal = row.total || 0;
+				const formattedTotal = isValueMode
+					? this.format_currency(rowTotal)
+					: this.format_number(rowTotal);
+				bodyHtml += `<td class="total-col text-right"><strong>${formattedTotal}</strong></td>`;
+			}
 			bodyHtml += "</tr>";
 		});
 
@@ -488,21 +524,39 @@ class CustomerDashboard {
 		let grandTotalHtml = "<tr>";
 		grandTotalHtml += '<td class="sticky-col"><strong>Grand Total</strong></td>';
 
-		// Add grand totals for each month
-		data.month_keys.forEach((monthKey) => {
-			const value = data.grand_totals[monthKey] || 0;
-			const formattedValue = isValueMode
-				? this.format_currency(value)
-				: this.format_number(value);
-			grandTotalHtml += `<td class="month-col text-right"><strong>${formattedValue}</strong></td>`;
-		});
+		if (isQuantityMode) {
+			data.month_keys.forEach((monthKey) => {
+				const monthValues = data.grand_totals[monthKey] || {};
+				const pcsValue = this.format_number(monthValues.pcs || 0);
+				const kgsValue = this.format_number(monthValues.kgs || 0);
+				grandTotalHtml += `<td class="month-col text-right"><strong>${pcsValue}</strong></td>`;
+				grandTotalHtml += `<td class="month-col text-right"><strong>${kgsValue}</strong></td>`;
+			});
 
-		// Add grand total sum
-		const grandTotal = data.grand_total || 0;
-		const formattedGrandTotal = isValueMode
-			? this.format_currency(grandTotal)
-			: this.format_number(grandTotal);
-		grandTotalHtml += `<td class="total-col text-right"><strong>${formattedGrandTotal}</strong></td>`;
+			const grandTotal = data.grand_total || {};
+			grandTotalHtml += `<td class="total-col text-right"><strong>${this.format_number(
+				grandTotal.pcs || 0
+			)}</strong></td>`;
+			grandTotalHtml += `<td class="total-col text-right"><strong>${this.format_number(
+				grandTotal.kgs || 0
+			)}</strong></td>`;
+		} else {
+			// Add grand totals for each month
+			data.month_keys.forEach((monthKey) => {
+				const value = data.grand_totals[monthKey] || 0;
+				const formattedValue = isValueMode
+					? this.format_currency(value)
+					: this.format_number(value);
+				grandTotalHtml += `<td class="month-col text-right"><strong>${formattedValue}</strong></td>`;
+			});
+
+			// Add grand total sum
+			const grandTotal = data.grand_total || 0;
+			const formattedGrandTotal = isValueMode
+				? this.format_currency(grandTotal)
+				: this.format_number(grandTotal);
+			grandTotalHtml += `<td class="total-col text-right"><strong>${formattedGrandTotal}</strong></td>`;
+		}
 		grandTotalHtml += "</tr>";
 
 		tfoot.innerHTML = grandTotalHtml;

@@ -1,0 +1,288 @@
+<style>
+	.cgl-root {
+		font-family: Arial, Helvetica, sans-serif;
+		font-size: 11px;
+		color: #000;
+		line-height: 1.35;
+	}
+	.cgl-center {
+		text-align: center;
+	}
+	.cgl-company-name {
+		font-size: 14px;
+		font-weight: bold;
+		text-transform: uppercase;
+		margin-bottom: 4px;
+	}
+	.cgl-company-meta {
+		font-size: 10px;
+		text-transform: uppercase;
+		margin: 0 auto 10px;
+		max-width: 95%;
+	}
+	.cgl-company-meta a {
+		text-decoration: underline;
+		color: #000;
+	}
+	.cgl-party-name {
+		font-size: 13px;
+		font-weight: bold;
+		text-transform: uppercase;
+		margin-top: 8px;
+	}
+	.cgl-ledger-title {
+		font-size: 11px;
+		font-weight: normal;
+		text-transform: none;
+		margin: 2px 0 6px;
+	}
+	.cgl-party-addr {
+		font-size: 10px;
+		text-transform: uppercase;
+		margin: 0 auto 6px;
+		max-width: 95%;
+	}
+	.cgl-period {
+		font-size: 11px;
+		margin-bottom: 6px;
+	}
+	.cgl-page-line {
+		text-align: right;
+		font-size: 10px;
+		margin-bottom: 2px;
+	}
+	.cgl-table {
+		width: 100%;
+		border-collapse: collapse;
+		margin-top: 2px;
+	}
+	.cgl-table thead th,
+	.cgl-table tbody td {
+		padding: 0;
+		border-bottom: 1px solid #000;
+		vertical-align: top;
+	}
+	.cgl-table tbody td {
+		line-height: 1.05;
+	}
+	.cgl-table thead th {
+		font-weight: bold;
+		border-top: 1px solid #000;
+		vertical-align: bottom;
+	}
+	.cgl-table thead th.cgl-n,
+	.cgl-table tbody td.cgl-n {
+		text-align: right;
+	}
+	.cgl-table tbody td.cgl-particulars {
+		word-wrap: break-word;
+		overflow-wrap: anywhere;
+	}
+	.cgl-summary td {
+		font-weight: bold;
+	}
+	.cgl-summary td.cgl-particulars {
+		font-weight: bold;
+	}
+	tr.cgl-closing td {
+		font-weight: normal;
+	}
+	.cgl-table tbody tr.cgl-period-total td {
+		font-weight: bold;
+	}
+	.cgl-table tbody tr.cgl-grand-total td {
+		font-weight: bold;
+		border-bottom: 3px double #000;
+	}
+	.cgl-printed-on {
+		text-align: right;
+		font-size: 9px;
+		color: #555;
+		margin-top: 14px;
+	}
+</style>
+
+<div class="cgl-root">
+	{% var header_row = data.length ? data[0] : {}; %}
+	{% var company_nm = header_row.company_name || filters.company || ""; %}
+
+	{% var ledger_name = ""; %}
+	{% if (filters.party_name) { ledger_name = filters.party_name; %}
+	{% } else if (filters.party && filters.party.length) { ledger_name = filters.party.join(", "); %}
+	{% } else if (filters.account) { %}
+		{% ledger_name = Array.isArray(filters.account) ? filters.account.join(", ") : filters.account; %}
+	{% } else { ledger_name = __("All accounts"); %}
+	{% }; %}
+
+	<div class="cgl-center">
+		<div class="cgl-company-name">{%= __(company_nm) %}</div>
+		{% if (header_row.company_address_html || header_row.company_tax_id || header_row.company_registration_details || header_row.company_email) { %}
+			<div class="cgl-company-meta">
+				{% if (header_row.company_address_html) { %}<div>{%= header_row.company_address_html %}</div>{% }; %}
+				{% if (header_row.company_tax_id) { %}<div>{%= __("CIN") %}: {%= frappe.utils.escape_html(header_row.company_tax_id) %}</div>{% }; %}
+				{% if (header_row.company_registration_details) { %}<div>{%= strip_html(header_row.company_registration_details).split("\n").join(" ") %}</div>{% }; %}
+			</div>
+		{% }; %}
+
+		<div class="cgl-party-name">{%= frappe.utils.escape_html(ledger_name) %}</div>
+		<div class="cgl-ledger-title">{%= __("Ledger Account") %}</div>
+		{% if (header_row.party_address_html) { %}
+			<div class="cgl-party-addr">{%= header_row.party_address_html %}</div>
+		{% }; %}
+
+		<div class="cgl-period">
+			{%= frappe.datetime.str_to_user(filters.from_date) %}
+			{%= __("to") %}
+			{%= frappe.datetime.str_to_user(filters.to_date) %}
+		</div>
+	</div>
+
+	<div class="cgl-page-line">{%= __("Page") %} 1</div>
+
+	<table class="cgl-table">
+		<thead>
+			<tr>
+				<th style="width: 10%">{%= __("Date") %}</th>
+				<th style="width: 4%"></th>
+				<th style="width: 32%">{%= __("Particulars") %}</th>
+				<th style="width: 14%">{%= __("Vch Type") %}</th>
+				<th style="width: 14%" class="cgl-n">{%= __("Vch No.") %}</th>
+				<th style="width: 13%" class="cgl-n">{%= __("Debit") %}</th>
+				<th style="width: 13%" class="cgl-n">{%= __("Credit") %}</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% var last_row = data.length ? data[data.length - 1] : {}; %}
+			{% var last_acc_l = ((last_row.account || "") + "").replace(/'/g, "").toLowerCase(); %}
+			{% var last_is_closing = last_acc_l.indexOf("closing") !== -1; %}
+			{% var grand_total_idx =
+				data.length >= 2 && last_is_closing ? data.length - 2 : Math.max(0, data.length - 1); %}
+			{% var deferred_grand_total = null; %}
+			{% for (var i = 0, l = data.length; i < l; i++) { %}
+				{% var row = data[i]; %}
+				{% var is_detail = !!row.posting_date; %}
+				{% var acc_raw = (row.account || "").toString(); %}
+				{% var acc_l = acc_raw.replace(/'/g, "").toLowerCase(); %}
+				{% var is_closing = acc_l.indexOf("closing") !== -1; %}
+				{% var is_opening = acc_l.indexOf("opening") !== -1 && !is_closing; %}
+				{% var is_total =
+					acc_l.indexOf("total") !== -1 && !is_closing && acc_l.indexOf("opening +") === -1; %}
+				{% var is_grand_total = is_total && i === grand_total_idx; %}
+				{% var is_period_total = is_total && !is_grand_total; %}
+				{% var is_summary = !is_detail; %}
+				{% var _d = typeof flt !== "undefined" ? flt(row.debit) : parseFloat(row.debit) || 0; %}
+				{% var _c = typeof flt !== "undefined" ? flt(row.credit) : parseFloat(row.credit) || 0; %}
+				{% var _b = typeof flt !== "undefined" ? flt(row.balance) : parseFloat(row.balance) || 0; %}
+				{% var by_to = ""; %}
+				{% if (is_detail) { %}
+					{% if (_d > 0 && _c <= 0) { %}
+						{% by_to = __("To"); %}
+					{% }; %}
+					{% if (_c > 0 && _d <= 0) { %}
+						{% by_to = __("By"); %}
+					{% }; %}
+				{% }; %}
+				{% var cur = filters.presentation_currency || row.account_currency || ""; %}
+				{% var display_debit = _d; %}
+				{% var display_credit = _c; %}
+				{% if (is_closing) { %}
+					{% display_debit = _b < 0 ? Math.abs(_b) : 0; %}
+					{% display_credit = _b > 0 ? _b : 0; %}
+					{% if (display_debit > 0) { %}
+						{% by_to = __("To"); %}
+					{% } else if (display_credit > 0) { %}
+						{% by_to = __("By"); %}
+					{% }; %}
+				{% }; %}
+				{% var against = (row.against || "").toString().trim(); %}
+				{% against = against.replace(/\s*-\s*HEX\b/gi, "").trim(); %}
+				{% var particulars = ""; %}
+				{% if (is_detail) { %}
+					{% if (_d > 0 && _c <= 0) { %}
+						{% particulars = against; %}
+					{% } else if (_c > 0 && _d <= 0) { %}
+						{% particulars = against; %}
+					{% } else { %}
+						{% particulars = against || (row.account || ""); %}
+					{% }; %}
+					{% if (!particulars) { %}
+						{% particulars =
+							(row.voucher_type ? row.voucher_type + " — " : "") +
+							(row.voucher_no || row.account || ""); %}
+					{% }; %}
+				{% } else if (is_opening) { %}
+					{% particulars = __("Opening Balance"); %}
+				{% } else if (is_closing) { %}
+					{% particulars = __("Closing Balance"); %}
+				{% } else if (is_total) { %}
+					{% particulars = acc_raw.replace(/'/g, ""); %}
+				{% } else { %}
+					{% particulars = acc_raw.replace(/'/g, ""); %}
+				{% }; %}
+
+				{% var tr_class = ""; %}
+				{% if (is_summary) { %}
+				{% tr_class = tr_class + " cgl-summary"; %}
+				{% }; %}
+				{% if (is_closing) { %}
+				{% tr_class = tr_class + " cgl-closing"; %}
+				{% }; %}
+				{% if (is_grand_total) { %}
+				{% tr_class = tr_class + " cgl-grand-total"; %}
+				{% }; %}
+				{% if (is_period_total) { %}
+				{% tr_class = tr_class + " cgl-period-total"; %}
+				{% }; %}
+				{% if (last_is_closing && is_grand_total) { %}
+					{% deferred_grand_total = row; %}
+					{% continue; %}
+				{% }; %}
+				{% if (is_closing && deferred_grand_total) { %}
+					{% var td = _d; %}
+					{% var tc = _c; %}
+					<tr class="cgl-summary cgl-period-total">
+						<td></td>
+						<td></td>
+						<td class="cgl-particulars"></td>
+						<td></td>
+						<td class="cgl-n"></td>
+						<td class="cgl-n">{% if (td) { %}{%= format_currency(td, cur) %}{% }; %}</td>
+						<td class="cgl-n">{% if (tc) { %}{%= format_currency(tc, cur) %}{% }; %}</td>
+					</tr>
+				{% }; %}
+				<tr class="{%= tr_class.trim() %}">
+					<td>
+						{% if (is_detail) { %} {%= frappe.datetime.str_to_user(row.posting_date) %} {% }; %}
+					</td>
+					<td>{%= by_to %}</td>
+					<td class="cgl-particulars">{%= frappe.utils.escape_html(particulars) %}</td>
+					<td>{%= is_detail ? frappe.utils.escape_html(row.voucher_type_label || row.voucher_type || "") : "" %}</td>
+					<td class="cgl-n">{%= is_detail ? frappe.utils.escape_html(row.voucher_no_label || row.voucher_no || "") : "" %}</td>
+					<td class="cgl-n">
+						{% if (display_debit) { %} {%= format_currency(display_debit, cur) %} {% }; %}
+					</td>
+					<td class="cgl-n">
+						{% if (display_credit) { %} {%= format_currency(display_credit, cur) %} {% }; %}
+					</td>
+				</tr>
+				{% if (is_closing && deferred_grand_total) { %}
+					{% var gt_d = _d; %}
+					{% var gt_c = _c; %}
+					<tr class="cgl-summary cgl-grand-total">
+						<td></td>
+						<td></td>
+						<td class="cgl-particulars"></td>
+						<td></td>
+						<td class="cgl-n"></td>
+						<td class="cgl-n">{% if (gt_d + display_debit) { %}{%= format_currency(gt_d + display_debit, cur) %}{% }; %}</td>
+						<td class="cgl-n">{% if (gt_c + display_credit) { %}{%= format_currency(gt_c + display_credit, cur) %}{% }; %}</td>
+					</tr>
+				{% }; %}
+			{% }; %}
+		</tbody>
+	</table>
+
+	<p class="cgl-printed-on">
+		{%= __("Printed on {0}", [frappe.datetime.str_to_user(frappe.datetime.get_datetime_as_string())]) %}
+	</p>
+</div>

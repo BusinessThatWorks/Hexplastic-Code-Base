@@ -1,97 +1,58 @@
 <div class="daily-production-dashboard">
 
-	<!-- Global date filters (apply to entire dashboard) -->
-	<div class="dp-global-filters">
-		<div class="dp-date-filter">
-			<label for="dp-from-date">From</label>
-			<input type="date" id="dp-from-date" />
-		</div>
-		<div class="dp-date-filter">
-			<label for="dp-to-date">To</label>
-			<input type="date" id="dp-to-date" />
-		</div>
-	</div>
-
-	<!-- ============================================ -->
-	<!-- SECTION 01 — Production Summary              -->
-	<!-- ============================================ -->
 	<div class="dp-section">
-		<div class="dp-section-header">
+		<div class="dp-section-header dp-section-header-filters">
 			<div class="dp-section-title">
-				<span class="dp-section-icon">📊</span>
-				<h2>Production Summary</h2>
+				<span class="dp-section-icon">📅</span>
+				<h2>Daily Production</h2>
 			</div>
-			<span class="dp-section-badge">SECTION 01</span>
-		</div>
-
-		<!-- Daily Production & Rejection cards side by side -->
-		<div class="dp-row-two-cols">
-			<div>
-				<div class="dp-subsection-label">DAILY PRODUCTION</div>
-				<div class="dp-cards-row dp-cards-row-2 dp-cards-compact">
-					<div class="dp-card dp-card-green dp-card-compact">
-						<div class="dp-card-label">SHEETS PRODUCED</div>
-						<div class="dp-card-value" id="sheets-produced">0</div>
-					</div>
-					<div class="dp-card dp-card-green dp-card-compact">
-						<div class="dp-card-label">BOXES PRODUCED</div>
-						<div class="dp-card-value" id="boxes-produced">0</div>
-					</div>
+			<div class="dp-global-filters">
+				<div class="dp-date-filter">
+					<label for="dp-from-date">From</label>
+					<input type="date" id="dp-from-date" />
 				</div>
-			</div>
-
-			<div>
-				<div class="dp-subsection-label">DAILY REJECTION</div>
-				<div class="dp-cards-row dp-cards-row-2 dp-cards-compact">
-					<div class="dp-card dp-card-red dp-card-compact">
-						<div class="dp-card-label">SHEETS REJECTED</div>
-						<div class="dp-card-value" id="sheets-rejected">0</div>
-					</div>
-					<div class="dp-card dp-card-red dp-card-compact">
-						<div class="dp-card-label">BOXES REJECTED</div>
-						<div class="dp-card-value" id="boxes-rejected">0</div>
-					</div>
+				<div class="dp-date-filter">
+					<label for="dp-to-date">To</label>
+					<input type="date" id="dp-to-date" />
 				</div>
 			</div>
 		</div>
 
-		<!-- Tables below Production and Rejection -->
-		<div class="dp-row-two-cols dp-row-tables">
-		<div class="dp-summary-table-card">
-			<div class="dp-summary-table-header">Production Plan Overview</div>
+		<div class="dp-summary-table-card dp-summary-table-card-wide">
+			<div class="dp-summary-table-header">Sheet Line</div>
 			<div class="dp-summary-table-wrap">
-				<table class="dp-summary-table">
+				<table class="dp-summary-table dp-line-table">
 					<thead>
 						<tr>
-							<th>Item Name</th>
-							<th>Production Plan</th>
-							<th>Manufactured Qty</th>
+							<th>Shift</th>
+							<th>Target</th>
+							<th>Produced</th>
+							<th>Rejected</th>
 						</tr>
 					</thead>
-					<tbody id="production-plan-tbody">
+					<tbody id="sheet-line-tbody">
 						<!-- Dynamic rows -->
 					</tbody>
 				</table>
 			</div>
 		</div>
 
-		<div class="dp-summary-table-card">
-			<div class="dp-summary-table-header">Rejection Overview</div>
+		<div class="dp-summary-table-card dp-summary-table-card-wide">
+			<div class="dp-summary-table-header">EXIDE BOXES</div>
 			<div class="dp-summary-table-wrap">
-				<table class="dp-summary-table">
+				<table class="dp-summary-table dp-line-table">
 					<thead>
 						<tr>
-							<th>Rejection Id</th>
-							<th>Rejected Qty</th>
-							<th>Rejection %</th>
+							<th>Shift</th>
+							<th>Produced</th>
+							<th>Rejected</th>
 						</tr>
 					</thead>
-					<tbody id="rejection-overview-tbody">
+					<tbody id="exide-boxes-tbody">
 						<!-- Dynamic rows -->
 					</tbody>
 				</table>
 			</div>
-		</div>
 		</div>
 	</div>
 
@@ -107,41 +68,20 @@
 			<span class="dp-section-badge">SECTION 02</span>
 		</div>
 
-		<!-- Total Dispatched -->
-		<div class="dp-cards-row dp-cards-row-1">
-			<div class="dp-card dp-card-blue dp-card-wide">
-				<div class="dp-card-body-split">
-					<div class="dp-card-body-left">
-						<div class="dp-card-label">TOTAL QUANTITY DISPATCHED</div>
-						<div class="dp-card-value dp-value-big" id="total-dispatched">0</div>
-					</div>
-					<div class="dp-card-body-right dp-mini-table">
-						<div class="dp-mini-table-row dp-mini-table-header">
-							<span>SHEETS</span>
-							<span>EXIDE</span>
-						</div>
-						<div class="dp-mini-table-row dp-mini-table-values">
-							<span id="dispatch-sheets-mini">0</span>
-							<span id="dispatch-exide-mini">0</span>
-						</div>
-						<div class="dp-mini-table-row dp-mini-table-pct">
-							<span id="dispatch-sheets-pct-mini">0%</span>
-							<span id="dispatch-exide-pct-mini">0%</span>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- Dispatch by category -->
-		<div class="dp-cards-row dp-cards-row-2">
-			<div class="dp-card dp-card-blue-light">
-				<div class="dp-card-label">SHEETS DISPATCHED</div>
-				<div class="dp-card-value" id="dispatch-sheets">0</div>
-			</div>
-			<div class="dp-card dp-card-purple">
-				<div class="dp-card-label">EXIDE DISPATCHED</div>
-				<div class="dp-card-value" id="dispatch-exide">0</div>
+		<div class="dp-summary-table-card dp-summary-table-card-wide">
+			<div class="dp-summary-table-header">Dispatch Details</div>
+			<div class="dp-summary-table-wrap">
+				<table class="dp-summary-table dp-dispatch-table">
+					<thead>
+						<tr>
+							<th>Sheet Line Qty Dispatch</th>
+							<th>EXIDE BOXES Qty Dispatch</th>
+						</tr>
+					</thead>
+					<tbody id="dispatch-summary-tbody">
+						<!-- Dynamic rows -->
+					</tbody>
+				</table>
 			</div>
 		</div>
 	</div>
@@ -158,41 +98,22 @@
 			<span class="dp-section-badge">SECTION 03</span>
 		</div>
 
-		<!-- Consumed & Generated -->
-		<div class="dp-cards-row dp-cards-row-2">
-			<div class="dp-card dp-card-orange">
-				<div class="dp-card-label">TOTAL CONSUMED</div>
-				<div class="dp-card-value" id="mip-consumed">0</div>
-			</div>
-			<div class="dp-card dp-card-green">
-				<div class="dp-card-label">TOTAL GENERATED</div>
-				<div class="dp-card-value" id="mip-generated">0</div>
-			</div>
-		</div>
-
-		<!-- Net Balance -->
-		<div class="dp-cards-row dp-cards-row-1">
-			<div class="dp-card dp-card-green-gradient dp-card-wide">
-				<div class="dp-card-body-split">
-					<div class="dp-card-body-left">
-						<div class="dp-card-label">NET BALANCE (GENERATED − CONSUMED)</div>
-						<div class="dp-card-value dp-value-big" id="mip-net-balance">0</div>
-					</div>
-					<div class="dp-card-body-right dp-mini-table dp-mini-table-mip">
-						<div class="dp-mini-table-row">
-							<span class="dp-mip-label">Generated</span>
-							<span class="dp-mip-value" id="mip-gen-mini">0</span>
-						</div>
-						<div class="dp-mini-table-row">
-							<span class="dp-mip-label">Consumed</span>
-							<span class="dp-mip-value" id="mip-con-mini">0</span>
-						</div>
-						<div class="dp-mini-table-row dp-mip-net-row">
-							<span class="dp-mip-label dp-mip-net-label">Net&nbsp;&nbsp;=</span>
-							<span class="dp-mip-value dp-mip-net-value" id="mip-net-mini">0</span>
-						</div>
-					</div>
-				</div>
+		<div class="dp-summary-table-card dp-summary-table-card-wide">
+			<div class="dp-summary-table-header">MIP Summary</div>
+			<div class="dp-summary-table-wrap">
+				<table class="dp-summary-table dp-mip-table">
+					<thead>
+						<tr>
+							<th>Shift</th>
+							<th>Total Issued</th>
+							<th>Total Consumed</th>
+							<th>Net Balance</th>
+						</tr>
+					</thead>
+					<tbody id="mip-summary-tbody">
+						<!-- Dynamic row -->
+					</tbody>
+				</table>
 			</div>
 		</div>
 	</div>

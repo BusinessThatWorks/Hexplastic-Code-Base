@@ -40,8 +40,8 @@ class ProductionLogSheetDashboard {
 		this.page = page;
 		this.wrapper = $(page.body);
 		this.chart = null;
-		this.manufacturing_items = [];
-		this.debounce_timer = null;
+		this.grades = [];
+		this.grade_debounce_timer = null;
 		this.initial_load = true; // Flag to track initial page load
 		this.process_loss_data = null;
 
@@ -153,6 +153,11 @@ class ProductionLogSheetDashboard {
 				self.show_table_export_menu($(this), "process-loss-table", "Process_Loss_Details");
 			});
 
+			this.wrapper.on("click", "#export-planned-actual-btn", function (e) {
+				e.stopPropagation();
+				self.show_table_export_menu($(this), "actual-vs-planned-table", "Planned_vs_Actual");
+			});
+
 			// Close dropdown when clicking outside
 			$(document).on("click", function (e) {
 				if (!$(e.target).closest(".export-btn, .export-dropdown-menu").length) {
@@ -187,42 +192,37 @@ class ProductionLogSheetDashboard {
 				self.refresh_data();
 			});
 
-			// Manufacturing Item change (fires on blur when value changes)
-			// Also handle autocomplete selection
-			this.wrapper.on("change", "#manufacturing-item", function () {
-				// Clear any pending debounce timer
-				if (self.debounce_timer) {
-					clearTimeout(self.debounce_timer);
-					self.debounce_timer = null;
+			// Grade filter: change and debounced input
+			this.wrapper.on("change", "#grade-filter", function () {
+				if (self.grade_debounce_timer) {
+					clearTimeout(self.grade_debounce_timer);
+					self.grade_debounce_timer = null;
 				}
 				self.refresh_data();
 			});
 
-			// Manufacturing Item input (debounced for instant refresh while typing)
-			this.wrapper.on("input", "#manufacturing-item", function () {
-				// Clear existing timer
-				if (self.debounce_timer) {
-					clearTimeout(self.debounce_timer);
+			this.wrapper.on("input", "#grade-filter", function () {
+				if (self.grade_debounce_timer) {
+					clearTimeout(self.grade_debounce_timer);
 				}
-				// Set new timer to refresh after 500ms of no typing
-				self.debounce_timer = setTimeout(function () {
+				self.grade_debounce_timer = setTimeout(function () {
 					self.refresh_data();
 				}, 500);
 			});
 
-			// Setup item autocomplete (with auto-refresh on selection)
-			this.setup_item_autocomplete();
+			this.setup_grade_autocomplete();
 		}, 200);
 	}
 
-	setup_item_autocomplete() {
+	setup_grade_autocomplete() {
 		const self = this;
-		const input = document.getElementById("manufacturing-item");
+		const input = document.getElementById("grade-filter");
 
 		if (!input) return;
 
-		// Create dropdown container
-		const wrapper = document.getElementById("item-filter-wrapper");
+		const wrapper = document.getElementById("grade-filter-wrapper");
+		if (!wrapper) return;
+
 		const dropdown = document.createElement("div");
 		dropdown.className = "autocomplete-dropdown";
 		dropdown.style.display = "none";
@@ -230,14 +230,14 @@ class ProductionLogSheetDashboard {
 
 		input.addEventListener("input", function () {
 			const value = this.value.toLowerCase();
-			const filtered = self.manufacturing_items.filter((item) =>
-				item.toLowerCase().includes(value)
+			const filtered = (self.grades || []).filter((g) =>
+				String(g).toLowerCase().includes(value)
 			);
 
 			if (filtered.length > 0 && value.length > 0) {
 				dropdown.innerHTML = filtered
 					.slice(0, 10)
-					.map((item) => `<div class="autocomplete-item">${item}</div>`)
+					.map((g) => `<div class="autocomplete-item">${frappe.utils.escape_html(String(g))}</div>`)
 					.join("");
 				dropdown.style.display = "block";
 			} else {
@@ -246,10 +246,10 @@ class ProductionLogSheetDashboard {
 		});
 
 		input.addEventListener("focus", function () {
-			if (self.manufacturing_items.length > 0 && this.value.length === 0) {
-				dropdown.innerHTML = self.manufacturing_items
+			if ((self.grades || []).length > 0 && this.value.length === 0) {
+				dropdown.innerHTML = self.grades
 					.slice(0, 10)
-					.map((item) => `<div class="autocomplete-item">${item}</div>`)
+					.map((g) => `<div class="autocomplete-item">${frappe.utils.escape_html(String(g))}</div>`)
 					.join("");
 				dropdown.style.display = "block";
 			}
@@ -259,7 +259,6 @@ class ProductionLogSheetDashboard {
 			if (e.target.classList.contains("autocomplete-item")) {
 				input.value = e.target.textContent;
 				dropdown.style.display = "none";
-				// Trigger change event to auto-refresh
 				const changeEvent = new Event("change", { bubbles: true });
 				input.dispatchEvent(changeEvent);
 			}
@@ -280,7 +279,7 @@ class ProductionLogSheetDashboard {
 			async: true,
 			callback: function (r) {
 				if (r.message) {
-					self.manufacturing_items = r.message.items || [];
+					self.grades = r.message.grades || [];
 				}
 			},
 		});
@@ -304,11 +303,12 @@ class ProductionLogSheetDashboard {
 	}
 
 	get_filters() {
+		const gradeRaw = document.getElementById("grade-filter")?.value || "";
 		return {
 			from_date: document.getElementById("from-date")?.value || "",
 			to_date: document.getElementById("to-date")?.value || "",
 			shift: document.getElementById("shift-filter")?.value || "All",
-			manufacturing_item: document.getElementById("manufacturing-item")?.value || "",
+			grade: gradeRaw.trim(),
 		};
 	}
 
@@ -463,12 +463,13 @@ class ProductionLogSheetDashboard {
                         ${entry.shift_type || "-"}
                     </span>
                 </td>
+                <td>${frappe.utils.escape_html(entry.grade || "-")}</td>
                 <td class="text-right">${this.format_number(entry.manufactured_qty, 0)}</td>
                 <td class="text-right">${this.format_number(entry.net_weight)}</td>
                 <td class="text-right">${this.format_number(entry.total_consumption)}</td>
-                <td class="text-right">${this.format_number(entry.prime_used)}</td>
                 <td class="text-right">${this.format_number(entry.mip_used)}</td>
                 <td class="text-right">${this.format_number(entry.process_loss_weight)}</td>
+                <td class="text-right">${this.format_number(entry.total_production_weight)}</td>
             </tr>
         `
 			)
@@ -529,7 +530,7 @@ class ProductionLogSheetDashboard {
 			.map(
 				(row) => `
             <tr>
-                <td>${row.item || "-"}</td>
+                <td>${frappe.utils.escape_html(row.grade || "-")}</td>
                 <td class="text-right">${this.format_number(row.planned_qty, 0)}</td>
                 <td class="text-right">${this.format_number(row.planned_fg_weight)}</td>
                 <td class="text-right">${this.format_number(row.planned_rm_consumption)}</td>
@@ -878,11 +879,16 @@ class ProductionLogSheetDashboard {
 		img.src = svgUrl;
 	}
 
+	/** Export dropdown triggers CSV: use the visible export button for loading state. */
+	_export_table_btn_selector(tableClass) {
+		if (tableClass === "entries-table") return "#export-logbook-btn";
+		if (tableClass === "actual-vs-planned-table") return "#export-planned-actual-btn";
+		return "#export-processloss-btn";
+	}
+
 	export_table_excel(tableClass, filePrefix) {
 		const self = this;
-		const btn = this.wrapper.find(
-			tableClass === "entries-table" ? "#export-logbook-excel" : "#export-processloss-excel"
-		);
+		const btn = this.wrapper.find(this._export_table_btn_selector(tableClass));
 
 		// Add loading state
 		btn.addClass("exporting");
@@ -921,6 +927,8 @@ class ProductionLogSheetDashboard {
 
 		if (tableClass === "entries-table") {
 			table = document.getElementById("entries-table");
+		} else if (tableClass === "actual-vs-planned-table") {
+			table = document.getElementById("actual-vs-planned-table");
 		} else {
 			table = this.wrapper.find(".process-loss-table")[0];
 		}
@@ -986,9 +994,7 @@ class ProductionLogSheetDashboard {
 
 	export_table_pdf(tableClass, filePrefix) {
 		const self = this;
-		const btn = this.wrapper.find(
-			tableClass === "entries-table" ? "#export-logbook-btn" : "#export-processloss-btn"
-		);
+		const btn = this.wrapper.find(this._export_table_btn_selector(tableClass));
 
 		// Add loading state
 		btn.addClass("exporting");
@@ -1080,7 +1086,7 @@ class ProductionLogSheetDashboard {
 			const filterText = `From: ${filters.from_date || "N/A"} | To: ${
 				filters.to_date || "N/A"
 			} | Shift: ${filters.shift || "All"}${
-				filters.manufacturing_item ? ` | Item: ${filters.manufacturing_item}` : ""
+				filters.grade ? ` | Grade: ${filters.grade}` : ""
 			}`;
 			doc.text(filterText, 14, yPos);
 

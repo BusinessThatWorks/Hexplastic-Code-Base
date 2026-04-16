@@ -249,7 +249,7 @@ body.customer-dashboard-page .customer-dashboard {
 
 .customer-dashboard .pivot-table th.month-col,
 .customer-dashboard .pivot-table th.total-col {
-    text-align: right;
+    text-align: center;
 }
 
 .customer-dashboard .pivot-table th.sticky-col {
