@@ -87,6 +87,20 @@
 				</svg>
 				Planned vs Actual
 			</button>
+			<button class="tab-btn" data-tab="rm-consumption">
+				<svg
+					class="tab-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path d="M4 7h16"></path>
+					<path d="M4 12h16"></path>
+					<path d="M4 17h16"></path>
+				</svg>
+				RM Consumption
+			</button>
 			<button class="tab-btn" data-tab="process-loss">
 				<svg
 					class="tab-icon"
@@ -364,6 +378,32 @@
 							<polyline points="13 2 13 9 20 9"></polyline>
 						</svg>
 						<p>No data available for the selected filters</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- RM Consumption Tab -->
+		<div class="tab-pane" id="rm-consumption-tab">
+			<div class="entries-section">
+				<div class="section-header">
+					<h3>Raw Material Consumption</h3>
+				</div>
+				<div class="entries-table-container">
+					<table class="entries-table" id="rm-consumption-table">
+						<thead>
+							<tr>
+								<th>Raw Material</th>
+								<th class="text-right">Consumption</th>
+								<th>UOM</th>
+							</tr>
+						</thead>
+						<tbody id="rm-consumption-tbody">
+							<!-- Dynamic rows will be inserted here -->
+						</tbody>
+					</table>
+					<div class="no-data-message" id="no-rm-consumption-message" style="display: none">
+						<p>No RM consumption data available for the selected filters</p>
 					</div>
 				</div>
 			</div>

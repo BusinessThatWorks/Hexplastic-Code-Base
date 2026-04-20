@@ -330,6 +330,7 @@ class ProductionLogSheetDashboard {
 					self.process_loss_data = r.message.process_loss;
 					self.update_process_loss(r.message.process_loss);
 					self.update_actual_vs_planned(r.message.actual_vs_planned);
+					self.update_rm_consumption(r.message.rm_consumption);
 				}
 				self.hide_loading();
 			},
@@ -537,6 +538,36 @@ class ProductionLogSheetDashboard {
                 <td class="text-right">${this.format_number(row.actual_manufactured_qty, 0)}</td>
                 <td class="text-right">${this.format_number(row.actual_fg_weight)}</td>
                 <td class="text-right">${this.format_number(row.actual_rm_consumption)}</td>
+            </tr>
+        `
+			)
+			.join("");
+	}
+
+	update_rm_consumption(data) {
+		const tbody = document.getElementById("rm-consumption-tbody");
+		const noDataMsg = document.getElementById("no-rm-consumption-message");
+		const table = document.getElementById("rm-consumption-table");
+
+		if (!tbody) return;
+
+		if (!data || data.length === 0) {
+			tbody.innerHTML = "";
+			if (noDataMsg) noDataMsg.style.display = "flex";
+			if (table) table.style.display = "none";
+			return;
+		}
+
+		if (noDataMsg) noDataMsg.style.display = "none";
+		if (table) table.style.display = "table";
+
+		tbody.innerHTML = data
+			.map(
+				(row) => `
+            <tr>
+                <td>${frappe.utils.escape_html(row.raw_material || "-")}</td>
+                <td class="text-right">${this.format_number(row.consumption)}</td>
+                <td>${frappe.utils.escape_html(row.uom || "-")}</td>
             </tr>
         `
 			)
