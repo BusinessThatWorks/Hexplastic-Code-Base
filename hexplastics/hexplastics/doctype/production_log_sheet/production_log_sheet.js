@@ -32,6 +32,16 @@ frappe.ui.form.on("Production Log Sheet", {
 		if (frm.doc.docstatus !== 1) {
 			frm._opening_mip_manually_edited = !!frm.doc.opening_qty_for_mip;
 		}
+
+		// Always refresh FG totals display for all docs (including submitted),
+		// but avoid dirty-state for non-mutable docs.
+		setTimeout(function() {
+			calculate_finished_good_totals(frm, { avoid_dirty: !can_mutate_on_refresh });
+		}, 500);
+	},
+
+	validate(frm) {
+		calculate_finished_good_totals(frm);
 	},
 
 	production_plan(frm) {
@@ -876,6 +886,7 @@ function rebuild_tables_from_fg_details(frm) {
 		});
 		frm.refresh_field("table_foun");
 
+		calculate_finished_good_totals(frm);
 		calculate_total_rm_consumption(frm);
 		calculate_total_production_weight(frm);
 		calculate_closing_qty_for_mip(frm);
@@ -993,6 +1004,7 @@ function rebuild_tables_from_fg_details(frm) {
 			frm.refresh_field("table_foun");
 
 			// ── Recalculate all totals ───────────────────────────────
+			calculate_finished_good_totals(frm);
 			calculate_total_rm_consumption(frm);
 			calculate_total_production_weight(frm);
 			calculate_closing_qty_for_mip(frm);
@@ -1061,35 +1073,56 @@ function calculate_finished_good_details_net_weight(frm, cdt, cdn) {
 		frappe.model.set_value(cdt, cdn, "net_weight", net_weight);
 	}
 
-	// Optional: keep legacy header fields in sync (dashboards/APIs may still read them).
-	const fg_details = frm.doc.table_foun || [];
-	const total_net_weight = fg_details.reduce(function (acc, r) {
-		return acc + (flt(r.net_weight) || 0);
-	}, 0);
-	const total_gross_weight = fg_details.reduce(function (acc, r) {
-		return acc + (flt(r.gross_weight) || 0);
-	}, 0);
-	const total_fabric_packing_weight = fg_details.reduce(function (acc, r) {
-		return acc + (flt(r.weight_of_fabric_packing) || 0);
-	}, 0);
-
-	if (frm.fields_dict && frm.fields_dict.net_weight) {
-		set_form_value_if_changed(frm, "net_weight", Math.round(total_net_weight * 10000) / 10000);
-	}
-	if (frm.fields_dict && frm.fields_dict.gross_weight) {
-		set_form_value_if_changed(frm, "gross_weight", Math.round(total_gross_weight * 10000) / 10000);
-	}
-	if (frm.fields_dict && frm.fields_dict.weight_of_fabric_packing) {
-		set_form_value_if_changed(
-			frm,
-			"weight_of_fabric_packing",
-			Math.round(total_fabric_packing_weight * 10000) / 10000
-		);
-	}
+	calculate_finished_good_totals(frm);
 
 	// Totals that depend on net_weight
 	calculate_closing_qty_for_mip(frm);
 	calculate_total_production_weight(frm);
+}
+
+/**
+ * Calculate and set Finished Good totals on parent doctype.
+ * Sums Gross Weight, Weight Of Fabric Packing and Net Weight from table_foun.
+ *
+ * @param {Object} frm - The form object
+ */
+function calculate_finished_good_totals(frm, opts) {
+	const options = opts || {};
+	const fg_details = frm.doc.table_foun || [];
+
+	const total_gross_weight = fg_details.reduce(function(acc, row) {
+		return acc + (flt(row.gross_weight) || 0);
+	}, 0);
+	const total_weight_of_fabric_packing = fg_details.reduce(function(acc, row) {
+		return acc + (flt(row.weight_of_fabric_packing) || 0);
+	}, 0);
+	const total_net_weight = fg_details.reduce(function(acc, row) {
+		return acc + (flt(row.net_weight) || 0);
+	}, 0);
+
+	const rounded_total_gross_weight = Math.round(total_gross_weight * 10000) / 10000;
+	const rounded_total_weight_of_fabric_packing =
+		Math.round(total_weight_of_fabric_packing * 10000) / 10000;
+	const rounded_total_net_weight = Math.round(total_net_weight * 10000) / 10000;
+
+	if (options.avoid_dirty) {
+		set_form_value_without_dirty_if_changed(frm, "total_gross_weight", rounded_total_gross_weight);
+		set_form_value_without_dirty_if_changed(
+			frm,
+			"total_weight_of_fabric_packing",
+			rounded_total_weight_of_fabric_packing
+		);
+		set_form_value_without_dirty_if_changed(frm, "total_net_weight", rounded_total_net_weight);
+		return;
+	}
+
+	set_form_value_if_changed(frm, "total_gross_weight", rounded_total_gross_weight);
+	set_form_value_if_changed(
+		frm,
+		"total_weight_of_fabric_packing",
+		rounded_total_weight_of_fabric_packing
+	);
+	set_form_value_if_changed(frm, "total_net_weight", rounded_total_net_weight);
 }
 
 /**
@@ -1242,6 +1275,23 @@ function set_form_value_if_changed(frm, fieldname, value) {
 		return;
 	}
 	frm.set_value(fieldname, value);
+}
+
+/**
+ * Set a parent form field value without triggering dirty state.
+ * Intended for read-only/submitted document display recalculations.
+ *
+ * @param {Object} frm - The form object
+ * @param {string} fieldname - Parent fieldname
+ * @param {number|string|null} value - New value
+ */
+function set_form_value_without_dirty_if_changed(frm, fieldname, value) {
+	const current = frm.doc[fieldname];
+	if (is_same_numeric_value(current, value)) {
+		return;
+	}
+	frm.doc[fieldname] = value;
+	frm.refresh_field(fieldname);
 }
 
 /**

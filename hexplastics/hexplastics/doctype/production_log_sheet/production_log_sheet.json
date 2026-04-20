@@ -24,6 +24,12 @@
   "column_break_ygjr",
   "finished_good_details_section",
   "table_foun",
+  "section_break_fg_totals",
+  "total_gross_weight",
+  "column_break_qtgw",
+  "total_weight_of_fabric_packing",
+  "column_break_hbzs",
+  "total_net_weight",
   "section_break_urbl",
   "raw_material_consumption",
   "section_break_rquc",
@@ -267,6 +273,39 @@
    "fieldname": "table_foun",
    "fieldtype": "Table",
    "options": "Production Log Sheet FG Details Table"
+  },
+  {
+   "fieldname": "section_break_fg_totals",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "total_gross_weight",
+   "fieldtype": "Float",
+   "label": "Total Gross Weight",
+   "precision": "4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_qtgw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_weight_of_fabric_packing",
+   "fieldtype": "Float",
+   "label": "Total Weight Of Fabric Packing",
+   "precision": "4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_hbzs",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_net_weight",
+   "fieldtype": "Float",
+   "label": "Total Net Weight",
+   "precision": "4",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
