@@ -1035,6 +1035,7 @@ frappe.ui.form.on("Production Log Sheet FG Details Table", {
 	// When manufactured_qty changes in Finished Good Details, keep Production Details in sync.
 	manufactured_qty(frm, cdt, cdn) {
 		update_production_details_manufactured_qty(frm);
+		calculate_finished_good_totals(frm);
 		calculate_total_production_weight(frm);
 		calculate_closing_qty_for_mip(frm);
 		frm.refresh_field("production_details");
@@ -1082,7 +1083,7 @@ function calculate_finished_good_details_net_weight(frm, cdt, cdn) {
 
 /**
  * Calculate and set Finished Good totals on parent doctype.
- * Sums Gross Weight, Weight Of Fabric Packing and Net Weight from table_foun.
+ * Sums Manufactured Qty, Gross Weight, Weight Of Fabric Packing and Net Weight from table_foun.
  *
  * @param {Object} frm - The form object
  */
@@ -1099,6 +1100,9 @@ function calculate_finished_good_totals(frm, opts) {
 	const total_net_weight = fg_details.reduce(function(acc, row) {
 		return acc + (flt(row.net_weight) || 0);
 	}, 0);
+	const total_manufactured_qty = fg_details.reduce(function(acc, row) {
+		return acc + (cint(row.manufactured_qty) || 0);
+	}, 0);
 
 	const rounded_total_gross_weight = Math.round(total_gross_weight * 10000) / 10000;
 	const rounded_total_weight_of_fabric_packing =
@@ -1106,6 +1110,7 @@ function calculate_finished_good_totals(frm, opts) {
 	const rounded_total_net_weight = Math.round(total_net_weight * 10000) / 10000;
 
 	if (options.avoid_dirty) {
+		set_form_value_without_dirty_if_changed(frm, "total_manufactured_qty", total_manufactured_qty);
 		set_form_value_without_dirty_if_changed(frm, "total_gross_weight", rounded_total_gross_weight);
 		set_form_value_without_dirty_if_changed(
 			frm,
@@ -1116,6 +1121,7 @@ function calculate_finished_good_totals(frm, opts) {
 		return;
 	}
 
+	set_form_value_if_changed(frm, "total_manufactured_qty", total_manufactured_qty);
 	set_form_value_if_changed(frm, "total_gross_weight", rounded_total_gross_weight);
 	set_form_value_if_changed(
 		frm,

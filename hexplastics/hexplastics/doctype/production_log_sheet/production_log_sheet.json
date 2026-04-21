@@ -25,6 +25,8 @@
   "finished_good_details_section",
   "table_foun",
   "section_break_fg_totals",
+  "total_manufactured_qty",
+  "column_break_fg_tot_1",
   "total_gross_weight",
   "column_break_qtgw",
   "total_weight_of_fabric_packing",
@@ -277,6 +279,16 @@
   {
    "fieldname": "section_break_fg_totals",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "total_manufactured_qty",
+   "fieldtype": "Int",
+   "label": "Total Manufactured Qty",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_fg_tot_1",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "total_gross_weight",
