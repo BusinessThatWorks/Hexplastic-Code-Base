@@ -62,6 +62,7 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
                     left: 160px;\
                     background: #fff;\
                     z-index: 3;\
+                    border-right: 2px solid #7a838c !important;\
                 }\
                 .att-details-table thead .att-sticky-col-1,\
                 .att-details-table thead .att-sticky-col-2 {\
@@ -75,6 +76,9 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
                 }\
                 .att-details-table .att-sticky-col-2 {\
                     min-width: 180px;\
+                }\
+                .att-details-table .att-group-separator {\
+                    border-right: 2px solid #7a838c !important;\
                 }\
                 .att-fixed-scrollbar-wrap {\
                     overflow-x: auto;\
@@ -119,11 +123,12 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
 		$thead.empty();
 		const default_row = $('<tr>');
 		default_row.append($('<th class="att-sticky-col-1">').text('Employee ID'));
+		default_row.append($('<th>').text('Hex Employee Id'));
 		default_row.append($('<th class="att-sticky-col-2">').text('Employee Name'));
 		default_row.append($('<th>').text('Status'));
 		default_row.append($('<th>').text('First In'));
 		default_row.append($('<th>').text('Last Out'));
-		default_row.append($('<th>').text('Hours'));
+		default_row.append($('<th class="att-group-separator">').text('Hours'));
 		$thead.append(default_row);
 	}
 
@@ -269,14 +274,15 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
 			const date_row = $('<tr>');
 			const metric_row = $('<tr>');
 			date_row.append($('<th rowspan="2" class="att-sticky-col-1">').text('Employee ID'));
+			date_row.append($('<th rowspan="2">').text('Hex Employee Id'));
 			date_row.append($('<th rowspan="2" class="att-sticky-col-2">').text('Employee Name'));
 
 			date_list.forEach(date => {
-				date_row.append($('<th colspan="4" class="text-center">').text(format_display_date(date)));
+				date_row.append($('<th colspan="4" class="text-center att-group-separator">').text(format_display_date(date)));
 				metric_row.append($('<th>').text('Status'));
 				metric_row.append($('<th>').text('First In'));
 				metric_row.append($('<th>').text('Last Out'));
-				metric_row.append($('<th>').text('Hours'));
+				metric_row.append($('<th class="att-group-separator">').text('Hours'));
 			});
 
 			$thead.append(date_row);
@@ -293,9 +299,13 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
 				if (!employee_map[key]) {
 					employee_map[key] = {
 						employee_id: emp_id,
+						hex_employee_id: row.hex_employee_id || '',
 						employee_name: row.employee_name || '',
 						by_date: {}
 					};
+				}
+				if (!employee_map[key].hex_employee_id && row.hex_employee_id) {
+					employee_map[key].hex_employee_id = row.hex_employee_id;
 				}
 				employee_map[key].by_date[row.attendance_date] = row;
 			});
@@ -305,6 +315,7 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
 				.forEach(emp_row => {
 					const tr = $('<tr>');
 					tr.append($('<td class="att-sticky-col-1">').text(emp_row.employee_id));
+					tr.append($('<td>').text(emp_row.hex_employee_id || ''));
 					tr.append($('<td class="att-sticky-col-2">').text(emp_row.employee_name));
 
 					date_list.forEach(date => {
@@ -318,7 +329,7 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
 						tr.append(statusCell);
 						tr.append($('<td>').text(day.first_in || ''));
 						tr.append($('<td>').text(day.last_out || ''));
-						tr.append($('<td>').text(day.hours !== '' && day.hours !== undefined ? day.hours : ''));
+						tr.append($('<td class="att-group-separator">').text(day.hours !== '' && day.hours !== undefined ? day.hours : ''));
 					});
 
 					$tbody.append(tr);
@@ -371,6 +382,7 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
 					const mapped_rows = data.map(row => ({
 						attendance_date: row.attendance_date || '',
 						employee_id: row.employee || '',
+						employee_ref: row.employee || '',
 						employee_name: row.employee_name || '',
 						status: row.status || '',
 						first_in: row.custom_attendance_in_time || '',
@@ -384,7 +396,39 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
 						start += page_size;
 						fetch_next_batch();
 					} else {
-						render_rows(all_rows);
+						const employee_refs = [...new Set(all_rows.map(row => row.employee_ref).filter(Boolean))];
+						if (!employee_refs.length) {
+							render_rows(all_rows);
+							return;
+						}
+
+						frappe.call({
+							method: 'frappe.client.get_list',
+							args: {
+								doctype: 'Employee',
+								fields: ['name', 'custom_employee_id'],
+								filters: {
+									name: ['in', employee_refs]
+								},
+								limit_page_length: employee_refs.length
+							},
+							callback: function (emp_resp) {
+								const employee_data = emp_resp.message || [];
+								const employee_id_map = {};
+								employee_data.forEach(emp => {
+									employee_id_map[emp.name] = emp.custom_employee_id || '';
+								});
+								all_rows = all_rows.map(row => ({
+									...row,
+									hex_employee_id: employee_id_map[row.employee_ref] || ''
+								}));
+								render_rows(all_rows);
+							},
+							error: function () {
+								frappe.msgprint('Failed to fetch Hex Employee Id from Employee doctype.');
+								render_rows(all_rows);
+							}
+						});
 					}
 				},
 				error: function () {
