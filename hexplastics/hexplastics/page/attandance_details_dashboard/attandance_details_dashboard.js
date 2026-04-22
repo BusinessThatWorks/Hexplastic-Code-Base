@@ -12,7 +12,7 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
 	const current_month = parseInt(today.split('-')[1], 10);
 
 	const controls = $(
-		'<div class="form-inline" style="gap: 12px; margin-bottom: 12px; display: flex; align-items: center;">\
+		'<div class="form-inline att-controls-wrap" style="gap: 12px; margin-bottom: 12px; display: flex; align-items: center;">\
             <label style="margin: 0;">Month</label>\
             <select class="form-control" id="att-month" style="margin-right: 12px;"></select>\
             <label style="margin: 0;">From</label>\
@@ -52,6 +52,18 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
                     overflow-x: auto;\
                     overflow-y: auto !important;\
                     max-height: calc(100vh - 180px);\
+                }\
+                .att-controls-wrap {\
+                    position: relative;\
+                    z-index: 20;\
+                }\
+                .att-controls-wrap #att-emp-wrapper {\
+                    position: relative;\
+                    z-index: 30;\
+                }\
+                .att-controls-wrap #att-emp-wrapper .awesomplete ul,\
+                .att-controls-wrap #att-emp-wrapper .ui-autocomplete {\
+                    z-index: 1000 !important;\
                 }\
                 .att-details-table thead th {\
                     position: sticky;\
