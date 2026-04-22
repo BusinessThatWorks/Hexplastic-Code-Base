@@ -250,78 +250,10 @@ def get_gl_entries(filters, accounting_dimensions):
 		if gl_entry.party_type and gl_entry.party:
 			gl_entry.party_name = party_name_map.get(gl_entry.party_type, {}).get(gl_entry.party)
 
-	set_custom_voucher_display_fields(gl_entries)
-
 	if filters.get("presentation_currency"):
 		return convert_to_presentation_currency(gl_entries, currency_map, filters)
 	else:
 		return gl_entries
-
-
-def set_custom_voucher_display_fields(gl_entries):
-	if not gl_entries:
-		return
-
-	payment_entry_names = []
-	journal_entry_names = []
-	purchase_invoice_names = []
-
-	for gl_entry in gl_entries:
-		if gl_entry.voucher_type == "Payment Entry":
-			payment_entry_names.append(gl_entry.voucher_no)
-		elif gl_entry.voucher_type == "Journal Entry":
-			journal_entry_names.append(gl_entry.voucher_no)
-		elif gl_entry.voucher_type == "Purchase Invoice":
-			purchase_invoice_names.append(gl_entry.voucher_no)
-
-	payment_entry_map = {}
-	if payment_entry_names:
-		for payment_entry in frappe.get_all(
-			"Payment Entry",
-			filters={"name": ("in", list(set(payment_entry_names)))},
-			fields=["name", "payment_type", "reference_no"],
-		):
-			payment_entry_map[payment_entry.name] = payment_entry
-
-	journal_entry_map = {}
-	if journal_entry_names:
-		for journal_entry in frappe.get_all(
-			"Journal Entry",
-			filters={"name": ("in", list(set(journal_entry_names)))},
-			fields=["name", "cheque_no"],
-		):
-			journal_entry_map[journal_entry.name] = journal_entry
-
-	purchase_invoice_map = {}
-	if purchase_invoice_names:
-		for purchase_invoice in frappe.get_all(
-			"Purchase Invoice",
-			filters={"name": ("in", list(set(purchase_invoice_names)))},
-			fields=["name", "bill_no"],
-		):
-			purchase_invoice_map[purchase_invoice.name] = purchase_invoice
-
-	for gl_entry in gl_entries:
-		gl_entry.voucher_type_label = gl_entry.voucher_type
-		gl_entry.voucher_no_label = gl_entry.voucher_no
-
-		if gl_entry.voucher_type == "Payment Entry":
-			payment_entry = payment_entry_map.get(gl_entry.voucher_no)
-			if payment_entry:
-				if payment_entry.payment_type:
-					gl_entry.voucher_type_label = payment_entry.payment_type
-				if payment_entry.reference_no:
-					gl_entry.voucher_no_label = payment_entry.reference_no
-
-		elif gl_entry.voucher_type == "Journal Entry":
-			journal_entry = journal_entry_map.get(gl_entry.voucher_no)
-			if journal_entry and journal_entry.cheque_no:
-				gl_entry.voucher_no_label = journal_entry.cheque_no
-
-		elif gl_entry.voucher_type == "Purchase Invoice":
-			purchase_invoice = purchase_invoice_map.get(gl_entry.voucher_no)
-			if purchase_invoice and purchase_invoice.bill_no:
-				gl_entry.voucher_no_label = purchase_invoice.bill_no
 
 
 def get_conditions(filters):
@@ -562,32 +494,6 @@ def get_totals_dict():
 	)
 
 
-def normalize_opening_balance_row(row):
-	"""Show opening only in debit column using net absolute value."""
-	net_value = row.debit - row.credit
-	net_value_in_account_currency = row.debit_in_account_currency - row.credit_in_account_currency
-
-	row.debit = abs(net_value)
-	row.credit = 0
-	row.debit_in_account_currency = abs(net_value_in_account_currency)
-	row.credit_in_account_currency = 0
-
-	return row
-
-
-def normalize_closing_balance_row(row):
-	"""Show closing only in credit column using net absolute value."""
-	net_value = row.debit - row.credit
-	net_value_in_account_currency = row.debit_in_account_currency - row.credit_in_account_currency
-
-	row.debit = 0
-	row.credit = abs(net_value)
-	row.debit_in_account_currency = 0
-	row.credit_in_account_currency = abs(net_value_in_account_currency)
-
-	return row
-
-
 def group_by_field(group_by):
 	if group_by == "Categorize by Party":
 		return "party"
@@ -712,13 +618,6 @@ def get_accountwise_gle(filters, accounting_dimensions, gl_entries, gle_map, tot
 		update_value_in_dict(totals, "total", value)
 		update_value_in_dict(totals, "closing", value)
 		entries.append(value)
-
-	# Opening/closing balance display customization for this report.
-	normalize_opening_balance_row(totals.opening)
-	normalize_closing_balance_row(totals.closing)
-	for acc_dict in gle_map.values():
-		normalize_opening_balance_row(acc_dict.totals.opening)
-		normalize_closing_balance_row(acc_dict.totals.closing)
 
 	return totals, entries
 
@@ -851,7 +750,7 @@ def get_columns(filters):
 		]
 
 	columns += [
-		{"label": _("Voucher Type"), "fieldname": "voucher_type_label", "width": 120},
+		{"label": _("Voucher Type"), "fieldname": "voucher_type", "width": 120},
 		{
 			"label": _("Voucher Subtype"),
 			"fieldname": "voucher_subtype",
@@ -860,8 +759,9 @@ def get_columns(filters):
 		},
 		{
 			"label": _("Voucher No"),
-			"fieldname": "voucher_no_label",
-			"fieldtype": "Data",
+			"fieldname": "voucher_no",
+			"fieldtype": "Dynamic Link",
+			"options": "voucher_type",
 			"width": 180,
 		},
 		{"label": _("Against Account"), "fieldname": "against", "width": 120},

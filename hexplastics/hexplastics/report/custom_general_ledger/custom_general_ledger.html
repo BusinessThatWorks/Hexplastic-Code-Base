@@ -185,6 +185,15 @@
 				{% var cur = filters.presentation_currency || row.account_currency || ""; %}
 				{% var display_debit = _d; %}
 				{% var display_credit = _c; %}
+				{% if (is_opening) { %}
+					{% display_debit = _b > 0 ? _b : 0; %}
+					{% display_credit = _b < 0 ? Math.abs(_b) : 0; %}
+					{% if (display_debit > 0) { %}
+						{% by_to = __("To"); %}
+					{% } else if (display_credit > 0) { %}
+						{% by_to = __("By"); %}
+					{% }; %}
+				{% }; %}
 				{% if (is_closing) { %}
 					{% display_debit = _b < 0 ? Math.abs(_b) : 0; %}
 					{% display_credit = _b > 0 ? _b : 0; %}
@@ -256,7 +265,7 @@
 					</td>
 					<td>{%= by_to %}</td>
 					<td class="cgl-particulars">{%= frappe.utils.escape_html(particulars) %}</td>
-					<td>{%= is_detail ? frappe.utils.escape_html(row.voucher_type_label || row.voucher_type || "") : "" %}</td>
+					<td>{%= is_detail ? frappe.utils.escape_html(row.voucher_subtype || "") : "" %}</td>
 					<td class="cgl-n">{%= is_detail ? frappe.utils.escape_html(row.voucher_no_label || row.voucher_no || "") : "" %}</td>
 					<td class="cgl-n">
 						{% if (display_debit) { %} {%= format_currency(display_debit, cur) %} {% }; %}
