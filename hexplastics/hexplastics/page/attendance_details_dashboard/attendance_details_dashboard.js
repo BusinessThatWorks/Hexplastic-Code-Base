@@ -1,7 +1,7 @@
-frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
+frappe.pages['attendance-details-dashboard'].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: 'Attandance Details Dashboard',
+		title: 'Attendance Details Dashboard',
 		single_column: true
 	});
 

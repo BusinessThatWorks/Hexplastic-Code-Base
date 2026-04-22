@@ -562,6 +562,32 @@ def get_totals_dict():
 	)
 
 
+def normalize_opening_balance_row(row):
+	"""Show opening only in debit column using net absolute value."""
+	net_value = row.debit - row.credit
+	net_value_in_account_currency = row.debit_in_account_currency - row.credit_in_account_currency
+
+	row.debit = abs(net_value)
+	row.credit = 0
+	row.debit_in_account_currency = abs(net_value_in_account_currency)
+	row.credit_in_account_currency = 0
+
+	return row
+
+
+def normalize_closing_balance_row(row):
+	"""Show closing only in credit column using net absolute value."""
+	net_value = row.debit - row.credit
+	net_value_in_account_currency = row.debit_in_account_currency - row.credit_in_account_currency
+
+	row.debit = 0
+	row.credit = abs(net_value)
+	row.debit_in_account_currency = 0
+	row.credit_in_account_currency = abs(net_value_in_account_currency)
+
+	return row
+
+
 def group_by_field(group_by):
 	if group_by == "Categorize by Party":
 		return "party"
@@ -686,6 +712,13 @@ def get_accountwise_gle(filters, accounting_dimensions, gl_entries, gle_map, tot
 		update_value_in_dict(totals, "total", value)
 		update_value_in_dict(totals, "closing", value)
 		entries.append(value)
+
+	# Opening/closing balance display customization for this report.
+	normalize_opening_balance_row(totals.opening)
+	normalize_closing_balance_row(totals.closing)
+	for acc_dict in gle_map.values():
+		normalize_opening_balance_row(acc_dict.totals.opening)
+		normalize_closing_balance_row(acc_dict.totals.closing)
 
 	return totals, entries
 
