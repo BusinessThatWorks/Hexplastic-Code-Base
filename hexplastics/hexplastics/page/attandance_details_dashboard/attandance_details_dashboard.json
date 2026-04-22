@@ -1,0 +1,33 @@
+{
+ "content": null,
+ "creation": "2026-04-20 00:00:00",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "octicon octicon-graph",
+ "idx": 0,
+ "modified": "2026-04-20 14:52:15.868061",
+ "modified_by": "Administrator",
+ "module": "Hexplastics",
+ "name": "attandance-details-dashboard",
+ "owner": "Administrator",
+ "page_name": "attandance-details-dashboard",
+ "roles": [
+  {
+   "role": "HR Manager"
+  },
+  {
+   "role": "Administrator"
+  },
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Prepared Report User"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 1,
+ "title": "Attandance Details Dashboard"
+}

@@ -36,6 +36,9 @@ class ProductionLogSheet(Document):
         fabric_packing_weight_total = sum(
             flt(d.get("weight_of_fabric_packing")) for d in details
         )
+        manufactured_qty_total = sum(int(flt(d.get("manufactured_qty"))) for d in details)
+        if self.meta.has_field("total_manufactured_qty"):
+            self.total_manufactured_qty = manufactured_qty_total
 
         # Resolve a single manufacturing_item for legacy header field.
         # Use the first FG row's manufacturing_item, falling back to

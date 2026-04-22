@@ -21,6 +21,7 @@ def get_dashboard_data(
             "entries": get_log_book_entries(filters),
             "process_loss": get_process_loss_data(filters),
             "actual_vs_planned": get_actual_vs_planned_data(filters),
+            "rm_consumption": get_rm_consumption_data(filters),
         }
     except Exception:
         frappe.log_error(
@@ -33,6 +34,7 @@ def get_dashboard_data(
             "entries": [],
             "process_loss": {"chart_data": [], "table_data": []},
             "actual_vs_planned": [],
+            "rm_consumption": [],
         }
 
 
@@ -754,6 +756,64 @@ def get_actual_vs_planned_data(filters=None):
         frappe.log_error(
             message=frappe.get_traceback(),
             title=_("Error fetching actual vs planned data"),
+        )
+        return []
+
+
+@frappe.whitelist()
+def get_rm_consumption_data(filters=None):
+    """Get raw material consumption grouped by item name and UOM."""
+    try:
+        if isinstance(filters, str):
+            filters = frappe.parse_json(filters)
+
+        if not filters:
+            filters = {"docstatus": 1}
+
+        data = frappe.db.sql(
+            """
+            SELECT
+                COALESCE(NULLIF(TRIM(rm.item_name), ''), rm.item_code) AS raw_material,
+                COALESCE(NULLIF(TRIM(rm.stock_uom), ''), '-') AS uom,
+                COALESCE(SUM(rm.consumption), 0) AS consumption
+            FROM `tabProduction Log Sheet` pls
+            INNER JOIN `tabProduction Log Sheet Table` rm
+                ON rm.parent = pls.name
+                AND rm.parenttype = 'Production Log Sheet'
+                AND rm.parentfield = 'raw_material_consumption'
+            WHERE pls.docstatus = 1
+                {date_filter}
+                {shift_filter}
+                {item_filter}
+                {grade_filter}
+            GROUP BY
+                COALESCE(NULLIF(TRIM(rm.item_name), ''), rm.item_code),
+                COALESCE(NULLIF(TRIM(rm.stock_uom), ''), '-')
+            ORDER BY
+                COALESCE(NULLIF(TRIM(rm.item_name), ''), rm.item_code) ASC,
+                COALESCE(NULLIF(TRIM(rm.stock_uom), ''), '-') ASC
+        """.format(
+                date_filter=get_date_filter_sql(filters, "pls"),
+                shift_filter=get_shift_filter_sql(filters, "pls"),
+                item_filter=get_item_filter_sql(filters, "pls"),
+                grade_filter=get_grade_filter_sql(filters, "pls"),
+            ),
+            as_dict=True,
+        )
+
+        return [
+            {
+                "raw_material": row.get("raw_material"),
+                "uom": row.get("uom"),
+                "consumption": flt(row.get("consumption", 0), 2),
+            }
+            for row in data
+        ]
+
+    except Exception:
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title=_("Error fetching RM consumption data"),
         )
         return []
 

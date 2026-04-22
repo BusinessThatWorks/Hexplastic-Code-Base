@@ -433,6 +433,29 @@ body[data-page-route*="production-log-dashb"] .page-content-wrapper {
     margin: 0;
 }
 
+/* RM Consumption: stretch columns to use full table width */
+.production-log-dashboard #rm-consumption-table {
+    width: 100%;
+    min-width: 100%;
+    table-layout: fixed;
+}
+
+.production-log-dashboard #rm-consumption-table th:first-child,
+.production-log-dashboard #rm-consumption-table td:first-child {
+    width: 33%;
+}
+
+.production-log-dashboard #rm-consumption-table th:nth-child(2),
+.production-log-dashboard #rm-consumption-table td:nth-child(2) {
+    width: 30%;
+}
+
+.production-log-dashboard #rm-consumption-table th:nth-child(3),
+.production-log-dashboard #rm-consumption-table td:nth-child(3) {
+    width: 33%;
+    text-align: right;
+}
+
 .production-log-dashboard .entries-table thead {
     background: #f9f9fa;
     position: sticky;
