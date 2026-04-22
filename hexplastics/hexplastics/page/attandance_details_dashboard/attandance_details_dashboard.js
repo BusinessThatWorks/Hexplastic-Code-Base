@@ -27,33 +27,46 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
 	);
 
 	const table = $(
-		'<div class="table-responsive">\
+		'<div class="table-responsive att-table-wrap">\
             <table class="table table-bordered table-sm att-details-table">\
                 <thead></thead>\
                 <tbody></tbody>\
             </table>\
         </div>'
 	);
-	const fixed_scrollbar = $(
-		'<div class="att-fixed-scrollbar-wrap">\
-            <div class="att-fixed-scrollbar-inner"></div>\
-        </div>'
-	);
 
 	$container.append(controls);
-	$container.append(fixed_scrollbar);
 	$container.append(table);
 	if (!$('#att-details-dashboard-style').length) {
 		$('head').append(
 			'<style id="att-details-dashboard-style">\
+                .att-details-table {\
+                    border-collapse: separate;\
+                    border-spacing: 0;\
+                }\
                 .att-details-table th, .att-details-table td {\
                     white-space: nowrap;\
                     vertical-align: middle;\
+                }\
+                .att-table-wrap {\
+                    overflow-x: auto;\
+                    overflow-y: auto !important;\
+                    max-height: calc(100vh - 180px);\
+                }\
+                .att-details-table thead th {\
+                    position: sticky;\
+                    top: 0;\
+                    background: #f7fafc;\
+                    z-index: 5;\
+                }\
+                .att-details-table thead tr:nth-child(2) th {\
+                    top: var(--att-header-row-1-height, 36px);\
                 }\
                 .att-details-table .att-sticky-col-1 {\
                     position: sticky;\
                     left: 0;\
                     background: #fff;\
+                    background-clip: padding-box;\
                     z-index: 3;\
                     border-right: 1px solid #d1d8dd !important;\
                 }\
@@ -61,12 +74,23 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
                     position: sticky;\
                     left: 160px;\
                     background: #fff;\
+                    background-clip: padding-box;\
+                    z-index: 3;\
+                    border-right: 1px solid #d1d8dd !important;\
+                }\
+                .att-details-table .att-sticky-col-3 {\
+                    position: sticky;\
+                    left: 340px;\
+                    background: #fff;\
+                    background-clip: padding-box;\
                     z-index: 3;\
                     border-right: 2px solid #7a838c !important;\
                 }\
                 .att-details-table thead .att-sticky-col-1,\
-                .att-details-table thead .att-sticky-col-2 {\
-                    z-index: 4;\
+                .att-details-table thead .att-sticky-col-2,\
+                .att-details-table thead .att-sticky-col-3 {\
+                    z-index: 6;\
+                    background: #f7fafc;\
                 }\
                 .att-details-table thead .att-sticky-col-1 {\
                     border-right: 1px solid #d1d8dd !important;\
@@ -77,59 +101,36 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
                 .att-details-table .att-sticky-col-2 {\
                     min-width: 180px;\
                 }\
+                .att-details-table .att-sticky-col-3 {\
+                    min-width: 220px;\
+                }\
                 .att-details-table .att-group-separator {\
                     border-right: 2px solid #7a838c !important;\
-                }\
-                .att-fixed-scrollbar-wrap {\
-                    overflow-x: auto;\
-                    overflow-y: hidden;\
-                    height: 16px;\
-                    margin-bottom: 8px;\
-                }\
-                .att-fixed-scrollbar-inner {\
-                    height: 1px;\
                 }\
             </style>'
 		);
 	}
 
-	const $table_wrap = table;
-	const $fixed_scrollbar_wrap = fixed_scrollbar;
-	const $fixed_scrollbar_inner = fixed_scrollbar.find('.att-fixed-scrollbar-inner');
-	let is_syncing_scroll = false;
-
-	function sync_fixed_scrollbar_width() {
-		const table_el = table.find('table')[0];
-		if (!table_el) return;
-		$fixed_scrollbar_inner.width(table_el.scrollWidth);
+	function sync_header_offsets() {
+		const $table = table.find('table');
+		if (!$table.length) return;
+		const first_header_row_height = $table.find('thead tr:first-child').outerHeight() || 36;
+		$table[0].style.setProperty('--att-header-row-1-height', `${first_header_row_height}px`);
 	}
-
-	$table_wrap.on('scroll', function () {
-		if (is_syncing_scroll) return;
-		is_syncing_scroll = true;
-		$fixed_scrollbar_wrap.scrollLeft($table_wrap.scrollLeft());
-		is_syncing_scroll = false;
-	});
-
-	$fixed_scrollbar_wrap.on('scroll', function () {
-		if (is_syncing_scroll) return;
-		is_syncing_scroll = true;
-		$table_wrap.scrollLeft($fixed_scrollbar_wrap.scrollLeft());
-		is_syncing_scroll = false;
-	});
 
 	function render_default_header() {
 		const $thead = table.find('thead');
 		$thead.empty();
 		const default_row = $('<tr>');
 		default_row.append($('<th class="att-sticky-col-1">').text('Employee ID'));
-		default_row.append($('<th>').text('Hex Employee Id'));
-		default_row.append($('<th class="att-sticky-col-2">').text('Employee Name'));
+		default_row.append($('<th class="att-sticky-col-2">').text('Hex Employee ID'));
+		default_row.append($('<th class="att-sticky-col-3">').text('Employee Name'));
 		default_row.append($('<th>').text('Status'));
 		default_row.append($('<th>').text('First In'));
 		default_row.append($('<th>').text('Last Out'));
 		default_row.append($('<th class="att-group-separator">').text('Hours'));
 		$thead.append(default_row);
+			sync_header_offsets();
 	}
 
 	const month_options = [
@@ -274,8 +275,8 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
 			const date_row = $('<tr>');
 			const metric_row = $('<tr>');
 			date_row.append($('<th rowspan="2" class="att-sticky-col-1">').text('Employee ID'));
-			date_row.append($('<th rowspan="2">').text('Hex Employee Id'));
-			date_row.append($('<th rowspan="2" class="att-sticky-col-2">').text('Employee Name'));
+			date_row.append($('<th rowspan="2" class="att-sticky-col-2">').text('Hex Employee ID'));
+			date_row.append($('<th rowspan="2" class="att-sticky-col-3">').text('Employee Name'));
 
 			date_list.forEach(date => {
 				date_row.append($('<th colspan="4" class="text-center att-group-separator">').text(format_display_date(date)));
@@ -287,6 +288,7 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
 
 			$thead.append(date_row);
 			$thead.append(metric_row);
+			sync_header_offsets();
 		};
 
 		const render_rows = rows => {
@@ -315,8 +317,8 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
 				.forEach(emp_row => {
 					const tr = $('<tr>');
 					tr.append($('<td class="att-sticky-col-1">').text(emp_row.employee_id));
-					tr.append($('<td>').text(emp_row.hex_employee_id || ''));
-					tr.append($('<td class="att-sticky-col-2">').text(emp_row.employee_name));
+					tr.append($('<td class="att-sticky-col-2">').text(emp_row.hex_employee_id || ''));
+					tr.append($('<td class="att-sticky-col-3">').text(emp_row.employee_name));
 
 					date_list.forEach(date => {
 						const day = emp_row.by_date[date] || {};
@@ -334,7 +336,6 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
 
 					$tbody.append(tr);
 				});
-			sync_fixed_scrollbar_width();
 		};
 
 		render_header();
@@ -502,8 +503,7 @@ frappe.pages['attandance-details-dashboard'].on_page_load = function (wrapper) {
 
 	apply_selected_month_defaults();
 	render_default_header();
-	sync_fixed_scrollbar_width();
 	$(window).on('resize.att-details-dashboard', function () {
-		sync_fixed_scrollbar_width();
+		sync_header_offsets();
 	});
 };
