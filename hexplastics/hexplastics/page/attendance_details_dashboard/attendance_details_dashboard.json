@@ -5,12 +5,12 @@
  "doctype": "Page",
  "icon": "octicon octicon-graph",
  "idx": 0,
- "modified": "2026-04-20 14:52:15.868061",
+ "modified": "2026-04-22 14:44:11.596581",
  "modified_by": "Administrator",
  "module": "Hexplastics",
- "name": "attandance-details-dashboard",
+ "name": "attendance-details-dashboard",
  "owner": "Administrator",
- "page_name": "attandance-details-dashboard",
+ "page_name": "attendance-details-dashboard",
  "roles": [
   {
    "role": "HR Manager"
@@ -29,5 +29,5 @@
  "standard": "Yes",
  "style": null,
  "system_page": 1,
- "title": "Attandance Details Dashboard"
+ "title": "Attendance Details Dashboard"
 }
