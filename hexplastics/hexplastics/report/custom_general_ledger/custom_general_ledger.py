@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 import frappe
 from frappe import _, _dict
+from frappe.contacts.doctype.address.address import get_address_display, get_default_address
 from frappe.query_builder import Criterion
 from frappe.utils import cstr, getdate
 
@@ -44,8 +45,48 @@ def execute(filters=None):
 	columns = get_columns(filters)
 
 	res = get_result(filters, account_details)
+	res = add_print_header_context(res, filters)
 
 	return columns, res
+
+
+def add_print_header_context(data, filters):
+	company_name = filters.get("company")
+	company_address = ""
+	company_tax_id = ""
+	company_registration_details = ""
+	company_email = ""
+
+	if filters.get("company"):
+		company_doc = frappe.get_cached_doc("Company", filters.company)
+		company_name = company_doc.get("company_name") or filters.company
+		company_address = company_doc.get("address_html") or ""
+		company_tax_id = company_doc.get("tax_id") or ""
+		company_registration_details = company_doc.get("registration_details") or ""
+		company_email = company_doc.get("email") or ""
+
+		if not company_address:
+			if company_address_name := get_default_address("Company", filters.company):
+				company_address = get_address_display(company_address_name) or ""
+
+	party_address = ""
+	if filters.get("party_type") and filters.get("party") and len(filters.party) == 1:
+		party = filters.party[0]
+
+		if party_address_name := get_default_address(filters.party_type, party):
+			party_address = get_address_display(party_address_name) or ""
+		elif frappe.db.has_column(filters.party_type, "address_html"):
+			party_address = frappe.db.get_value(filters.party_type, party, "address_html") or ""
+
+	for row in data:
+		row["company_name"] = company_name
+		row["company_address_html"] = company_address
+		row["company_tax_id"] = company_tax_id
+		row["company_registration_details"] = company_registration_details
+		row["company_email"] = company_email
+		row["party_address_html"] = party_address
+
+	return data
 
 
 def validate_filters(filters, account_details):
