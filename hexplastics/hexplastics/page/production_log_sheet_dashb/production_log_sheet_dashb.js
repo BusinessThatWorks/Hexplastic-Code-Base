@@ -158,6 +158,11 @@ class ProductionLogSheetDashboard {
 				self.show_table_export_menu($(this), "actual-vs-planned-table", "Planned_vs_Actual");
 			});
 
+			this.wrapper.on("click", "#export-rm-consumption-btn", function (e) {
+				e.stopPropagation();
+				self.show_table_export_menu($(this), "rm-consumption-table", "RM_Consumption");
+			});
+
 			// Close dropdown when clicking outside
 			$(document).on("click", function (e) {
 				if (!$(e.target).closest(".export-btn, .export-dropdown-menu").length) {
@@ -914,6 +919,7 @@ class ProductionLogSheetDashboard {
 	_export_table_btn_selector(tableClass) {
 		if (tableClass === "entries-table") return "#export-logbook-btn";
 		if (tableClass === "actual-vs-planned-table") return "#export-planned-actual-btn";
+		if (tableClass === "rm-consumption-table") return "#export-rm-consumption-btn";
 		return "#export-processloss-btn";
 	}
 
@@ -960,6 +966,8 @@ class ProductionLogSheetDashboard {
 			table = document.getElementById("entries-table");
 		} else if (tableClass === "actual-vs-planned-table") {
 			table = document.getElementById("actual-vs-planned-table");
+		} else if (tableClass === "rm-consumption-table") {
+			table = document.getElementById("rm-consumption-table");
 		} else {
 			table = this.wrapper.find(".process-loss-table")[0];
 		}
