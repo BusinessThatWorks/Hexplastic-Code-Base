@@ -310,7 +310,6 @@ def get_log_book_entries(filters=None):
                 TRIM(MAX(REPLACE(TRIM(fgd.bom_name), '-', '_'))) ASC,
                 pls.production_date DESC,
                 pls.production_time DESC
-            LIMIT 100
         """.format(
                 date_filter=get_date_filter_sql(filters, "pls"),
                 shift_filter=get_shift_filter_sql(filters, "pls"),
