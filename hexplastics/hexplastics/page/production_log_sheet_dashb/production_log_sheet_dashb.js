@@ -158,6 +158,11 @@ class ProductionLogSheetDashboard {
 				self.show_table_export_menu($(this), "actual-vs-planned-table", "Planned_vs_Actual");
 			});
 
+			this.wrapper.on("click", "#export-rm-consumption-btn", function (e) {
+				e.stopPropagation();
+				self.show_table_export_menu($(this), "rm-consumption-table", "RM_Consumption");
+			});
+
 			// Close dropdown when clicking outside
 			$(document).on("click", function (e) {
 				if (!$(e.target).closest(".export-btn, .export-dropdown-menu").length) {
@@ -359,13 +364,13 @@ class ProductionLogSheetDashboard {
 		if (actualVsPlannedLoading) actualVsPlannedLoading.style.display = "none";
 	}
 
-	format_number(value, decimals = 2) {
+	format_number(value, decimals = 2, compact = true) {
 		if (value === null || value === undefined) return "0";
 
 		const num = parseFloat(value);
 		if (isNaN(num)) return "0";
 
-		if (num >= 1000000) {
+		if (compact && num >= 1000000) {
 			return (num / 1000000).toFixed(decimals) + "M";
 		} else if (num >= 1000) {
 			return num.toLocaleString("en-IN", {
@@ -413,19 +418,19 @@ class ProductionLogSheetDashboard {
 	update_log_book(data) {
 		if (!data) return;
 
-		const setValue = (id, value, isCurrency = false) => {
+		const setValue = (id, value, isCurrency = false, compact = true) => {
 			const el = document.getElementById(id);
 			if (el) {
 				el.textContent = isCurrency
 					? this.format_currency(value)
-					: this.format_number(value);
+					: this.format_number(value, 2, compact);
 			}
 		};
 
 		// Total Costing
 		setValue("total-costing", data.total_costing, true);
 		setValue("total-prime-used", data.total_prime_used);
-		setValue("total-rm-consumption", data.total_rm_consumption);
+		setValue("total-rm-consumption", data.total_rm_consumption, false, false);
 		setValue("lb-gross-weight", data.gross_weight);
 		setValue("lb-net-weight", data.net_weight);
 	}
@@ -914,11 +919,11 @@ class ProductionLogSheetDashboard {
 	_export_table_btn_selector(tableClass) {
 		if (tableClass === "entries-table") return "#export-logbook-btn";
 		if (tableClass === "actual-vs-planned-table") return "#export-planned-actual-btn";
+		if (tableClass === "rm-consumption-table") return "#export-rm-consumption-btn";
 		return "#export-processloss-btn";
 	}
 
 	export_table_excel(tableClass, filePrefix) {
-		const self = this;
 		const btn = this.wrapper.find(this._export_table_btn_selector(tableClass));
 
 		// Add loading state
@@ -935,21 +940,11 @@ class ProductionLogSheetDashboard {
 				return;
 			}
 
-			// Use Frappe's built-in CSV download (converts to Excel compatible format)
-			this.download_as_csv(tableData, `${filePrefix}_${this.get_date_string()}.csv`);
-
-			frappe.show_alert({
-				message: __("Table exported successfully"),
-				indicator: "green",
-			});
+			// Export as true Excel workbook (.xlsx)
+			this.load_xlsx_and_export(tableData, filePrefix, btn);
 		} catch (e) {
 			console.error("Excel export error:", e);
 			frappe.msgprint(__("Failed to export table. Please try again."));
-		} finally {
-			setTimeout(() => {
-				btn.removeClass("exporting");
-				btn.prop("disabled", false);
-			}, 500);
 		}
 	}
 
@@ -960,6 +955,8 @@ class ProductionLogSheetDashboard {
 			table = document.getElementById("entries-table");
 		} else if (tableClass === "actual-vs-planned-table") {
 			table = document.getElementById("actual-vs-planned-table");
+		} else if (tableClass === "rm-consumption-table") {
+			table = document.getElementById("rm-consumption-table");
 		} else {
 			table = this.wrapper.find(".process-loss-table")[0];
 		}
@@ -995,32 +992,72 @@ class ProductionLogSheetDashboard {
 		return { headers, rows };
 	}
 
-	download_as_csv(tableData, filename) {
-		const { headers, rows } = tableData;
+	load_xlsx_and_export(tableData, filePrefix, btn) {
+		if (typeof window.XLSX !== "undefined" && window.XLSX.utils) {
+			this.generate_xlsx(tableData, filePrefix, btn);
+			return;
+		}
 
-		// Build CSV content
-		let csv = "";
+		const script = document.createElement("script");
+		script.src = "https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js";
+		script.onload = () => {
+			this.generate_xlsx(tableData, filePrefix, btn);
+		};
+		script.onerror = () => {
+			frappe.msgprint(
+				__("Failed to load Excel library. Please check your internet connection.")
+			);
+			btn.removeClass("exporting").prop("disabled", false);
+		};
+		document.head.appendChild(script);
+	}
 
-		// Add headers
-		csv += headers.map((h) => `"${h.replace(/"/g, '""')}"`).join(",") + "\n";
+	generate_xlsx(tableData, filePrefix, btn) {
+		try {
+			const { headers, rows } = tableData;
+			const sheetData = this.build_xlsx_sheet_data(headers, rows);
 
-		// Add rows
-		rows.forEach((row) => {
-			csv += row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",") + "\n";
-		});
+			const worksheet = window.XLSX.utils.aoa_to_sheet(sheetData);
+			const workbook = window.XLSX.utils.book_new();
+			window.XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
 
-		// Create blob and download
-		const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
-		const link = document.createElement("a");
-		const url = URL.createObjectURL(blob);
+			const filename = `${filePrefix}_${this.get_date_string()}.xlsx`;
+			window.XLSX.writeFile(workbook, filename);
 
-		link.setAttribute("href", url);
-		link.setAttribute("download", filename);
-		link.style.visibility = "hidden";
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
-		URL.revokeObjectURL(url);
+			frappe.show_alert({
+				message: __("Excel exported successfully"),
+				indicator: "green",
+			});
+		} catch (error) {
+			console.error("XLSX export error:", error);
+			frappe.msgprint(__("Failed to export Excel. Please try again."));
+		} finally {
+			btn.removeClass("exporting").prop("disabled", false);
+		}
+	}
+
+	build_xlsx_sheet_data(headers, rows) {
+		const normalizedRows = (rows || []).map((row) =>
+			row.map((cell) => {
+				const num = this.parse_export_number(cell);
+				return num !== null ? num : cell;
+			})
+		);
+
+		return [headers, ...normalizedRows];
+	}
+
+	parse_export_number(value) {
+		if (value === null || value === undefined) return null;
+
+		let text = String(value).trim();
+		if (!text) return null;
+
+		text = text.replace(/,/g, "").replace(/₹/g, "").replace(/%/g, "");
+		if (!/^[-+]?\d*\.?\d+$/.test(text)) return null;
+
+		const num = parseFloat(text);
+		return Number.isFinite(num) ? num : null;
 	}
 
 	export_table_pdf(tableClass, filePrefix) {
