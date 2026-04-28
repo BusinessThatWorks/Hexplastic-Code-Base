@@ -924,7 +924,6 @@ class ProductionLogSheetDashboard {
 	}
 
 	export_table_excel(tableClass, filePrefix) {
-		const self = this;
 		const btn = this.wrapper.find(this._export_table_btn_selector(tableClass));
 
 		// Add loading state
@@ -941,21 +940,11 @@ class ProductionLogSheetDashboard {
 				return;
 			}
 
-			// Use Frappe's built-in CSV download (converts to Excel compatible format)
-			this.download_as_csv(tableData, `${filePrefix}_${this.get_date_string()}.csv`);
-
-			frappe.show_alert({
-				message: __("Table exported successfully"),
-				indicator: "green",
-			});
+			// Export as true Excel workbook (.xlsx)
+			this.load_xlsx_and_export(tableData, filePrefix, btn);
 		} catch (e) {
 			console.error("Excel export error:", e);
 			frappe.msgprint(__("Failed to export table. Please try again."));
-		} finally {
-			setTimeout(() => {
-				btn.removeClass("exporting");
-				btn.prop("disabled", false);
-			}, 500);
 		}
 	}
 
@@ -1003,32 +992,48 @@ class ProductionLogSheetDashboard {
 		return { headers, rows };
 	}
 
-	download_as_csv(tableData, filename) {
-		const { headers, rows } = tableData;
+	load_xlsx_and_export(tableData, filePrefix, btn) {
+		if (typeof window.XLSX !== "undefined" && window.XLSX.utils) {
+			this.generate_xlsx(tableData, filePrefix, btn);
+			return;
+		}
 
-		// Build CSV content
-		let csv = "";
+		const script = document.createElement("script");
+		script.src = "https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js";
+		script.onload = () => {
+			this.generate_xlsx(tableData, filePrefix, btn);
+		};
+		script.onerror = () => {
+			frappe.msgprint(
+				__("Failed to load Excel library. Please check your internet connection.")
+			);
+			btn.removeClass("exporting").prop("disabled", false);
+		};
+		document.head.appendChild(script);
+	}
 
-		// Add headers
-		csv += headers.map((h) => `"${h.replace(/"/g, '""')}"`).join(",") + "\n";
+	generate_xlsx(tableData, filePrefix, btn) {
+		try {
+			const { headers, rows } = tableData;
+			const sheetData = [headers, ...rows];
 
-		// Add rows
-		rows.forEach((row) => {
-			csv += row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",") + "\n";
-		});
+			const worksheet = window.XLSX.utils.aoa_to_sheet(sheetData);
+			const workbook = window.XLSX.utils.book_new();
+			window.XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
 
-		// Create blob and download
-		const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
-		const link = document.createElement("a");
-		const url = URL.createObjectURL(blob);
+			const filename = `${filePrefix}_${this.get_date_string()}.xlsx`;
+			window.XLSX.writeFile(workbook, filename);
 
-		link.setAttribute("href", url);
-		link.setAttribute("download", filename);
-		link.style.visibility = "hidden";
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
-		URL.revokeObjectURL(url);
+			frappe.show_alert({
+				message: __("Excel exported successfully"),
+				indicator: "green",
+			});
+		} catch (error) {
+			console.error("XLSX export error:", error);
+			frappe.msgprint(__("Failed to export Excel. Please try again."));
+		} finally {
+			btn.removeClass("exporting").prop("disabled", false);
+		}
 	}
 
 	export_table_pdf(tableClass, filePrefix) {
