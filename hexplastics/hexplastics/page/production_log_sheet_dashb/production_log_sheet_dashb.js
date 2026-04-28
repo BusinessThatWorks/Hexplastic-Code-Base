@@ -364,13 +364,13 @@ class ProductionLogSheetDashboard {
 		if (actualVsPlannedLoading) actualVsPlannedLoading.style.display = "none";
 	}
 
-	format_number(value, decimals = 2) {
+	format_number(value, decimals = 2, compact = true) {
 		if (value === null || value === undefined) return "0";
 
 		const num = parseFloat(value);
 		if (isNaN(num)) return "0";
 
-		if (num >= 1000000) {
+		if (compact && num >= 1000000) {
 			return (num / 1000000).toFixed(decimals) + "M";
 		} else if (num >= 1000) {
 			return num.toLocaleString("en-IN", {
@@ -418,19 +418,19 @@ class ProductionLogSheetDashboard {
 	update_log_book(data) {
 		if (!data) return;
 
-		const setValue = (id, value, isCurrency = false) => {
+		const setValue = (id, value, isCurrency = false, compact = true) => {
 			const el = document.getElementById(id);
 			if (el) {
 				el.textContent = isCurrency
 					? this.format_currency(value)
-					: this.format_number(value);
+					: this.format_number(value, 2, compact);
 			}
 		};
 
 		// Total Costing
 		setValue("total-costing", data.total_costing, true);
 		setValue("total-prime-used", data.total_prime_used);
-		setValue("total-rm-consumption", data.total_rm_consumption);
+		setValue("total-rm-consumption", data.total_rm_consumption, false, false);
 		setValue("lb-gross-weight", data.gross_weight);
 		setValue("lb-net-weight", data.net_weight);
 	}
@@ -1015,7 +1015,7 @@ class ProductionLogSheetDashboard {
 	generate_xlsx(tableData, filePrefix, btn) {
 		try {
 			const { headers, rows } = tableData;
-			const sheetData = [headers, ...rows];
+			const sheetData = this.build_xlsx_sheet_data(headers, rows);
 
 			const worksheet = window.XLSX.utils.aoa_to_sheet(sheetData);
 			const workbook = window.XLSX.utils.book_new();
@@ -1034,6 +1034,30 @@ class ProductionLogSheetDashboard {
 		} finally {
 			btn.removeClass("exporting").prop("disabled", false);
 		}
+	}
+
+	build_xlsx_sheet_data(headers, rows) {
+		const normalizedRows = (rows || []).map((row) =>
+			row.map((cell) => {
+				const num = this.parse_export_number(cell);
+				return num !== null ? num : cell;
+			})
+		);
+
+		return [headers, ...normalizedRows];
+	}
+
+	parse_export_number(value) {
+		if (value === null || value === undefined) return null;
+
+		let text = String(value).trim();
+		if (!text) return null;
+
+		text = text.replace(/,/g, "").replace(/₹/g, "").replace(/%/g, "");
+		if (!/^[-+]?\d*\.?\d+$/.test(text)) return null;
+
+		const num = parseFloat(text);
+		return Number.isFinite(num) ? num : null;
 	}
 
 	export_table_pdf(tableClass, filePrefix) {
