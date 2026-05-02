@@ -611,7 +611,7 @@ class BoxProduction(Document):
 					"stock_entry_type": "Manufacture",
 					"set_posting_time": 1,
 					"posting_date": self.production_date,
-					"posting_time": nowtime(),
+					"posting_time": self.posting_time,
 					"company": company,
 					"remarks": _("Auto-created from Box Production {0}").format(self.name),
 					"items": items,
@@ -628,7 +628,7 @@ class BoxProduction(Document):
 					"stock_entry_type": "Material Receipt",
 					"set_posting_time": 1,
 					"posting_date": self.production_date,
-					"posting_time": nowtime(),
+					"posting_time": self.posting_time,
 					"company": company,
 					"remarks": _("Created from Box Production {0}").format(self.name),
 					"items": [
