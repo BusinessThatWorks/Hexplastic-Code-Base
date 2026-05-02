@@ -8,11 +8,12 @@
  "field_order": [
   "section_break_acyh",
   "production_date",
+  "posting_time",
   "raw_material",
-  "rm_source_warehouse",
   "column_break_hpxt",
   "shift_type",
   "machine_name",
+  "rm_source_warehouse",
   "column_break_pxoz",
   "amended_from",
   "box_stock_entry_id",
@@ -531,13 +532,19 @@
    "fieldname": "staple_back_completed",
    "fieldtype": "Int",
    "label": "Back Completed"
+  },
+  {
+   "fieldname": "posting_time",
+   "fieldtype": "Time",
+   "label": "Posting Time",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-09 16:37:12.009591",
+ "modified": "2026-05-02 15:22:49.156001",
  "modified_by": "Administrator",
  "module": "Hexplastics",
  "name": "Box Production",
